@@ -3,8 +3,8 @@
 namespace Gloudemans\Tests\Shoppingcart;
 
 use Orchestra\Testbench\TestCase;
-use Gloudemans\Shoppingcart\CartItem;
-use Gloudemans\Shoppingcart\ShoppingcartServiceProvider;
+use OfflineAgency\OaLaravelCart\CartItem;
+use OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider;
 
 class CartItemTest extends TestCase
 {

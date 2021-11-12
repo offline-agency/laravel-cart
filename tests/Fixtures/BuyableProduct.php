@@ -2,7 +2,7 @@
 
 namespace Gloudemans\Tests\Shoppingcart\Fixtures;
 
-use Gloudemans\Shoppingcart\Contracts\Buyable;
+use OfflineAgency\OaLaravelCart\Contracts\Buyable;
 
 class BuyableProduct implements Buyable
 {
