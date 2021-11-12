@@ -1,12 +1,12 @@
 {
-    "name": "gloudemans/shoppingcart",
-    "description": "Laravel Shoppingcart",
-    "keywords": ["laravel", "shoppingcart"],
+    "name": "offline-agency/oa-laravel-cart",
+    "description": "Laravel shoppingcart with fiscal support",
+    "keywords": ["laravel", "shoppingcart", "cart"],
     "license": "MIT",
     "authors": [
         {
-            "name": "Rob Gloudemans",
-            "email": "info@robgloudemans.nl"
+            "name": "Offline Agency",
+            "email": "info@offlineagency.it"
         }
     ],
     "require": {
@@ -39,10 +39,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Gloudemans\\Shoppingcart\\ShoppingcartServiceProvider"
+                "OfflineAgency\\OaLaravelCart\\ShoppingcartServiceProvider"
             ],
             "aliases": {
-                "Cart": "Gloudemans\\Shoppingcart\\Facades\\Cart"
+                "Cart": "OfflineAgency\\OaLaravelCart\\Facades\\Cart"
             }
         }
     }
