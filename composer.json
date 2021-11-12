@@ -21,7 +21,7 @@
     },
     "autoload": {
         "psr-4": {
-            "OfflineAgency\OaLaravelCart\\": "src/"
+            "OfflineAgency\\OaLaravelCart\\": "src/"
         }
     },
     "autoload-dev": {
