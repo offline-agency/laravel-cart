@@ -45,7 +45,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "OfflineAgency\\OaLaravelCart\\ShoppingcartServiceProvider"
+                "OfflineAgency\\OaLaravelCart\\CartServiceProvider"
             ],
             "aliases": {
                 "Cart": "OfflineAgency\\OaLaravelCart\\Facades\\Cart"
