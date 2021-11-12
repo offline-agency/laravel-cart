@@ -1,8 +1,8 @@
 <?php
 
-namespace Gloudemans\Shoppingcart;
+namespace OfflineAgency\OaLaravelCart;
 
-use Gloudemans\Shoppingcart\Contracts\Buyable;
+use OfflineAgency\OaLaravelCart\Contracts\Buyable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 
@@ -225,7 +225,7 @@ class CartItem implements Arrayable, Jsonable {
 	/**
 	 * Update the cart item from a Buyable.
 	 *
-	 * @param \Gloudemans\Shoppingcart\Contracts\Buyable $item
+	 * @param \OfflineAgency\OaLaravelCart\Contracts\Buyable $item
 	 *
 	 * @return void
 	 */
@@ -259,7 +259,7 @@ class CartItem implements Arrayable, Jsonable {
 	 *
 	 * @param mixed $model
 	 *
-	 * @return \Gloudemans\Shoppingcart\CartItem
+	 * @return \OfflineAgency\OaLaravelCart\CartItem
 	 */
 	public function associate( $model ) {
 		$this->associatedModel = is_string( $model ) ? $model : get_class( $model );
@@ -272,7 +272,7 @@ class CartItem implements Arrayable, Jsonable {
 	 *
 	 * @param int|float $taxRate
 	 *
-	 * @return \Gloudemans\Shoppingcart\CartItem
+	 * @return \OfflineAgency\OaLaravelCart\CartItem
 	 */
 	public function setTaxRate( $taxRate ) {
 		$this->taxRate = $taxRate;
@@ -322,10 +322,10 @@ class CartItem implements Arrayable, Jsonable {
 	/**
 	 * Create a new instance from a Buyable.
 	 *
-	 * @param \Gloudemans\Shoppingcart\Contracts\Buyable $item
+	 * @param \OfflineAgency\OaLaravelCart\Contracts\Buyable $item
 	 * @param array $options
 	 *
-	 * @return \Gloudemans\Shoppingcart\CartItem
+	 * @return \OfflineAgency\OaLaravelCart\CartItem
 	 */
 	public static function fromBuyable( Buyable $item, array $options = [] ) {
 		return new self( $item->getBuyableIdentifier( $options ), $item->getBuyableDescription( $options ), $item->getBuyablePrice( $options ), $options );
@@ -336,7 +336,7 @@ class CartItem implements Arrayable, Jsonable {
 	 *
 	 * @param array $attributes
 	 *
-	 * @return \Gloudemans\Shoppingcart\CartItem
+	 * @return \OfflineAgency\OaLaravelCart\CartItem
 	 */
 	public static function fromArray( array $attributes ) {
 		$options = array_get( $attributes, 'options', [] );

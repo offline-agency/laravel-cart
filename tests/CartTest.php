@@ -4,15 +4,15 @@ namespace Gloudemans\Tests\Shoppingcart;
 
 use Mockery;
 use PHPUnit\Framework\Assert;
-use Gloudemans\Shoppingcart\Cart;
+use OfflineAgency\OaLaravelCart\Cart;
 use Orchestra\Testbench\TestCase;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Collection;
-use Gloudemans\Shoppingcart\CartItem;
+use OfflineAgency\OaLaravelCart\CartItem;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Session\SessionManager;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Gloudemans\Shoppingcart\ShoppingcartServiceProvider;
+use OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider;
 use Gloudemans\Tests\Shoppingcart\Fixtures\ProductModel;
 use Gloudemans\Tests\Shoppingcart\Fixtures\BuyableProduct;
 
@@ -340,7 +340,7 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \Gloudemans\Shoppingcart\Exceptions\InvalidRowIDException
+     * @expectedException \OfflineAgency\OaLaravelCart\Exceptions\InvalidRowIDException
      */
     public function it_will_throw_an_exception_if_a_rowid_was_not_found()
     {
@@ -620,7 +620,7 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \Gloudemans\Shoppingcart\Exceptions\UnknownModelException
+     * @expectedException \OfflineAgency\OaLaravelCart\Exceptions\UnknownModelException
      * @expectedExceptionMessage The supplied model SomeModel does not exist.
      */
     public function it_will_throw_an_exception_when_a_non_existing_model_is_being_associated()
@@ -815,7 +815,7 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \Gloudemans\Shoppingcart\Exceptions\CartAlreadyStoredException
+     * @expectedException \OfflineAgency\OaLaravelCart\Exceptions\CartAlreadyStoredException
      * @expectedExceptionMessage A cart with identifier 123 was already stored.
      */
     public function it_will_throw_an_exception_when_a_cart_was_already_stored_using_the_specified_identifier()
@@ -919,7 +919,7 @@ class CartTest extends TestCase
     /**
      * Get an instance of the cart.
      *
-     * @return \Gloudemans\Shoppingcart\Cart
+     * @return \OfflineAgency\OaLaravelCart\Cart
      */
     private function getCart()
     {

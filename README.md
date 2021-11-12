@@ -1,9 +1,4 @@
-## OA Laravel Cart
-[![Build Status](https://travis-ci.org/Crinsane/LaravelShoppingcart.png?branch=master)](https://travis-ci.org/Crinsane/LaravelShoppingcart)
-[![Total Downloads](https://poser.pugx.org/gloudemans/shoppingcart/downloads.png)](https://packagist.org/packages/gloudemans/shoppingcart)
-[![Latest Stable Version](https://poser.pugx.org/gloudemans/shoppingcart/v/stable)](https://packagist.org/packages/gloudemans/shoppingcart)
-[![Latest Unstable Version](https://poser.pugx.org/gloudemans/shoppingcart/v/unstable)](https://packagist.org/packages/gloudemans/shoppingcart)
-[![License](https://poser.pugx.org/gloudemans/shoppingcart/license)](https://packagist.org/packages/gloudemans/shoppingcart)
+## Oa Laravel Cart
 
 A simple shoppingcart implementation for Laravel.
 
@@ -21,11 +16,11 @@ Should you still be on version 5.4 of Laravel, the final steps for you are to ad
 
 Add a new line to the `providers` array:
 
-	Gloudemans\Shoppingcart\ShoppingcartServiceProvider::class
+	OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider::class
 
 And optionally add a new line to the `aliases` array:
 
-	'Cart' => Gloudemans\Shoppingcart\Facades\Cart::class,
+	'Cart' => OfflineAgency\OaLaravelCart\Facades\Cart::class,
 
 Now you're ready to start using the shoppingcart in your application.
 
@@ -336,13 +331,13 @@ To save cart into the database so you can retrieve it later, the package needs t
 By default the package will use the default database connection and use a table named `shoppingcart`.
 If you want to change these options, you'll have to publish the `config` file.
 
-    php artisan vendor:publish --provider="Gloudemans\Shoppingcart\ShoppingcartServiceProvider" --tag="config"
+    php artisan vendor:publish --provider="OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider" --tag="config"
 
 This will give you a `cart.php` config file in which you can make the changes.
 
 To make your life easy, the package also includes a ready to use `migration` which you can publish by running:
 
-    php artisan vendor:publish --provider="Gloudemans\Shoppingcart\ShoppingcartServiceProvider" --tag="migrations"
+    php artisan vendor:publish --provider="OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider" --tag="migrations"
     
 This will place a `shoppingcart` table's migration file into `database/migrations` directory. Now all you have to do is run `php artisan migrate` to migrate your database.
 

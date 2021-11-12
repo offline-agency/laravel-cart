@@ -1,6 +1,6 @@
 <?php
 
-namespace Gloudemans\Shoppingcart;
+namespace OfflineAgency\OaLaravelCart;
 
 use Illuminate\Support\Collection;
 

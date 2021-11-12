@@ -1,16 +1,16 @@
 <?php
 
-namespace Gloudemans\Shoppingcart;
+namespace OfflineAgency\OaLaravelCart;
 
 use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Session\SessionManager;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Contracts\Events\Dispatcher;
-use Gloudemans\Shoppingcart\Contracts\Buyable;
-use Gloudemans\Shoppingcart\Exceptions\UnknownModelException;
-use Gloudemans\Shoppingcart\Exceptions\InvalidRowIDException;
-use Gloudemans\Shoppingcart\Exceptions\CartAlreadyStoredException;
+use OfflineAgency\OaLaravelCart\Contracts\Buyable;
+use OfflineAgency\OaLaravelCart\Exceptions\UnknownModelException;
+use OfflineAgency\OaLaravelCart\Exceptions\InvalidRowIDException;
+use OfflineAgency\OaLaravelCart\Exceptions\CartAlreadyStoredException;
 
 class Cart
 {
@@ -25,7 +25,7 @@ class Cart
 
     /**
      * Instance of the event dispatcher.
-     * 
+     *
      * @var \Illuminate\Contracts\Events\Dispatcher
      */
     private $events;
@@ -55,7 +55,7 @@ class Cart
      * Set the current cart instance.
      *
      * @param string|null $instance
-     * @return \Gloudemans\Shoppingcart\Cart
+     * @return \OfflineAgency\OaLaravelCart\Cart
      */
     public function instance($instance = null)
     {
@@ -84,7 +84,7 @@ class Cart
      * @param int|float $qty
      * @param float     $price
      * @param array     $options
-     * @return \Gloudemans\Shoppingcart\CartItem
+     * @return \OfflineAgency\OaLaravelCart\CartItem
      */
     public function add($id, $name = null, $subtitle = null, $qty = null, $price = null, $totalPrice = null, $vat = null, $urlImg = null, array $options = [])
     {
@@ -103,7 +103,7 @@ class Cart
         }
 
         $content->put($cartItem->rowId, $cartItem);
-        
+
         $this->events->dispatch('cart.added', $cartItem);
 
         $this->session->put($this->instance, $content);
@@ -116,7 +116,7 @@ class Cart
      *
      * @param string $rowId
      * @param mixed  $qty
-     * @return \Gloudemans\Shoppingcart\CartItem
+     * @return \OfflineAgency\OaLaravelCart\CartItem
      */
     public function update($rowId, $qty)
     {
@@ -178,7 +178,7 @@ class Cart
      * Get a cart item from the cart by its rowId.
      *
      * @param string $rowId
-     * @return \Gloudemans\Shoppingcart\CartItem
+     * @return \OfflineAgency\OaLaravelCart\CartItem
      */
     public function get($rowId)
     {
