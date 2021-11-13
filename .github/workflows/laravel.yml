@@ -9,8 +9,13 @@ on:
 jobs:
   laravel-tests:
 
-    runs-on: ubuntu-latest
-
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        php: ['7.2', '7.3', '7.4']
+        os: ['ubuntu-latest']
+     
+    name: PHP v${{ matrix.php }}
     steps:
     - uses: shivammathur/setup-php@15c43e89cdef867065b0213be354c2841860869e
       with:
