@@ -1,8 +1,11 @@
 <?php
 
-namespace Gloudemans\Tests\Shoppingcart;
+namespace OfflineAgency\Tests\OaLaravelCart;
 
+use Illuminate\Foundation\Application;
 use Mockery;
+use OfflineAgency\OaLaravelCart\Exceptions\InvalidRowIDException;
+use OfflineAgency\Tests\OaLaravelCart\Fixtures\BuyableProduct;
 use PHPUnit\Framework\Assert;
 use OfflineAgency\OaLaravelCart\Cart;
 use Orchestra\Testbench\TestCase;
@@ -12,9 +15,7 @@ use OfflineAgency\OaLaravelCart\CartItem;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Session\SessionManager;
 use Illuminate\Contracts\Auth\Authenticatable;
-use OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider;
-use Gloudemans\Tests\Shoppingcart\Fixtures\ProductModel;
-use Gloudemans\Tests\Shoppingcart\Fixtures\BuyableProduct;
+use OfflineAgency\OaLaravelCart\CartServiceProvider;
 
 class CartTest extends TestCase
 {
@@ -23,18 +24,18 @@ class CartTest extends TestCase
     /**
      * Set the package service provider.
      *
-     * @param \Illuminate\Foundation\Application $app
+     * @param Application $app
      * @return array
      */
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
-        return [ShoppingcartServiceProvider::class];
+        return [CartServiceProvider::class];
     }
 
     /**
      * Define environment setup.
      *
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)
@@ -56,7 +57,7 @@ class CartTest extends TestCase
      *
      * @return void
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -85,7 +86,7 @@ class CartTest extends TestCase
         $this->assertItemsInCart(1, $cart->instance(Cart::DEFAULT_INSTANCE));
         $this->assertItemsInCart(1, $cart->instance('wishlist'));
     }
-    
+
     /** @test */
     public function it_can_add_an_item()
     {
@@ -130,7 +131,7 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    public function it_will_return_an_array_of_cartitems_when_you_add_multiple_items_at_once()
+    public function it_will_return_an_array_of_cart_items_when_you_add_multiple_items_at_once()
     {
         Event::fake();
 
@@ -212,8 +213,6 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Please supply a valid identifier.
      */
     public function it_will_validate_the_identifier()
     {
@@ -224,8 +223,6 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Please supply a valid name.
      */
     public function it_will_validate_the_name()
     {
@@ -236,8 +233,6 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Please supply a valid quantity.
      */
     public function it_will_validate_the_quantity()
     {
@@ -248,8 +243,6 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Please supply a valid price.
      */
     public function it_will_validate_the_price()
     {
@@ -340,9 +333,8 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \OfflineAgency\OaLaravelCart\Exceptions\InvalidRowIDException
      */
-    public function it_will_throw_an_exception_if_a_rowid_was_not_found()
+    public function it_will_throw_an_exception_if_a_row_id_was_not_found()
     {
         $cart = $this->getCart();
 
@@ -352,7 +344,7 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    public function it_will_regenerate_the_rowid_if_the_options_changed()
+    public function it_will_regenerate_the_row_id_if_the_options_changed()
     {
         $cart = $this->getCart();
 
@@ -431,7 +423,7 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    public function it_can_get_an_item_from_the_cart_by_its_rowid()
+    public function it_can_get_an_item_from_the_cart_by_its_row_id()
     {
         $cart = $this->getCart();
 
@@ -618,10 +610,8 @@ class CartTest extends TestCase
         $this->assertEquals(ProductModel::class, Assert::readAttribute($cartItem, 'associatedModel'));
     }
 
-    /**
+    /**FCart
      * @test
-     * @expectedException \OfflineAgency\OaLaravelCart\Exceptions\UnknownModelException
-     * @expectedExceptionMessage The supplied model SomeModel does not exist.
      */
     public function it_will_throw_an_exception_when_a_non_existing_model_is_being_associated()
     {
@@ -773,7 +763,7 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    public function it_can_return_cartItem_formated_numbers_by_config_values()
+    public function it_can_return_cartItem_formatted_numbers_by_config_values()
     {
         $this->setConfigFormat(2, ',', '');
 
@@ -815,8 +805,6 @@ class CartTest extends TestCase
 
     /**
      * @test
-     * @expectedException \OfflineAgency\OaLaravelCart\Exceptions\CartAlreadyStoredException
-     * @expectedExceptionMessage A cart with identifier 123 was already stored.
      */
     public function it_will_throw_an_exception_when_a_cart_was_already_stored_using_the_specified_identifier()
     {
@@ -884,7 +872,17 @@ class CartTest extends TestCase
     {
         $cart = $this->getCart();
 
-        $cart->add(new BuyableProduct(1, 'First item', 10.00), 2);
+        $cart->add(
+          new BuyableProduct(1, 'First item', 10.00),
+          'Some item',
+          'This is a simple description',
+          1,
+          10.00,
+          12.22,
+          2.22,
+          '',
+          ['size' => 'XL', 'color' => 'red']
+        );
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
@@ -919,7 +917,7 @@ class CartTest extends TestCase
     /**
      * Get an instance of the cart.
      *
-     * @return \OfflineAgency\OaLaravelCart\Cart
+     * @return Cart
      */
     private function getCart()
     {
@@ -931,7 +929,7 @@ class CartTest extends TestCase
 
     /**
      * Set the config number format.
-     * 
+     *
      * @param int    $decimals
      * @param string $decimalPoint
      * @param string $thousandSeperator

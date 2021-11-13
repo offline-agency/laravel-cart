@@ -1,28 +1,37 @@
 <?php
 
-namespace Gloudemans\Tests\Shoppingcart;
+namespace OfflineAgency\Tests\OaLaravelCart;
 
+use Illuminate\Foundation\Application;
+use OfflineAgency\OaLaravelCart\CartServiceProvider;
 use Orchestra\Testbench\TestCase;
 use OfflineAgency\OaLaravelCart\CartItem;
-use OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider;
 
 class CartItemTest extends TestCase
 {
     /**
      * Set the package service provider.
      *
-     * @param \Illuminate\Foundation\Application $app
+     * @param Application $app
      * @return array
      */
-    protected function getPackageProviders($app)
+    protected function getPackageProviders($app): array
     {
-        return [ShoppingcartServiceProvider::class];
+        return [CartServiceProvider::class];
     }
 
     /** @test */
     public function it_can_be_cast_to_an_array()
     {
-        $cartItem = new CartItem(1, 'Some item', 10.00, ['size' => 'XL', 'color' => 'red']);
+        $cartItem = new CartItem(
+          1,
+          'Some item',
+          'This is a simple description',
+          10.00,
+          10.00,
+          2.22,
+          12.22,
+          ['size' => 'XL', 'color' => 'red']);
         $cartItem->setQuantity(2);
 
         $this->assertEquals([
@@ -43,8 +52,16 @@ class CartItemTest extends TestCase
     /** @test */
     public function it_can_be_cast_to_json()
     {
-        $cartItem = new CartItem(1, 'Some item', 10.00, ['size' => 'XL', 'color' => 'red']);
-        $cartItem->setQuantity(2);
+      $cartItem = new CartItem(
+        1,
+        'Some item',
+        'This is a simple description',
+        10.00,
+        10.00,
+        2.22,
+        12.22,
+        ['size' => 'XL', 'color' => 'red']);
+      $cartItem->setQuantity(2);
 
         $this->assertJson($cartItem->toJson());
 

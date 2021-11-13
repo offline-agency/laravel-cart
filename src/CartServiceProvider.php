@@ -1,12 +1,12 @@
 <?php
 
-namespace OfflineAgency\Shoppingcart;
+namespace OfflineAgency\OaLaravelCart;
 
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\ServiceProvider;
 
-class ShoppingcartServiceProvider extends ServiceProvider
+class CartServiceProvider extends ServiceProvider
 {
 
     /**

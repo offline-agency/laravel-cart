@@ -12,14 +12,14 @@ return [
     |
     */
 
-    'tax' => 21,
+    'tax' => 22,
 
     /*
     |--------------------------------------------------------------------------
-    | Shoppingcart database settings
+    | Cart database settings
     |--------------------------------------------------------------------------
     |
-    | Here you can set the connection that the shoppingcart should use when
+    | Here you can set the connection that the shopping cart should use when
     | storing and restoring a cart.
     |
     */
@@ -28,7 +28,7 @@ return [
 
         'connection' => null,
 
-        'table' => 'shoppingcart',
+        'table' => 'cart',
 
     ],
 
@@ -49,7 +49,7 @@ return [
     | Default number format
     |--------------------------------------------------------------------------
     |
-    | This defaults will be used for the formated numbers if you don't
+    | This defaults will be used for the formatted numbers if you don't
     | set them in the method call.
     |
     */
@@ -60,8 +60,7 @@ return [
 
         'decimal_point' => '.',
 
-        'thousand_seperator' => ','
+        'thousand_separator' => ','
 
     ],
-
 ];
