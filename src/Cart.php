@@ -95,15 +95,15 @@ class Cart
    */
     public function add(
       $id,
-      string $name = null,
-      string $subtitle = null,
-      int $qty = null,
-      float $price = null,
-      float $totalPrice = null,
-      float $vat = null,
-      string $vatFcCode = null,
-      string $productFcCode = null,
-      string $urlImg = null,
+      string $name,
+      string $subtitle,
+      int $qty,
+      float $price,
+      float $totalPrice,
+      float $vat,
+      string $vatFcCode = '',
+      string $productFcCode = '',
+      string $urlImg = '',
       array $options = []
     )
     {

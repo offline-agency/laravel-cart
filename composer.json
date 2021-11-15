@@ -29,6 +29,11 @@
             "OfflineAgency\\LaravelCart\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "OfflineAgency\\LaravelCart\\Tests\\": "tests/"
+        }
+    },
     "scripts": {
         "test": "vendor/bin/phpunit"
     },
