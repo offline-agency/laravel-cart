@@ -1,6 +1,6 @@
 <?php
 
-namespace OfflineAgency\OaLaravelCart;
+namespace OfflineAgency\LaravelCart;
 
 use Closure;
 use Illuminate\Database\Connection;
@@ -8,10 +8,10 @@ use Illuminate\Support\Collection;
 use Illuminate\Session\SessionManager;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Contracts\Events\Dispatcher;
-use OfflineAgency\OaLaravelCart\Contracts\Buyable;
-use OfflineAgency\OaLaravelCart\Exceptions\UnknownModelException;
-use OfflineAgency\OaLaravelCart\Exceptions\InvalidRowIDException;
-use OfflineAgency\OaLaravelCart\Exceptions\CartAlreadyStoredException;
+use OfflineAgency\LaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
+use OfflineAgency\LaravelCart\Exceptions\InvalidRowIDException;
+use OfflineAgency\LaravelCart\Exceptions\CartAlreadyStoredException;
 
 class Cart
 {
@@ -296,11 +296,9 @@ class Cart
     {
         $content = $this->getContent();
 
-        $subTotal = $content->reduce(function ($subTotal, CartItem $cartItem) {
-            return $subTotal + ($cartItem->qty * $cartItem->price);
-        }, 0);
-
-        return $subTotal;
+      return $content->reduce(function ($subTotal, CartItem $cartItem) {
+          return $subTotal + ($cartItem->qty * $cartItem->price);
+      }, 0);
     }
 
     /**
@@ -494,7 +492,7 @@ class Cart
   ): CartItem
   {
         if ($id instanceof Buyable) {
-            $cartItem = CartItem::fromBuyable($id, $qty ?: []);
+            $cartItem = CartItem::fromBuyable($id, []);
             $cartItem->setQuantity($name ?: 1);
             $cartItem->associate($id);
         } elseif (is_array($id)) {

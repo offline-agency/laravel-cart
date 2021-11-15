@@ -1,5 +1,5 @@
 <?php
-namespace OfflineAgency\OaLaravelCart\Facades;
+namespace OfflineAgency\LaravelCart\Facades;
 
 use Illuminate\Support\Facades\Facade;
 

@@ -1,11 +1,11 @@
 <?php
 
-namespace OfflineAgency\Tests\OaLaravelCart;
+namespace OfflineAgency\Tests\LaravelCart;
 
 use Illuminate\Foundation\Application;
-use OfflineAgency\OaLaravelCart\CartServiceProvider;
+use OfflineAgency\LaravelCart\CartServiceProvider;
 use Orchestra\Testbench\TestCase;
-use OfflineAgency\OaLaravelCart\CartItem;
+use OfflineAgency\LaravelCart\CartItem;
 
 class CartItemTest extends TestCase
 {

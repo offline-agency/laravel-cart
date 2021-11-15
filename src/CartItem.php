@@ -1,9 +1,9 @@
 <?php
 
-namespace OfflineAgency\OaLaravelCart;
+namespace OfflineAgency\LaravelCart;
 
 use Illuminate\Support\Arr;
-use OfflineAgency\OaLaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Contracts\Buyable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 
@@ -243,8 +243,9 @@ class CartItem implements Arrayable, Jsonable {
 	 * @param int|float $qty
 	 */
 	public function setQuantity( $qty ) {
+
 		if ( empty( $qty ) || ! is_numeric( $qty ) ) {
-			throw new \InvalidArgumentException( 'Please supply a valid quantity.' );
+			throw new \InvalidArgumentException( 'Please supply a valid quantity. Provided: ' . $qty );
 		}
 
 		$this->qty = $qty;

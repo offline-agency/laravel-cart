@@ -1,6 +1,6 @@
 <?php
 
-namespace OfflineAgency\OaLaravelCart;
+namespace OfflineAgency\LaravelCart;
 
 use Illuminate\Support\Collection;
 

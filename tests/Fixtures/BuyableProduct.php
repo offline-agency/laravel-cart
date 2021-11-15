@@ -1,8 +1,8 @@
 <?php
 
-namespace OfflineAgency\Tests\OaLaravelCart\Fixtures;
+namespace OfflineAgency\LaravelCart\Tests\Fixtures;
 
-use OfflineAgency\OaLaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Contracts\Buyable;
 
 class BuyableProduct implements Buyable
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace OfflineAgency\OaLaravelCart\Contracts;
+namespace OfflineAgency\LaravelCart\Contracts;
 
 interface Buyable
 {

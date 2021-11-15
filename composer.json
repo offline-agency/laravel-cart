@@ -1,6 +1,6 @@
 {
-    "name": "offline-agency/oa-laravel-cart",
-    "description": "Laravel shoppingcart with fiscal support",
+    "name": "offline-agency/laravel-cart",
+    "description": "Laravel shopping cart with fiscal support",
     "type": "library",
     "keywords": ["laravel", "shoppingcart", "cart"],
     "license": "MIT",
@@ -26,12 +26,7 @@
     },
     "autoload": {
         "psr-4": {
-            "OfflineAgency\\OaLaravelCart\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "OfflineAgency\\Tests\\OaLaravelCart\\": "tests/"
+            "OfflineAgency\\LaravelCart\\": "src/"
         }
     },
     "scripts": {
@@ -45,10 +40,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "OfflineAgency\\OaLaravelCart\\CartServiceProvider"
+                "OfflineAgency\\LaravelCart\\CartServiceProvider"
             ],
             "aliases": {
-                "Cart": "OfflineAgency\\OaLaravelCart\\Facades\\Cart"
+                "Cart": "OfflineAgency\\LaravelCart\\Facades\\Cart"
             }
         }
     }

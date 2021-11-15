@@ -1,8 +1,8 @@
 <?php
 
-namespace OfflineAgency\Tests\OaLaravelCart;
+namespace OfflineAgency\LaravelCart\Tests;
 
-use OfflineAgency\OaLaravelCart\Cart;
+use OfflineAgency\LaravelCart\Cart;
 use PHPUnit\Framework\Assert as PHPUnit;
 
 trait CartAssertions
