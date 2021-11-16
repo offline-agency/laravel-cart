@@ -30,9 +30,9 @@ class CartItemTest extends TestCase
       1,
       1000.00,
       1200.22,
-      200.22,
       '0',
-      '10',
+      '0',
+      200.22,
       'https://ecommerce.test/images/item-name.png',
       ['size' => 'XL', 'color' => 'red']
     );
@@ -43,15 +43,17 @@ class CartItemTest extends TestCase
       'id' => 1,
       'name' => 'First Cart item',
       'subtitle' => 'This is a simple description',
-      'price' => 1000.00,
-      'rowId' => '07d5da5550494c62daf9993cf954303f',
       'qty' => 2,
+      'price' => 1000.00,
+      'vatFcCode' => '0',
+      'productFcCode' => '0',
+      'vat' => 200.22,
+      'rowId' => '07d5da5550494c62daf9993cf954303f',
+      'urlImg' => 'https://ecommerce.test/images/item-name.png',
       'options' => [
         'size' => 'XL',
         'color' => 'red'
-      ],
-      'tax' => 0,
-      'subtotal' => 20.00,
+      ]
     ], $cartItem->toArray());
   }
 
@@ -65,9 +67,9 @@ class CartItemTest extends TestCase
       1,
       1000.00,
       1200.22,
-      200.22,
       '0',
-      '10',
+      '0',
+      200.22,
       'https://ecommerce.test/images/item-name.png',
       ['size' => 'XL', 'color' => 'red']
     );
@@ -75,7 +77,7 @@ class CartItemTest extends TestCase
 
     $this->assertJson($cartItem->toJson());
 
-    $json = '{"rowId":"07d5da5550494c62daf9993cf954303f","id":1,"name":"First Cart item","qty":2,"price":1000,"vatFcCode":200.22,"0":"productFcCode","1":"0","$vat":10,"$urlImg":"https:\/\/ecommerce.test\/images\/item-name.png","options":{"size":"XL","color":"red"},"tax":null,"subtotal":null}';
+    $json = '{"rowId":"07d5da5550494c62daf9993cf954303f","id":1,"name":"First Cart item","subtitle":"This is a simple description","qty":2,"price":1000,"vatFcCode":"0","productFcCode":"0","vat":200.22,"urlImg":"https:\/\/ecommerce.test\/images\/item-name.png","options":{"size":"XL","color":"red"}}';
 
     $this->assertEquals($json, $cartItem->toJson());
   }

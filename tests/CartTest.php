@@ -19,6 +19,7 @@ use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
 use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
 use OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel;
 use Orchestra\Testbench\TestCase;
+use TypeError;
 
 class CartTest extends TestCase
 {
@@ -359,13 +360,14 @@ class CartTest extends TestCase
    */
   public function it_will_validate_the_quantity()
   {
+    $this->expectException(TypeError::class);
     $cart = $this->getCart();
 
     $cartItem = $cart->add(
       1,
       'Cart item',
       'This is a simple description',
-      1,
+      null,
       10.00,
       12.22,
       2.22
@@ -377,9 +379,16 @@ class CartTest extends TestCase
    */
   public function it_will_validate_the_price()
   {
+    $this->expectException(TypeError::class);
     $cart = $this->getCart();
 
-    $cart->add(1, 'Some title', 1, 'invalid');
+    $cart->add(
+      null,
+      'Cart item',
+      'This is a simple description',
+      1,
+      null
+    );
   }
 
   /** @test */
@@ -749,43 +758,63 @@ class CartTest extends TestCase
       'First Cart item',
       'This is a simple description',
       1,
-      10.00,
-      12.22,
-      2.22
+      1000.00,
+      1200.22,
+      200.22,
+      '0',
+      '0',
+      'https://ecommerce.test/images/item-name.png',
+      ['size' => 'XL', 'color' => 'red']
     );
     $cartItem = $cart->add(
       2,
       'Second Cart item',
       'This is a simple description',
       1,
-      10.00,
-      12.22,
-      2.22
+      1000.00,
+      1200.22,
+      200.22,
+      '0',
+      '0',
+      'https://ecommerce.test/images/item-name.png',
+      ['size' => 'XL', 'color' => 'red']
     );
 
     $content = $cart->content();
 
     $this->assertInstanceOf(Collection::class, $content);
     $this->assertEquals([
-      '027c91341fd5cf4d2579b49c4b6a90da' => [
-        'rowId' => '027c91341fd5cf4d2579b49c4b6a90da',
+      '07d5da5550494c62daf9993cf954303f' => [
+        'rowId' => '07d5da5550494c62daf9993cf954303f',
         'id' => 1,
         'name' => 'First Cart item',
+        'subtitle' => 'This is a simple description',
         'qty' => 1,
-        'price' => 10.00,
-        'tax' => 2.10,
-        'subtotal' => 10.0,
-        'options' => [],
+        'price' => 1000.00,
+        'vatFcCode' => '0',
+        'productFcCode' => '0',
+        'vat' => 200.22,
+        'urlImg' => 'https://ecommerce.test/images/item-name.png',
+        'options' => [
+          'size' => 'XL',
+          'color' => 'red'
+        ]
       ],
-      '370d08585360f5c568b18d1f2e4ca1df' => [
-        'rowId' => '370d08585360f5c568b18d1f2e4ca1df',
+      '13e04d556bd1d42c1d940962999e405a' => [
+        'rowId' => '13e04d556bd1d42c1d940962999e405a',
         'id' => 2,
         'name' => 'Second Cart item',
+        'subtitle' => 'This is a simple description',
         'qty' => 1,
-        'price' => 10.00,
-        'tax' => 2.10,
-        'subtotal' => 10.0,
-        'options' => [],
+        'price' => 1000.00,
+        'vatFcCode' => '0',
+        'productFcCode' => '0',
+        'vat' => 200.22,
+        'urlImg' => 'https://ecommerce.test/images/item-name.png',
+        'options' => [
+          'size' => 'XL',
+          'color' => 'red'
+        ]
       ]
     ], $content->toArray());
   }

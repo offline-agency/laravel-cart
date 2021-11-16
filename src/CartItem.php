@@ -490,20 +490,19 @@ class CartItem implements Arrayable, Jsonable {
 	 */
 	public function toArray(): array
   {
-		return [
-			'rowId'    => $this->rowId,
-			'id'       => $this->id,
-			'name'     => $this->name,
-			'qty'      => $this->qty,
-			'price'    => $this->price,
+    return [
+      'rowId' => $this->rowId,
+      'id' => $this->id,
+      'name' => $this->name,
+      'subtitle' => $this->subtitle,
+      'qty' => $this->qty,
+      'price' => $this->price,
       'vatFcCode' => $this->vatFcCode,
-      'productFcCode', $this->productFcCode,
-      '$vat' => $this->vat,
-      '$urlImg'=> $this->urlImg,
-			'options'  => $this->options->toArray(),
-			'tax'      => $this->tax,
-			'subtotal' => $this->subtotal
-		];
+      'productFcCode' => $this->productFcCode,
+      'vat' => $this->vat,
+      'urlImg' => $this->urlImg,
+      'options' => $this->options->toArray()
+    ];
 	}
 
 	/**
