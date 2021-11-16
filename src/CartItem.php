@@ -2,10 +2,10 @@
 
 namespace OfflineAgency\LaravelCart;
 
-use Illuminate\Support\Arr;
-use OfflineAgency\LaravelCart\Contracts\Buyable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Support\Arr;
+use OfflineAgency\LaravelCart\Contracts\Buyable;
 
 class CartItem implements Arrayable, Jsonable {
 	/**
@@ -90,34 +90,42 @@ class CartItem implements Arrayable, Jsonable {
 	 *
 	 * @var string|null
 	 */
-	private $associatedModel = null;
+	public $associatedModel = null;
 
 	/**
 	 * The tax rate for the cart item.
 	 *
 	 * @var int|float
 	 */
-	private $taxRate = 0;
+  public $taxRate = 0;
   /**
    * @var float|int|mixed|null
    */
-  private $priceTax;
+  public $priceTax;
   /**
    * @var float|int|mixed|null
    */
-  private $tax;
+  public $tax;
   /**
    * @var float|int|mixed|null
    */
-  private $taxTotal;
+  public $taxTotal;
   /**
    * @var float|int|mixed|null
    */
-  private $subtotal;
+  public $subtotal;
   /**
    * @var float|int|mixed|null
    */
-  private $total;
+  public $total;
+  /**
+   * @var float|int|mixed|null
+   */
+  public $productFcCode;
+  /**
+   * @var float|int|mixed|null
+   */
+  public $vatFcCode;
 
   /**
    * CartItem constructor.
@@ -131,7 +139,19 @@ class CartItem implements Arrayable, Jsonable {
    * @param $urlImg
    * @param array $options
    */
-	public function __construct( $id, string $name, string $subtitle, float $price, $totalPrice, $vat, $urlImg, array $options = [] ) {
+	public function __construct(
+    $id,
+    string $name,
+    string $subtitle,
+    $qty,
+    float $price,
+    $totalPrice,
+    $vatFcCode,
+    $productFcCode,
+    $vat,
+    $urlImg,
+    array $options = []
+  ) {
 		if ( empty( $id ) ) {
 			throw new \InvalidArgumentException( 'Please supply a valid identifier.' );
 		}
@@ -142,16 +162,19 @@ class CartItem implements Arrayable, Jsonable {
 			throw new \InvalidArgumentException( 'Please supply a valid price.' );
 		}
 
-		$this->id       = $id;
-		$this->name     = $name;
-		$this->subtitle = $subtitle;
-		$this->price    = floatval( $price );
-		$this->totalPrice = floatval( $totalPrice );
-		$this->vat        =        floatval( $vat );
-		$this->vatLabel = $this->vat  > 0 ? "Iva Inclusa" : "Esente Iva";
-		$this->urlImg   = $urlImg;
-		$this->options  = new CartItemOptions( $options );
-		$this->rowId    = $this->generateRowId( $id, $options );
+    $this->id = $id;
+    $this->name = $name;
+    $this->subtitle = $subtitle;
+    $this->qty = $qty;
+    $this->price = floatval($price);
+    $this->totalPrice = floatval($totalPrice);
+    $this->vatFcCode = $vatFcCode;
+    $this->productFcCode = $productFcCode;
+    $this->vat = floatval($vat);
+    $this->vatLabel = $this->vat > 0 ? "Iva Inclusa" : "Esente Iva";
+    $this->urlImg = $urlImg;
+    $this->options = new CartItemOptions($options);
+    $this->rowId = $this->generateRowId($id, $options);
 	}
 
   /**
@@ -387,8 +410,11 @@ class CartItem implements Arrayable, Jsonable {
       $attributes['id'],
       $attributes['name'],
       $attributes['subtitle'],
+      $attributes['qty'],
       $attributes['price'],
       $attributes['totalPrice'],
+      $attributes['vatFcCode'],
+      $attributes['productFcCode'],
       $attributes['vat'],
       $attributes['urlImg'],
       $options
@@ -402,17 +428,44 @@ class CartItem implements Arrayable, Jsonable {
    * @param $id
    * @param $name
    * @param $subtitle
+   * @param $qty
    * @param $price
    * @param $totalPrice
+   * @param $vatFcCode
+   * @param $productFcCode
    * @param $vat
    * @param $urlImg
    * @param array $options
    *
    * @return CartItem
    */
-	public static function fromAttributes( $id, $name,$subtitle, $price, $totalPrice, $vat, $urlImg, array $options = [] ): CartItem
+	public static function fromAttributes(
+    $id,
+    $name,
+    $subtitle,
+    $qty,
+    $price,
+    $totalPrice,
+    $vatFcCode,
+    $productFcCode,
+    $vat,
+    $urlImg,
+    array $options = []
+  ): CartItem
   {
-		return new self($id, $name,$subtitle, $price, $totalPrice, $vat, $urlImg, $options );
+		return new self(
+      $id,
+      $name,
+      $subtitle,
+      $qty,
+      $price,
+      $totalPrice,
+      $vatFcCode,
+      $productFcCode,
+      $vat,
+      $urlImg,
+      $options
+    );
 	}
 
 	/**
@@ -443,6 +496,10 @@ class CartItem implements Arrayable, Jsonable {
 			'name'     => $this->name,
 			'qty'      => $this->qty,
 			'price'    => $this->price,
+      'vatFcCode' => $this->vatFcCode,
+      'productFcCode', $this->productFcCode,
+      '$vat' => $this->vat,
+      '$urlImg'=> $this->urlImg,
 			'options'  => $this->options->toArray(),
 			'tax'      => $this->tax,
 			'subtotal' => $this->subtotal
@@ -471,20 +528,8 @@ class CartItem implements Arrayable, Jsonable {
 	 *
 	 * @return string
 	 */
-	private function numberFormat( $value, $decimals, $decimalPoint, $thousandSeparator ): string
+	private function numberFormat(float $value, int $decimals, string $decimalPoint, string $thousandSeparator ): string
   {
-		if ( is_null( $decimals ) ) {
-			$decimals = is_null( config( 'cart.format.decimals' ) ) ? 2 : config( 'cart.format.decimals' );
-		}
-
-		if ( is_null( $decimalPoint ) ) {
-			$decimalPoint = is_null( config( 'cart.format.decimal_point' ) ) ? '.' : config( 'cart.format.decimal_point' );
-		}
-
-		if ( is_null( $thousandSeparator ) ) {
-      $thousandSeparator = is_null( config( 'cart.format.thousand_seperator' ) ) ? ',' : config( 'cart.format.thousand_separator' );
-		}
-
-		return number_format( $value, $decimals, $decimalPoint, $thousandSeparator );
+    return number_format( $value, $decimals, $decimalPoint, $thousandSeparator );
 	}
 }

@@ -4,6 +4,7 @@ namespace OfflineAgency\LaravelCart;
 
 use Closure;
 use Illuminate\Database\Connection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Session\SessionManager;
 use Illuminate\Database\DatabaseManager;
@@ -120,6 +121,8 @@ class Cart
           $qty,
           $price,
           $totalPrice,
+          $vatFcCode,
+          $productFcCode,
           $vat,
           $urlImg,
           $options
@@ -264,9 +267,9 @@ class Cart
      */
     public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
-        return $this->getContent()->reduce(function ($total, CartItem $cartItem) {
-            return $total + ($cartItem->qty * $cartItem->totalPrice);
-        }, 0);
+      return $this->getContent()->reduce(function ($total, CartItem $cartItem) {
+        return $total + ($cartItem->qty * $cartItem->totalPrice);
+      }, 0);
     }
 
     /**
@@ -277,7 +280,7 @@ class Cart
      * @param string|null $thousandSeparator
      * @return float
      */
-    public function tax(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
+    public function tax(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         return $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
           return $tax + ($cartItem->qty * $cartItem->vat);
@@ -294,9 +297,7 @@ class Cart
      */
     public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
-        $content = $this->getContent();
-
-      return $content->reduce(function ($subTotal, CartItem $cartItem) {
+      return $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
           return $subTotal + ($cartItem->qty * $cartItem->price);
       }, 0);
     }
@@ -304,7 +305,7 @@ class Cart
     /**
      * Search the cart content for a cart item matching the given search closure.
      *
-     * @param \Closure $search
+     * @param Closure $search
      * @return Collection
      */
     public function search(Closure $search): Collection
@@ -330,26 +331,6 @@ class Cart
         $cartItem = $this->get($rowId);
 
         $cartItem->associate($model);
-
-        $content = $this->getContent();
-
-        $content->put($cartItem->rowId, $cartItem);
-
-        $this->session->put($this->instance, $content);
-    }
-
-    /**
-     * Set the tax rate for the cart item with the given rowId.
-     *
-     * @param string $rowId
-     * @param int|float $taxRate
-     * @return void
-     */
-    public function setTax(string $rowId, $taxRate)
-    {
-        $cartItem = $this->get($rowId);
-
-        $cartItem->setTaxRate($taxRate);
 
         $content = $this->getContent();
 
@@ -473,6 +454,8 @@ class Cart
    * @param $qty
    * @param $price
    * @param $totalPrice
+   * @param $vatFcCode
+   * @param $productFcCode
    * @param $vat
    * @param $urlImg
    * @param array $options
@@ -486,6 +469,8 @@ class Cart
     $qty,
     $price,
     $totalPrice,
+    $vatFcCode,
+    $productFcCode,
     $vat,
     $urlImg,
     array $options
@@ -499,11 +484,21 @@ class Cart
             $cartItem = CartItem::fromArray($id);
             $cartItem->setQuantity($id['qty']);
         } else {
-            $cartItem = CartItem::fromAttributes($id, $name,$subtitle, $price, $totalPrice, $vat, $urlImg, $options);
+            $cartItem = CartItem::fromAttributes(
+              $id,
+              $name,
+              $subtitle,
+              $qty,
+              $price,
+              $totalPrice,
+              $vatFcCode,
+              $productFcCode,
+              $vat,
+              $urlImg,
+              $options
+            );
             $cartItem->setQuantity($qty);
         }
-
-        $cartItem->setTaxRate(config('cart.tax'));
 
         return $cartItem;
     }
@@ -564,7 +559,35 @@ class Cart
         return is_null($connection) ? config('database.default') : $connection;
     }
 
-    /**
+  /**
+   * @param array $items
+   * @return Collection
+   */
+  public function addBatch(array $items): Collection
+  {
+    foreach($items as $item){
+      $id = Arr::get($item, 'id');
+      $name = Arr::get($item, 'name');
+      $subtitle = Arr::get($item, 'subtitle');
+      $qty = Arr::get($item, 'qty');
+      $price = Arr::get($item, 'price');
+      $totalPrice = Arr::get($item, 'totalPrice');
+      $vat = Arr::get($item, 'vat');
+
+      $this->add(
+        $id,
+        $name,
+        $subtitle,
+        $qty,
+        $price,
+        $totalPrice,
+        $vat
+      );
+    }
+    return $this->content();
+  }
+
+  /**
      * Get the Formatted number
      *
      * @param $value
