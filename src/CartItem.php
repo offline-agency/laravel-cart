@@ -5,127 +5,43 @@ namespace OfflineAgency\LaravelCart;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
+use InvalidArgumentException;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
 
 class CartItem implements Arrayable, Jsonable {
-	/**
-	 * The rowID of the cart item.
-	 *
-	 * @var string
-	 */
+
 	public $rowId;
-
-	/**
-	 * The ID of the cart item.
-	 *
-	 * @var int|string
-	 */
 	public $id;
-
-	/**
-	 * The quantity for this cart item.
-	 *
-	 * @var int|float
-	 */
 	public $qty;
-
-	/**
-	 * The name of the cart item.
-	 *
-	 * @var string
-	 */
 	public $name;
-
-	/**
-	 * The subtitle of the cart item.
-	 *
-	 * @var string
-	 */
 	public $subtitle;
 
-	/**
-	 * The price without TAX of the cart item.
-	 *
-	 * @var float
-	 */
-	public $price;
-
-	/**
-	 * The price with TAX of the cart item.
-	 *
-	 * @var float
-	 */
+  public $price;
 	public $totalPrice;
 
-	/**
-	 * The price with discount of the cart item.
-	 *
-	 * @var float
-	 */
-	public $vat;
-
-	/**
-	 * The vat label of the cart item
-	 *
-	 * @var float
-	 */
+  public $vat;
 	public $vatLabel;
+	public $vatRate;
+  public $vatFcCode;
 
-	/**
-	 * The url image of the cart item
-	 *
-	 * @var float
-	 */
-	public $urlImg;
+  public $urlImg;
 
-	/**
-	 * The options for this cart item.
-	 *
-	 * @var array
-	 */
 	public $options;
 
-	/**
-	 * The FQN of the associated model.
-	 *
-	 * @var string|null
-	 */
-	public $associatedModel = null;
-
-	/**
-	 * The tax rate for the cart item.
-	 *
-	 * @var int|float
-	 */
-  public $taxRate = 0;
-  /**
-   * @var float|int|mixed|null
-   */
-  public $priceTax;
-  /**
-   * @var float|int|mixed|null
-   */
-  public $tax;
-  /**
-   * @var float|int|mixed|null
-   */
-  public $taxTotal;
-  /**
-   * @var float|int|mixed|null
-   */
-  public $subtotal;
-  /**
-   * @var float|int|mixed|null
-   */
-  public $total;
-  /**
-   * @var float|int|mixed|null
-   */
+  public $associatedModel;
+  public $model;
   public $productFcCode;
-  /**
-   * @var float|int|mixed|null
-   */
-  public $vatFcCode;
+
+  public $discountValue;
+  public $discountCode;
+  public $discountDescription;
+  public $discountRate;
+
+  public $couponCode;
+  public $couponType;
+  public $couponValue;
+
+
 
   /**
    * CartItem constructor.
@@ -189,7 +105,8 @@ class CartItem implements Arrayable, Jsonable {
    *
    * @return string
    */
-	public function price( int $decimals = null, string $decimalPoint = null,string $thousandSeparator = null ) {
+	public function price( int $decimals = null, string $decimalPoint = null,string $thousandSeparator = null ): string
+  {
 		return $this->numberFormat( $this->price, $decimals, $decimalPoint, $thousandSeparator );
 	}
 
@@ -230,9 +147,10 @@ class CartItem implements Arrayable, Jsonable {
 	 * @param string|null $decimalPoint
 	 * @param string|null $thousandSeparator
 	 *
-	 * @return float
-	 */
-	public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null ) {
+	 * @return string
+   */
+	public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null ): string
+  {
 		return $this->numberFormat( $this->total, $decimals, $decimalPoint, $thousandSeparator );
 	}
 
@@ -245,7 +163,8 @@ class CartItem implements Arrayable, Jsonable {
 	 *
 	 * @return string
 	 */
-	public function tax(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null ) {
+	public function tax(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null ): string
+  {
 		return $this->numberFormat( $this->tax, $decimals, $decimalPoint, $thousandSeparator );
 	}
 
@@ -271,7 +190,7 @@ class CartItem implements Arrayable, Jsonable {
 	public function setQuantity( $qty ) {
 
 		if ( empty( $qty ) || ! is_numeric( $qty ) ) {
-			throw new \InvalidArgumentException( 'Please supply a valid quantity. Provided: ' . $qty );
+			throw new InvalidArgumentException( 'Please supply a valid quantity. Provided: ' . $qty );
 		}
 
 		$this->qty = $qty;
@@ -303,7 +222,6 @@ class CartItem implements Arrayable, Jsonable {
 		$this->qty      = Arr::get( $attributes, 'qty', $this->qty );
 		$this->name     = Arr::get( $attributes, 'name', $this->name );
 		$this->price    = Arr::get( $attributes, 'price', $this->price );
-		$this->priceTax = $this->price + $this->tax;
 		$this->options  = new CartItemOptions( Arr::get( $attributes, 'options', $this->options ) );
 
 		$this->rowId = $this->generateRowId( $this->id, $this->options->all() );
@@ -319,21 +237,7 @@ class CartItem implements Arrayable, Jsonable {
 	public function associate( $model ): CartItem
   {
 		$this->associatedModel = is_string( $model ) ? $model : get_class( $model );
-
-		return $this;
-	}
-
-	/**
-	 * Set the tax rate.
-	 *
-	 * @param int|float $taxRate
-	 *
-	 * @return CartItem
-	 */
-	public function setTaxRate( $taxRate ): CartItem
-  {
-		$this->taxRate = $taxRate;
-
+    $this->model = $model;
 		return $this;
 	}
 
@@ -535,4 +439,20 @@ class CartItem implements Arrayable, Jsonable {
   {
     return number_format( $value, $decimals, $decimalPoint, $thousandSeparator );
 	}
+
+  /**
+   * @param string $couponCode
+   * @param string $couponType
+   * @param float $couponValue
+   */
+  public function applyCoupon(
+    string $couponCode,
+    string $couponType,
+    float $couponValue
+  )
+  {
+    $this->couponCode = $couponCode;
+    $this->couponType = $couponType;
+    $this->couponValue = $couponValue;
+  }
 }
