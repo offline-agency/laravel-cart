@@ -81,4 +81,41 @@ class CartItemTest extends TestCase
 
     $this->assertEquals($json, $cartItem->toJson());
   }
+
+  /** @test */
+  public function it_can_apply_a_coupon()
+  {
+    $cartItem = new CartItem(
+      1,
+      'First Cart item',
+      'This is a simple description',
+      1,
+      1000.00,
+      1200.22,
+      '0',
+      '0',
+      200.22,
+      'https://ecommerce.test/images/item-name.png',
+      ['size' => 'XL', 'color' => 'red']
+    );
+
+    $cartItem->applyCoupon(
+'BLACK_FRIDAY2021',
+'percentage',
+      100
+    );
+
+    $this->assertEquals('BLACK_FRIDAY2021', $cartItem->couponCode);
+    $this->assertEquals('percentage', $cartItem->couponType);
+    $this->assertEquals(100, $cartItem->couponValue);
+    $this->assertEquals(0, $cartItem->price);
+    $this->assertEquals(0, $cartItem->vat);
+    $this->assertEquals(0, $cartItem->totalPrice);
+
+    $this->assertEquals(0, $cartItem->discountCode);
+    $this->assertEquals(0, $cartItem->discountDescription);
+    $this->assertEquals(0, $cartItem->discountRate);
+    $this->assertEquals(0, $cartItem->discountValue;
+
+  }
 }
