@@ -89,7 +89,7 @@ class CartItem implements Arrayable, Jsonable
         $this->productFcCode = $productFcCode;
         $this->vat = floatval($vat);
         $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
-        $this->vatRate = $this->formatFloat( 100 * $this->vat / $this->totalPrice);
+        $this->vatRate = $this->formatFloat(100 * $this->vat / $this->totalPrice);
         $this->urlImg = $urlImg;
         $this->options = new CartItemOptions($options);
         $this->rowId = $this->generateRowId($id, $options);
@@ -356,54 +356,56 @@ class CartItem implements Arrayable, Jsonable
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
-  /**
-   * @param string $couponCode
-   * @param string $couponType
-   * @param float $couponValue
-   * @return CartItem
-   */
+    /**
+     * @param string $couponCode
+     * @param string $couponType
+     * @param float  $couponValue
+     *
+     * @return CartItem
+     */
     public function applyCoupon(
         string $couponCode,
         string $couponType,
         float $couponValue
-    ): CartItem
-    {
+    ): CartItem {
         $this->couponCode = $couponCode;
         $this->couponType = $couponType;
         $this->couponValue = $couponValue;
 
-        if($couponType === 'fixed'){
-          $this->discountValue = $couponValue;
-          $this->discountRate = $this->formatFloat(100 * $couponValue / $this->totalPrice);
+        if ($couponType === 'fixed') {
+            $this->discountValue = $couponValue;
+            $this->discountRate = $this->formatFloat(100 * $couponValue / $this->totalPrice);
 
-          $this->totalPrice = $this->totalPrice - $couponValue;
-          $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-          $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-        }else if($couponType === 'percentage'){
-          $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
-          $this->discountValue = $discountValue;
-          $this->discountRate = $couponValue;
+            $this->totalPrice = $this->totalPrice - $couponValue;
+            $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+            $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+        } elseif ($couponType === 'percentage') {
+            $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
+            $this->discountValue = $discountValue;
+            $this->discountRate = $couponValue;
 
-          $this->totalPrice =  $this->formatFloat($this->totalPrice - $discountValue);
-          $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-          $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-        }else{
-          throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
+            $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
+            $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+            $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+        } else {
+            throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
         }
+
         return $this;
     }
 
-  /**
-   * @param float $value
-   * @return float
-   */
-  private function formatFloat(float $value): float
-  {
-    return (float) number_format(
-      $value, // the number to format
+    /**
+     * @param float $value
+     *
+     * @return float
+     */
+    private function formatFloat(float $value): float
+    {
+        return (float) number_format(
+            $value, // the number to format
       2, // how many decimal points
-      ".", // decimal separator
-      "" // thousands separator, set it to blank
-    );
-  }
+      '.', // decimal separator
+      '' // thousands separator, set it to blank
+        );
+    }
 }
