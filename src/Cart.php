@@ -627,42 +627,41 @@ class Cart
         if (is_null($thousandSeparator)) {
             $thousandSeparator = is_null(config('cart.format.thousand_separator')) ? ',' : config('cart.format.thousand_separator');
         }
+
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
-  /**
-   * @param $rowId
-   * @param string $couponCode
-   * @param string $couponType
-   * @param float $couponValue
-   */
-  public function applyCoupon(
-      $rowId,
-      string $couponCode,
-      string $couponType,
-      float $couponValue
-    )
-    {
+    /**
+     * @param $rowId
+     * @param string $couponCode
+     * @param string $couponType
+     * @param float  $couponValue
+     */
+    public function applyCoupon(
+        $rowId,
+        string $couponCode,
+        string $couponType,
+        float $couponValue
+    ) {
+        $cartItem = $this->get($rowId);
 
-      $cartItem = $this->get($rowId);
+        $cartItem->applyCoupon(
+            $couponCode,
+            $couponType,
+            $couponValue
+        );
 
-      $cartItem->applyCoupon(
-        $couponCode,
-        $couponType,
-        $couponValue
-      );
+        $content = $this->getContent();
 
-      $content = $this->getContent();
+        $content->put($cartItem->rowId, $cartItem);
 
-      $content->put($cartItem->rowId, $cartItem);
+        $this->session->put($this->instance, $content);
 
-      $this->session->put($this->instance, $content);
-
-      array_push($this->coupons, (object)[
-        'rowId' => $rowId,
-        'couponCode' => $couponCode,
-        'couponType' => $couponType,
-        'couponValue' => $couponValue
-      ]);
+        array_push($this->coupons, (object) [
+            'rowId'       => $rowId,
+            'couponCode'  => $couponCode,
+            'couponType'  => $couponType,
+            'couponValue' => $couponValue,
+        ]);
     }
 }
