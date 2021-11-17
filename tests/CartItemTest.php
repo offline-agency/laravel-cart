@@ -102,12 +102,12 @@ class CartItemTest extends TestCase
         );
 
         $cartItem->applyCoupon(
-            'BLACK_FRIDAY_2021',
+            'BLACK_FRIDAY_PERCENTAGE_2021',
             'percentage',
             50
         );
 
-        $this->assertEquals('BLACK_FRIDAY_2021', $cartItem->couponCode);
+        $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $cartItem->couponCode);
         $this->assertEquals('percentage', $cartItem->couponType);
         $this->assertEquals(50, $cartItem->couponValue);
         $this->assertEquals(514.32, $cartItem->price);
@@ -138,12 +138,12 @@ class CartItemTest extends TestCase
     );
 
     $cartItem->applyCoupon(
-      'BLACK_FRIDAY_2021',
+      'BLACK_FRIDAY_FIXED_2021',
       'fixed',
       100
     );
 
-    $this->assertEquals('BLACK_FRIDAY_2021', $cartItem->couponCode);
+    $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $cartItem->couponCode);
     $this->assertEquals('fixed', $cartItem->couponType);
     $this->assertEquals(100, $cartItem->couponValue);
     $this->assertEquals(942.94, $cartItem->price);
@@ -177,7 +177,7 @@ class CartItemTest extends TestCase
     );
 
     $cartItem->applyCoupon(
-      'BLACK_FRIDAY2021',
+      'BLACK_FRIDAY_INVALID_2021',
       'not-valid-type',
       100
     );

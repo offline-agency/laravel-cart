@@ -1438,6 +1438,104 @@ class CartTest extends TestCase
         event(new Logout('', $user));
     }
 
+  /** @test */
+  public function it_will_add_a_fixed_coupon_to_a_cart_item()
+  {
+    $cart = $this->getCart();
+    $cartItem = $cart->add(
+      1,
+      'First Cart item',
+      'This is a simple description',
+      1,
+      1000.00,
+      1200.22,
+      200.22,
+      '0',
+      '0',
+      'https://ecommerce.test/images/item-name.png',
+      ['size' => 'XL', 'color' => 'red']
+    );
+
+    $cart->applyCoupon(
+      '07d5da5550494c62daf9993cf954303f',
+      'BLACK_FRIDAY_FIXED_2021',
+      'fixed',
+      100
+    );
+
+    $this->assertIsArray($cart->coupons);
+    $this->assertCount(1, $cart->coupons);
+    $this->assertEquals(
+      (object) [
+        'rowId' => '07d5da5550494c62daf9993cf954303f',
+        'couponCode' => 'BLACK_FRIDAY_FIXED_2021',
+        'couponType' => 'fixed',
+        'couponValue' => 100
+      ],
+      $cart->coupons[0]
+    );
+    $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $cartItem->couponCode);
+    $this->assertEquals('fixed', $cartItem->couponType);
+    $this->assertEquals(100, $cartItem->couponValue);
+    $this->assertEquals(942.94, $cartItem->price);
+    $this->assertEquals(157.28, $cartItem->vat);
+    $this->assertEquals(1100.22, $cartItem->totalPrice);
+
+    $this->assertNull($cartItem->discountCode);
+    $this->assertNull($cartItem->discountDescription);
+    $this->assertEquals(8.33, $cartItem->discountRate);
+    $this->assertEquals(100, $cartItem->discountValue);
+  }
+
+  /** @test */
+  public function it_will_add_a_percentage_coupon_to_a_cart_item()
+  {
+    $cart = $this->getCart();
+    $cartItem = $cart->add(
+      1,
+      'First Cart item',
+      'This is a simple description',
+      1,
+      1000.00,
+      1200.22,
+      200.22,
+      '0',
+      '0',
+      'https://ecommerce.test/images/item-name.png',
+      ['size' => 'XL', 'color' => 'red']
+    );
+
+    $cart->applyCoupon(
+      '07d5da5550494c62daf9993cf954303f',
+      'BLACK_FRIDAY_PERCENTAGE_2021',
+      'percentage',
+      50
+    );
+
+    $this->assertIsArray($cart->coupons);
+    $this->assertCount(1, $cart->coupons);
+    $this->assertEquals(
+      (object) [
+        'rowId' => '07d5da5550494c62daf9993cf954303f',
+        'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
+        'couponType' => 'percentage',
+        'couponValue' => 50
+      ],
+      $cart->coupons[0]
+    );
+
+    $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $cartItem->couponCode);
+    $this->assertEquals('percentage', $cartItem->couponType);
+    $this->assertEquals(50, $cartItem->couponValue);
+    $this->assertEquals(514.32, $cartItem->price);
+    $this->assertEquals(85.79, $cartItem->vat);
+    $this->assertEquals(600.11, $cartItem->totalPrice);
+
+    $this->assertNull( $cartItem->discountCode);
+    $this->assertNull($cartItem->discountDescription);
+    $this->assertEquals(50, $cartItem->discountRate);
+    $this->assertEquals(600.11, $cartItem->discountValue);
+  }
     /**
      * Get an instance of the cart.
      *
