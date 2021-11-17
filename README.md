@@ -1,6 +1,13 @@
-##Laravel Cart
+#Laravel Cart
+[![Latest Stable Version](https://poser.pugx.org/offline-agency/laravel-cart/v/stable)](https://packagist.org/packages/offline-agency/laravel-cart)
+[![MIT Licensed](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
+[![Laravel](https://github.com/offline-agency/laravel-cart/actions/workflows/laravel.yml/badge.svg?branch=main)](https://github.com/offline-agency/laravel-cart/actions/workflows/laravel.yml)
+[![StyleCI](https://github.styleci.io/repos/167236902/shield)](https://styleci.io/repos/167236902)
+[![Total Downloads](https://img.shields.io/packagist/dt/offline-agency/laravel-cart.svg?style=flat-square)](https://packagist.org/packages/offline-agency/laravel-cart)
 
 A simple cart implementation for Laravel.
+
+![Laravel Cart](https://banners.beyondco.de/Laravel%20Cart.png?theme=light&packageManager=composer+require&packageName=offline-agency%2Flaravel-cart&pattern=aztec&style=style_1&description=Laravel+shopping+cart+with+fiscal+support&md=1&showWatermark=0&fontSize=125px&images=shopping-cart)
 
 ## Installation
 
@@ -246,7 +253,7 @@ This way of searching gives you total control over the search process and gives 
 
 On multiple instances the Cart will return to you a Collection. This is just a simple Laravel Collection, so all methods you can call on a Laravel Collection are also available on the result.
 
-As an example, you can quicky get the number of unique products in a cart:
+As an example, you can quickly get the number of unique products in a cart:
 
 ```php
 Cart::content()->count();
@@ -297,7 +304,7 @@ That way you can access your model right from the `CartItem`!
 
 The model can be accessed via the `model` property on the CartItem.
 
-**If your model implements the `Buyable` interface and you used your model to add the item to the cart, it will associate automatically.**
+**If your model implements the `Buyable` interface, and you used your model to add the item to the cart, it will associate automatically.**
 
 Here is an example:
 
@@ -356,6 +363,14 @@ If you want to retrieve the cart from the database and restore it, all you have 
     
     // To restore a cart instance named 'wishlist'
     Cart::instance('wishlist')->restore('username');
+
+### Add a coupon to cart instance for a specific cart item
+```php
+// First we'll add the item to the cart.
+$cartItem = Cart::add('293ad', 'Product 1', 1, 9.99, ['size' => 'large']);
+
+Cart::addCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_2021','fixed', 100);
+```
 
 ## Exceptions
 
@@ -437,3 +452,31 @@ Cart::add('1239ad0', 'Product 2', 2, 5.95, ['size' => 'large']);
    	</tfoot>
 </table>
 ```
+## Testing
+
+Run the tests with:
+
+```bash
+composer test
+```
+
+## Contributing
+
+Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+
+## Security
+
+If you discover any security-related issues, please email <support@offlineagency.com> instead of using the issue tracker.
+
+## Credits
+
+- [Giacomo Fabbian](https://github.com/Giacomo92)
+- [All Contributors](../../contributors)
+
+## About us
+
+Offline Agency is a web design agency based in Padua, Italy. You'll find an overview of our projects [on our website](https://offlineagency.it/).
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
