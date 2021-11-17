@@ -115,7 +115,7 @@ class CartItemTest extends TestCase
     $this->assertEquals(0, $cartItem->discountCode);
     $this->assertEquals(0, $cartItem->discountDescription);
     $this->assertEquals(0, $cartItem->discountRate);
-    $this->assertEquals(0, $cartItem->discountValue;
+    $this->assertEquals(0, $cartItem->discountValue);
 
   }
 }
