@@ -373,25 +373,26 @@ class CartItem implements Arrayable, Jsonable {
 		return null;
 	}
 
-	/**
-	 * Create a new instance from a Buyable.
-	 *
-	 * @param Buyable $item
-	 * @param array $options
-	 *
-	 * @return CartItem
-	 */
-	public static function fromBuyable( Buyable $item, array $options = [] ): CartItem
+  /**
+   * Create a new instance from a Buyable.
+   *
+   * @param Buyable $item
+   * @return CartItem
+   */
+	public static function fromBuyable( Buyable $item ): CartItem
   {
 		return new self(
-      $item->getBuyableIdentifier( $options ),
-      $item->getBuyableDescription( $options ),
-      $item->getBuyablePrice( $options ),
-      $item->getBuyablePrice( $options ),
-      $item->getBuyablePrice( $options ),
-      $item->getBuyablePrice( $options ),
-      $item->getBuyablePrice( $options ),
-      $options
+      $item->getId(),
+      $item->getName(),
+      $item->getSubtitle(),
+      $item->getQty(),
+      $item->getPrice(),
+      $item->getTotalPrice(),
+      $item->getVatFcCode(),
+      $item->getProductFcCode(),
+      $item->getVat(),
+      $item->getSubtitle(),
+      $item->getOptions()
     );
 	}
 

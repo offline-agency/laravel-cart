@@ -477,7 +477,7 @@ class Cart
   ): CartItem
   {
         if ($id instanceof Buyable) {
-            $cartItem = CartItem::fromBuyable($id, []);
+            $cartItem = CartItem::fromBuyable($id);
             $cartItem->setQuantity($name ?: 1);
             $cartItem->associate($id);
         } elseif (is_array($id)) {
