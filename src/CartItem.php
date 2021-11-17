@@ -282,11 +282,11 @@ class CartItem implements Arrayable, Jsonable {
 	 * @return void
 	 */
 	public function updateFromBuyable( Buyable $item ) {
-		$this->id       = $item->getId();
-		$this->name     = $item->getName();
-		$this->price    = $item->getPrice();
-		$this->vat = $item->getVat();
-	}
+    $this->id = $item->getId();
+    $this->name = $item->getName();
+    $this->price = $item->getPrice();
+    $this->vat = $item->getVat();
+  }
 
 	/**
 	 * Update the cart item from an array.
