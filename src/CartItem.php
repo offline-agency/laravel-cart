@@ -70,13 +70,13 @@ class CartItem implements Arrayable, Jsonable
         array $options = []
     ) {
         if (empty($id)) {
-            throw new \InvalidArgumentException('Please supply a valid identifier.');
+            throw new InvalidArgumentException('Please supply a valid identifier.');
         }
         if (empty($name)) {
-            throw new \InvalidArgumentException('Please supply a valid name.');
+            throw new InvalidArgumentException('Please supply a valid name.');
         }
         if (strlen($price) < 0 || !is_numeric($price)) {
-            throw new \InvalidArgumentException('Please supply a valid price.');
+            throw new InvalidArgumentException('Please supply a valid price.');
         }
 
         $this->id = $id;
@@ -89,95 +89,10 @@ class CartItem implements Arrayable, Jsonable
         $this->productFcCode = $productFcCode;
         $this->vat = floatval($vat);
         $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
+        $this->vatRate = $this->formatFloat( 100 * $this->vat / $this->totalPrice);
         $this->urlImg = $urlImg;
         $this->options = new CartItemOptions($options);
         $this->rowId = $this->generateRowId($id, $options);
-    }
-
-    /**
-     * Returns the formatted price without TAX.
-     *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
-     * @return string
-     */
-    public function price(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->price, $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Returns the formatted price with TAX.
-     *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
-     * @return string
-     */
-    public function priceTax(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->priceTax, $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Returns the formatted subtotal.
-     * Subtotal is price for whole CartItem without TAX.
-     *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
-     * @return string
-     */
-    public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->subtotal, $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Returns the formatted total.
-     * Total is price for whole CartItem with TAX.
-     *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
-     * @return string
-     */
-    public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->total, $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Returns the formatted tax.
-     *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
-     * @return string
-     */
-    public function tax(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->tax, $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Returns the formatted tax.
-     *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
-     * @return float
-     */
-    public function taxTotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
-    {
-        return $this->taxTotal;
     }
 
     /**
@@ -441,18 +356,54 @@ class CartItem implements Arrayable, Jsonable
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
-    /**
-     * @param string $couponCode
-     * @param string $couponType
-     * @param float  $couponValue
-     */
+  /**
+   * @param string $couponCode
+   * @param string $couponType
+   * @param float $couponValue
+   * @return CartItem
+   */
     public function applyCoupon(
         string $couponCode,
         string $couponType,
         float $couponValue
-    ) {
+    ): CartItem
+    {
         $this->couponCode = $couponCode;
         $this->couponType = $couponType;
         $this->couponValue = $couponValue;
+
+        if($couponType === 'fixed'){
+          $this->discountValue = $couponValue;
+          $this->discountRate = $this->formatFloat(100 * $couponValue / $this->totalPrice);
+
+          $this->totalPrice = $this->totalPrice - $couponValue;
+          $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+          $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+        }else if($couponType === 'percentage'){
+          $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
+          $this->discountValue = $discountValue;
+          $this->discountRate = $couponValue;
+
+          $this->totalPrice =  $this->formatFloat($this->totalPrice - $discountValue);
+          $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+          $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+        }else{
+          throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
+        }
+        return $this;
     }
+
+  /**
+   * @param float $value
+   * @return float
+   */
+  private function formatFloat(float $value): float
+  {
+    return (float) number_format(
+      $value, // the number to format
+      2, // how many decimal points
+      ".", // decimal separator
+      "" // thousands separator, set it to blank
+    );
+  }
 }

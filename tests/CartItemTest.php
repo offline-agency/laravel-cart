@@ -3,6 +3,7 @@
 namespace OfflineAgency\Tests\LaravelCart;
 
 use Illuminate\Foundation\Application;
+use InvalidArgumentException;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\CartServiceProvider;
 use Orchestra\Testbench\TestCase;
@@ -84,7 +85,7 @@ class CartItemTest extends TestCase
     }
 
     /** @test */
-    public function it_can_apply_a_coupon()
+    public function it_can_apply_a_coupon_percentage()
     {
         $cartItem = new CartItem(
             1,
@@ -101,21 +102,85 @@ class CartItemTest extends TestCase
         );
 
         $cartItem->applyCoupon(
-            'BLACK_FRIDAY2021',
+            'BLACK_FRIDAY_2021',
             'percentage',
-            100
+            50
         );
 
-        $this->assertEquals('BLACK_FRIDAY2021', $cartItem->couponCode);
+        $this->assertEquals('BLACK_FRIDAY_2021', $cartItem->couponCode);
         $this->assertEquals('percentage', $cartItem->couponType);
-        $this->assertEquals(100, $cartItem->couponValue);
-        $this->assertEquals(0, $cartItem->price);
-        $this->assertEquals(0, $cartItem->vat);
-        $this->assertEquals(0, $cartItem->totalPrice);
+        $this->assertEquals(50, $cartItem->couponValue);
+        $this->assertEquals(514.32, $cartItem->price);
+        $this->assertEquals(85.79, $cartItem->vat);
+        $this->assertEquals(600.11, $cartItem->totalPrice);
 
-        $this->assertEquals(0, $cartItem->discountCode);
-        $this->assertEquals(0, $cartItem->discountDescription);
-        $this->assertEquals(0, $cartItem->discountRate);
-        $this->assertEquals(0, $cartItem->discountValue);
+        $this->assertNull( $cartItem->discountCode);
+        $this->assertNull($cartItem->discountDescription);
+        $this->assertEquals(50, $cartItem->discountRate);
+        $this->assertEquals(600.11, $cartItem->discountValue);
     }
+
+  /** @test */
+  public function it_can_apply_a_coupon_fixed()
+  {
+    $cartItem = new CartItem(
+      1,
+      'First Cart item',
+      'This is a simple description',
+      1,
+      1000.00,
+      1200.22,
+      '0',
+      '0',
+      200.22,
+      'https://ecommerce.test/images/item-name.png',
+      ['size' => 'XL', 'color' => 'red']
+    );
+
+    $cartItem->applyCoupon(
+      'BLACK_FRIDAY_2021',
+      'fixed',
+      100
+    );
+
+    $this->assertEquals('BLACK_FRIDAY_2021', $cartItem->couponCode);
+    $this->assertEquals('fixed', $cartItem->couponType);
+    $this->assertEquals(100, $cartItem->couponValue);
+    $this->assertEquals(942.94, $cartItem->price);
+    $this->assertEquals(157.28, $cartItem->vat);
+    $this->assertEquals(1100.22, $cartItem->totalPrice);
+
+    $this->assertNull($cartItem->discountCode);
+    $this->assertNull($cartItem->discountDescription);
+    $this->assertEquals(8.33, $cartItem->discountRate);
+    $this->assertEquals(100, $cartItem->discountValue);
+  }
+
+  /** @test */
+  public function it_can_throw_an_exception_with_invalid_coupon_type()
+  {
+    $this->expectException(InvalidArgumentException::class);
+    $this->expectExceptionMessage('Coupon type not handled. Possible values: fixed and percentage');
+
+    $cartItem = new CartItem(
+      1,
+      'First Cart item',
+      'This is a simple description',
+      1,
+      1000.00,
+      1200.22,
+      '0',
+      '0',
+      200.22,
+      'https://ecommerce.test/images/item-name.png',
+      ['size' => 'XL', 'color' => 'red']
+    );
+
+    $cartItem->applyCoupon(
+      'BLACK_FRIDAY2021',
+      'not-valid-type',
+      100
+    );
+
+  }
 }
