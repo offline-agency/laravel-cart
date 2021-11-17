@@ -1,4 +1,5 @@
-#Laravel Cart
+# Laravel Cart
+
 [![Latest Stable Version](https://poser.pugx.org/offline-agency/laravel-cart/v/stable)](https://packagist.org/packages/offline-agency/laravel-cart)
 [![MIT Licensed](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
 [![Laravel](https://github.com/offline-agency/laravel-cart/actions/workflows/laravel.yml/badge.svg?branch=main)](https://github.com/offline-agency/laravel-cart/actions/workflows/laravel.yml)
