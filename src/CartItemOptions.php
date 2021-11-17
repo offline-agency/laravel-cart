@@ -1,6 +1,6 @@
 <?php
 
-namespace OfflineAgency\OaLaravelCart;
+namespace OfflineAgency\LaravelCart;
 
 use Illuminate\Support\Collection;
 
@@ -10,6 +10,7 @@ class CartItemOptions extends Collection
      * Get the option by the given key.
      *
      * @param string $key
+     *
      * @return mixed
      */
     public function __get($key)

@@ -1,434 +1,411 @@
 <?php
 
-namespace OfflineAgency\OaLaravelCart;
+namespace OfflineAgency\LaravelCart;
 
-use OfflineAgency\OaLaravelCart\Contracts\Buyable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Support\Arr;
+use InvalidArgumentException;
+use OfflineAgency\LaravelCart\Contracts\Buyable;
 
-class CartItem implements Arrayable, Jsonable {
-	/**
-	 * The rowID of the cart item.
-	 *
-	 * @var string
-	 */
-	public $rowId;
+class CartItem implements Arrayable, Jsonable
+{
+    public $rowId;
+    public $id;
+    public $qty;
+    public $name;
+    public $subtitle;
 
-	/**
-	 * The ID of the cart item.
-	 *
-	 * @var int|string
-	 */
-	public $id;
+    public $price;
+    public $totalPrice;
 
-	/**
-	 * The quantity for this cart item.
-	 *
-	 * @var int|float
-	 */
-	public $qty;
+    public $vat;
+    public $vatLabel;
+    public $vatRate;
+    public $vatFcCode;
 
-	/**
-	 * The name of the cart item.
-	 *
-	 * @var string
-	 */
-	public $name;
+    public $urlImg;
 
-	/**
-	 * The subtitle of the cart item.
-	 *
-	 * @var string
-	 */
-	public $subtitle;
+    public $options;
 
-	/**
-	 * The price without TAX of the cart item.
-	 *
-	 * @var float
-	 */
-	public $price;
+    public $associatedModel;
+    public $model;
+    public $productFcCode;
 
-	/**
-	 * The price with TAX of the cart item.
-	 *
-	 * @var float
-	 */
-	public $totalPrice;
+    public $discountValue;
+    public $discountCode;
+    public $discountDescription;
+    public $discountRate;
 
-	/**
-	 * The price with discount of the cart item.
-	 *
-	 * @var float
-	 */
-	public $vat;
+    public $couponCode;
+    public $couponType;
+    public $couponValue;
 
-	/**
-	 * The vat label of the cart item
-	 *
-	 * @var float
-	 */
-	public $vatLabel;
+    /**
+     * CartItem constructor.
+     *
+     * @param int|string $id
+     * @param string     $name
+     * @param string     $subtitle
+     * @param $qty
+     * @param float $price
+     * @param $totalPrice
+     * @param $vatFcCode
+     * @param $productFcCode
+     * @param $vat
+     * @param $urlImg
+     * @param array $options
+     */
+    public function __construct(
+        $id,
+        string $name,
+        string $subtitle,
+        $qty,
+        float $price,
+        $totalPrice,
+        $vatFcCode,
+        $productFcCode,
+        $vat,
+        $urlImg,
+        array $options = []
+    ) {
+        if (empty($id)) {
+            throw new InvalidArgumentException('Please supply a valid identifier.');
+        }
+        if (empty($name)) {
+            throw new InvalidArgumentException('Please supply a valid name.');
+        }
+        if (strlen($price) < 0 || !is_numeric($price)) {
+            throw new InvalidArgumentException('Please supply a valid price.');
+        }
 
-	/**
-	 * The url image of the cart item
-	 *
-	 * @var float
-	 */
-	public $urlImg;
+        $this->id = $id;
+        $this->name = $name;
+        $this->subtitle = $subtitle;
+        $this->qty = $qty;
+        $this->price = floatval($price);
+        $this->totalPrice = floatval($totalPrice);
+        $this->vatFcCode = $vatFcCode;
+        $this->productFcCode = $productFcCode;
+        $this->vat = floatval($vat);
+        $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
+        $this->vatRate = $this->formatFloat(100 * $this->vat / $this->totalPrice);
+        $this->urlImg = $urlImg;
+        $this->options = new CartItemOptions($options);
+        $this->rowId = $this->generateRowId($id, $options);
+    }
 
-	/**
-	 * The options for this cart item.
-	 *
-	 * @var array
-	 */
-	public $options;
+    /**
+     * Set the quantity for this cart item.
+     *
+     * @param int|float $qty
+     */
+    public function setQuantity($qty)
+    {
+        if (empty($qty) || !is_numeric($qty)) {
+            throw new InvalidArgumentException('Please supply a valid quantity. Provided: '.$qty);
+        }
 
-	/**
-	 * The FQN of the associated model.
-	 *
-	 * @var string|null
-	 */
-	private $associatedModel = null;
+        $this->qty = $qty;
+    }
 
-	/**
-	 * The tax rate for the cart item.
-	 *
-	 * @var int|float
-	 */
-	private $taxRate = 0;
+    /**
+     * Update the cart item from a Buyable.
+     *
+     * @param Buyable $item
+     *
+     * @return void
+     */
+    public function updateFromBuyable(Buyable $item)
+    {
+        $this->id = $item->getId();
+        $this->name = $item->getName();
+        $this->price = $item->getPrice();
+        $this->vat = $item->getVat();
+    }
 
-	/**
-	 * CartItem constructor.
-	 *
-	 * @param int|string $id
-	 * @param string $name
-	 * @param float $price
-	 * @param array $options
-	 */
-	public function __construct( $id, $name,$subtitle, $price, $totalPrice, $vat, $urlImg, array $options = [] ) {
-		if ( empty( $id ) ) {
-			throw new \InvalidArgumentException( 'Please supply a valid identifier.' );
-		}
-		if ( empty( $name ) ) {
-			throw new \InvalidArgumentException( 'Please supply a valid name.' );
-		}
-		if ( strlen( $price ) < 0 || ! is_numeric( $price ) ) {
-			throw new \InvalidArgumentException( 'Please supply a valid price.' );
-		}
+    /**
+     * Update the cart item from an array.
+     *
+     * @param array $attributes
+     *
+     * @return void
+     */
+    public function updateFromArray(array $attributes)
+    {
+        $this->id = Arr::get($attributes, 'id', $this->id);
+        $this->qty = Arr::get($attributes, 'qty', $this->qty);
+        $this->name = Arr::get($attributes, 'name', $this->name);
+        $this->price = Arr::get($attributes, 'price', $this->price);
+        $this->options = new CartItemOptions(Arr::get($attributes, 'options', $this->options));
 
-		$this->id       = $id;
-		$this->name     = $name;
-		$this->subtitle = $subtitle;
-		$this->price    = floatval( $price );
-		$this->totalPrice = floatval( $totalPrice );
-		$this->vat        =        floatval( $vat );
-		$this->vatLabel = $this->vat  > 0 ? "Iva Inclusa" : "Esente Iva";
-		$this->urlImg   = $urlImg;
-		$this->options  = new CartItemOptions( $options );
-		$this->rowId    = $this->generateRowId( $id, $options );
-	}
+        $this->rowId = $this->generateRowId($this->id, $this->options->all());
+    }
 
-	/**
-	 * Returns the formatted price without TAX.
-	 *
-	 * @param int $decimals
-	 * @param string $decimalPoint
-	 * @param string $thousandSeperator
-	 *
-	 * @return string
-	 */
-	public function price( $decimals = null, $decimalPoint = null, $thousandSeperator = null ) {
-		return $this->numberFormat( $this->price, $decimals, $decimalPoint, $thousandSeperator );
-	}
+    /**
+     * Associate the cart item with the given model.
+     *
+     * @param mixed $model
+     *
+     * @return CartItem
+     */
+    public function associate($model): CartItem
+    {
+        $this->associatedModel = is_string($model) ? $model : get_class($model);
+        $this->model = $model;
 
-	/**
-	 * Returns the formatted price with TAX.
-	 *
-	 * @param int $decimals
-	 * @param string $decimalPoint
-	 * @param string $thousandSeperator
-	 *
-	 * @return string
-	 */
-	public function priceTax( $decimals = null, $decimalPoint = null, $thousandSeperator = null ) {
-		return $this->numberFormat( $this->priceTax, $decimals, $decimalPoint, $thousandSeperator );
-	}
+        return $this;
+    }
 
-	/**
-	 * Returns the formatted subtotal.
-	 * Subtotal is price for whole CartItem without TAX
-	 *
-	 * @param int $decimals
-	 * @param string $decimalPoint
-	 * @param string $thousandSeperator
-	 *
-	 * @return string
-	 */
-	public function subtotal( $decimals = null, $decimalPoint = null, $thousandSeperator = null ) {
-		return $this->numberFormat( $this->subtotal, $decimals, $decimalPoint, $thousandSeperator );
-	}
+    /**
+     * Get an attribute from the cart item or get the associated model.
+     *
+     * @param string $attribute
+     *
+     * @return mixed
+     */
+    public function __get(string $attribute)
+    {
+        if (property_exists($this, $attribute)) {
+            return $this->{$attribute};
+        }
 
-	/**
-	 * Returns the formatted total.
-	 * Total is price for whole CartItem with TAX
-	 *
-	 * @param int $decimals
-	 * @param string $decimalPoint
-	 * @param string $thousandSeperator
-	 *
-	 * @return float
-	 */
-	public function total( $decimals = null, $decimalPoint = null, $thousandSeperator = null ) {
-		return $this->numberFormat( $this->total, $decimals, $decimalPoint, $thousandSeperator );
-	}
+        if ($attribute === 'priceTax') {
+            return $this->price + $this->tax;
+        }
 
-	/**
-	 * Returns the formatted tax.
-	 *
-	 * @param int $decimals
-	 * @param string $decimalPoint
-	 * @param string $thousandSeperator
-	 *
-	 * @return string
-	 */
-	public function tax( $decimals = null, $decimalPoint = null, $thousandSeperator = null ) {
-		return $this->numberFormat( $this->tax, $decimals, $decimalPoint, $thousandSeperator );
-	}
+        if ($attribute === 'subtotal') {
+            return $this->qty * $this->price;
+        }
 
-	/**
-	 * Returns the formatted tax.
-	 *
-	 * @param int $decimals
-	 * @param string $decimalPoint
-	 * @param string $thousandSeperator
-	 *
-	 * @return float
-	 */
-	public function taxTotal( $decimals = null, $decimalPoint = null, $thousandSeperator = null ) {
-		return $this->taxTotal;
-	}
+        if ($attribute === 'total') {
+            return $this->qty * ($this->priceTax);
+        }
 
-	/**
-	 * Set the quantity for this cart item.
-	 *
-	 * @param int|float $qty
-	 */
-	public function setQuantity( $qty ) {
-		if ( empty( $qty ) || ! is_numeric( $qty ) ) {
-			throw new \InvalidArgumentException( 'Please supply a valid quantity.' );
-		}
+        if ($attribute === 'tax') {
+            return $this->price * ($this->taxRate / 100);
+        }
 
-		$this->qty = $qty;
-	}
+        if ($attribute === 'taxTotal') {
+            return $this->tax * $this->qty;
+        }
 
-	/**
-	 * Update the cart item from a Buyable.
-	 *
-	 * @param \OfflineAgency\OaLaravelCart\Contracts\Buyable $item
-	 *
-	 * @return void
-	 */
-	public function updateFromBuyable( Buyable $item ) {
-		$this->id       = $item->getBuyableIdentifier( $this->options );
-		$this->name     = $item->getBuyableDescription( $this->options );
-		$this->price    = $item->getBuyablePrice( $this->options );
-		$this->priceTax = $this->price + $this->tax;
-	}
+        if ($attribute === 'model' && isset($this->associatedModel)) {
+            return with(new $this->associatedModel())->find($this->id);
+        }
 
-	/**
-	 * Update the cart item from an array.
-	 *
-	 * @param array $attributes
-	 *
-	 * @return void
-	 */
-	public function updateFromArray( array $attributes ) {
-		$this->id       = array_get( $attributes, 'id', $this->id );
-		$this->qty      = array_get( $attributes, 'qty', $this->qty );
-		$this->name     = array_get( $attributes, 'name', $this->name );
-		$this->price    = array_get( $attributes, 'price', $this->price );
-		$this->priceTax = $this->price + $this->tax;
-		$this->options  = new CartItemOptions( array_get( $attributes, 'options', $this->options ) );
+        return null;
+    }
 
-		$this->rowId = $this->generateRowId( $this->id, $this->options->all() );
-	}
+    /**
+     * Create a new instance from a Buyable.
+     *
+     * @param Buyable $item
+     *
+     * @return CartItem
+     */
+    public static function fromBuyable(Buyable $item): CartItem
+    {
+        return new self(
+            $item->getId(),
+            $item->getName(),
+            $item->getSubtitle(),
+            $item->getQty(),
+            $item->getPrice(),
+            $item->getTotalPrice(),
+            $item->getVatFcCode(),
+            $item->getProductFcCode(),
+            $item->getVat(),
+            $item->getSubtitle(),
+            $item->getOptions()
+        );
+    }
 
-	/**
-	 * Associate the cart item with the given model.
-	 *
-	 * @param mixed $model
-	 *
-	 * @return \OfflineAgency\OaLaravelCart\CartItem
-	 */
-	public function associate( $model ) {
-		$this->associatedModel = is_string( $model ) ? $model : get_class( $model );
+    /**
+     * Create a new instance from the given array.
+     *
+     * @param array $attributes
+     *
+     * @return CartItem
+     */
+    public static function fromArray(array $attributes): CartItem
+    {
+        $options = Arr::get($attributes, 'options', []);
 
-		return $this;
-	}
+        return new self(
+            $attributes['id'],
+            $attributes['name'],
+            $attributes['subtitle'],
+            $attributes['qty'],
+            $attributes['price'],
+            $attributes['totalPrice'],
+            $attributes['vatFcCode'],
+            $attributes['productFcCode'],
+            $attributes['vat'],
+            $attributes['urlImg'],
+            $options
+        );
+    }
 
-	/**
-	 * Set the tax rate.
-	 *
-	 * @param int|float $taxRate
-	 *
-	 * @return \OfflineAgency\OaLaravelCart\CartItem
-	 */
-	public function setTaxRate( $taxRate ) {
-		$this->taxRate = $taxRate;
+    /**
+     *  * Create a new instance from the given attributes.
+     *
+     * @param $id
+     * @param $name
+     * @param $subtitle
+     * @param $qty
+     * @param $price
+     * @param $totalPrice
+     * @param $vatFcCode
+     * @param $productFcCode
+     * @param $vat
+     * @param $urlImg
+     * @param array $options
+     *
+     * @return CartItem
+     */
+    public static function fromAttributes(
+        $id,
+        $name,
+        $subtitle,
+        $qty,
+        $price,
+        $totalPrice,
+        $vatFcCode,
+        $productFcCode,
+        $vat,
+        $urlImg,
+        array $options = []
+    ): CartItem {
+        return new self(
+            $id,
+            $name,
+            $subtitle,
+            $qty,
+            $price,
+            $totalPrice,
+            $vatFcCode,
+            $productFcCode,
+            $vat,
+            $urlImg,
+            $options
+        );
+    }
 
-		return $this;
-	}
+    /**
+     * Generate a unique id for the cart item.
+     *
+     * @param string $id
+     * @param array  $options
+     *
+     * @return string
+     */
+    protected function generateRowId(string $id, array $options): string
+    {
+        ksort($options);
 
-	/**
-	 * Get an attribute from the cart item or get the associated model.
-	 *
-	 * @param string $attribute
-	 *
-	 * @return mixed
-	 */
-	public function __get( $attribute ) {
-		if ( property_exists( $this, $attribute ) ) {
-			return $this->{$attribute};
-		}
+        return md5($id.serialize($options));
+    }
 
-		if ( $attribute === 'priceTax' ) {
-			return $this->price + $this->tax;
-		}
+    /**
+     * Get the instance as an array.
+     *
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return [
+            'rowId'         => $this->rowId,
+            'id'            => $this->id,
+            'name'          => $this->name,
+            'subtitle'      => $this->subtitle,
+            'qty'           => $this->qty,
+            'price'         => $this->price,
+            'vatFcCode'     => $this->vatFcCode,
+            'productFcCode' => $this->productFcCode,
+            'vat'           => $this->vat,
+            'urlImg'        => $this->urlImg,
+            'options'       => $this->options->toArray(),
+        ];
+    }
 
-		if ( $attribute === 'subtotal' ) {
-			return $this->qty * $this->price;
-		}
+    /**
+     * Convert the object to its JSON representation.
+     *
+     * @param int $options
+     *
+     * @return string
+     */
+    public function toJson($options = 0): string
+    {
+        return json_encode($this->toArray(), $options);
+    }
 
-		if ( $attribute === 'total' ) {
-			return $this->qty * ( $this->priceTax );
-		}
+    /**
+     * Get the formatted number.
+     *
+     * @param float  $value
+     * @param int    $decimals
+     * @param string $decimalPoint
+     * @param string $thousandSeparator
+     *
+     * @return string
+     */
+    private function numberFormat(float $value, int $decimals, string $decimalPoint, string $thousandSeparator): string
+    {
+        return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
+    }
 
-		if ( $attribute === 'tax' ) {
-			return $this->price * ( $this->taxRate / 100 );
-		}
+    /**
+     * @param string $couponCode
+     * @param string $couponType
+     * @param float  $couponValue
+     *
+     * @return CartItem
+     */
+    public function applyCoupon(
+        string $couponCode,
+        string $couponType,
+        float $couponValue
+    ): CartItem {
+        $this->couponCode = $couponCode;
+        $this->couponType = $couponType;
+        $this->couponValue = $couponValue;
 
-		if ( $attribute === 'taxTotal' ) {
-			return $this->tax * $this->qty;
-		}
+        if ($couponType === 'fixed') {
+            $this->discountValue = $couponValue;
+            $this->discountRate = $this->formatFloat(100 * $couponValue / $this->totalPrice);
 
-		if ( $attribute === 'model' && isset( $this->associatedModel ) ) {
-			return with( new $this->associatedModel )->find( $this->id );
-		}
+            $this->totalPrice = $this->totalPrice - $couponValue;
+            $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+            $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+        } elseif ($couponType === 'percentage') {
+            $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
+            $this->discountValue = $discountValue;
+            $this->discountRate = $couponValue;
 
-		return null;
-	}
+            $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
+            $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+            $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+        } else {
+            throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
+        }
 
-	/**
-	 * Create a new instance from a Buyable.
-	 *
-	 * @param \OfflineAgency\OaLaravelCart\Contracts\Buyable $item
-	 * @param array $options
-	 *
-	 * @return \OfflineAgency\OaLaravelCart\CartItem
-	 */
-	public static function fromBuyable( Buyable $item, array $options = [] ) {
-		return new self( $item->getBuyableIdentifier( $options ), $item->getBuyableDescription( $options ), $item->getBuyablePrice( $options ), $options );
-	}
+        return $this;
+    }
 
-	/**
-	 * Create a new instance from the given array.
-	 *
-	 * @param array $attributes
-	 *
-	 * @return \OfflineAgency\OaLaravelCart\CartItem
-	 */
-	public static function fromArray( array $attributes ) {
-		$options = array_get( $attributes, 'options', [] );
-
-		return new self( $attributes['id'], $attributes['name'], $attributes['price'], $options );
-	}
-
-
-	/**
-	 *  * Create a new instance from the given attributes.
-	 *
-	 * @param $id
-	 * @param $name
-	 * @param $subtitle
-	 * @param $price
-	 * @param $netPrice
-	 * @param $vatLabel
-	 * @param $urlImg
-	 * @param array $options
-	 *
-	 * @return CartItem
-	 */
-	public static function fromAttributes( $id, $name,$subtitle, $price, $totalPrice, $vat, $urlImg, array $options = [] ) {
-		return new self($id, $name,$subtitle, $price, $totalPrice, $vat, $urlImg, $options );
-	}
-
-	/**
-	 * Generate a unique id for the cart item.
-	 *
-	 * @param string $id
-	 * @param array $options
-	 *
-	 * @return string
-	 */
-	protected function generateRowId( $id, array $options ) {
-		ksort( $options );
-
-		return md5( $id . serialize( $options ) );
-	}
-
-	/**
-	 * Get the instance as an array.
-	 *
-	 * @return array
-	 */
-	public function toArray() {
-		return [
-			'rowId'    => $this->rowId,
-			'id'       => $this->id,
-			'name'     => $this->name,
-			'qty'      => $this->qty,
-			'price'    => $this->price,
-			'options'  => $this->options->toArray(),
-			'tax'      => $this->tax,
-			'subtotal' => $this->subtotal
-		];
-	}
-
-	/**
-	 * Convert the object to its JSON representation.
-	 *
-	 * @param int $options
-	 *
-	 * @return string
-	 */
-	public function toJson( $options = 0 ) {
-		return json_encode( $this->toArray(), $options );
-	}
-
-	/**
-	 * Get the formatted number.
-	 *
-	 * @param float $value
-	 * @param int $decimals
-	 * @param string $decimalPoint
-	 * @param string $thousandSeperator
-	 *
-	 * @return string
-	 */
-	private function numberFormat( $value, $decimals, $decimalPoint, $thousandSeperator ) {
-		if ( is_null( $decimals ) ) {
-			$decimals = is_null( config( 'cart.format.decimals' ) ) ? 2 : config( 'cart.format.decimals' );
-		}
-
-		if ( is_null( $decimalPoint ) ) {
-			$decimalPoint = is_null( config( 'cart.format.decimal_point' ) ) ? '.' : config( 'cart.format.decimal_point' );
-		}
-
-		if ( is_null( $thousandSeperator ) ) {
-			$thousandSeperator = is_null( config( 'cart.format.thousand_seperator' ) ) ? ',' : config( 'cart.format.thousand_seperator' );
-		}
-
-		return number_format( $value, $decimals, $decimalPoint, $thousandSeperator );
-	}
+    /**
+     * @param float $value
+     *
+     * @return float
+     */
+    private function formatFloat(float $value): float
+    {
+        return (float) number_format(
+            $value, // the number to format
+      2, // how many decimal points
+      '.', // decimal separator
+      '' // thousands separator, set it to blank
+        );
+    }
 }

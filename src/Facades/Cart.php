@@ -1,15 +1,17 @@
 <?php
-namespace OfflineAgency\OaLaravelCart\Facades;
+
+namespace OfflineAgency\LaravelCart\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
-class Cart extends Facade {
+class Cart extends Facade
+{
     /**
      * Get the registered name of the component.
      *
      * @return string
      */
-    protected static function getFacadeAccessor()
+    protected static function getFacadeAccessor(): string
     {
         return 'cart';
     }

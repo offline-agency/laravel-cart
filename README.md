@@ -1,6 +1,14 @@
-## Oa Laravel Cart
+# Laravel Cart
 
-A simple shoppingcart implementation for Laravel.
+[![Latest Stable Version](https://poser.pugx.org/offline-agency/laravel-cart/v/stable)](https://packagist.org/packages/offline-agency/laravel-cart)
+[![MIT Licensed](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
+[![Laravel](https://github.com/offline-agency/laravel-cart/actions/workflows/laravel.yml/badge.svg?branch=main)](https://github.com/offline-agency/laravel-cart/actions/workflows/laravel.yml)
+[![StyleCI](https://github.styleci.io/repos/167236902/shield)](https://styleci.io/repos/167236902)
+[![Total Downloads](https://img.shields.io/packagist/dt/offline-agency/laravel-cart.svg?style=flat-square)](https://packagist.org/packages/offline-agency/laravel-cart)
+
+A simple cart implementation for Laravel.
+
+![Laravel Cart](https://banners.beyondco.de/Laravel%20Cart.png?theme=light&packageManager=composer+require&packageName=offline-agency%2Flaravel-cart&pattern=aztec&style=style_1&description=Laravel+shopping+cart+with+fiscal+support&md=1&showWatermark=0&fontSize=125px&images=shopping-cart)
 
 ## Installation
 
@@ -8,7 +16,7 @@ Install the package through [Composer](http://getcomposer.org/).
 
 Run the Composer require command from the Terminal:
 
-    composer require offlineagency/oa-laravel-cart
+    composer require offlineagency/laravel-cart
     
 If you're using Laravel 5.5, this is all there is to do. 
 
@@ -16,18 +24,18 @@ Should you still be on version 5.4 of Laravel, the final steps for you are to ad
 
 Add a new line to the `providers` array:
 
-	OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider::class
+	OfflineAgency\LaravelCart\ShoppingcartServiceProvider::class
 
 And optionally add a new line to the `aliases` array:
 
-	'Cart' => OfflineAgency\OaLaravelCart\Facades\Cart::class,
+	'Cart' => OfflineAgency\LaravelCart\Facades\Cart::class,
 
-Now you're ready to start using the shoppingcart in your application.
+Now you're ready to start using the cart in your application.
 
 **As of version 2 of this package it's possibly to use dependency injection to inject an instance of the Cart class into your controller or other class**
 
 ## Overview
-Look at one of the following topics to learn more about LaravelShoppingcart
+Look at one of the following topics to learn more about Laravel Cart
 
 * [Usage](#usage)
 * [Collections](#collections)
@@ -67,7 +75,7 @@ Cart::add(['id' => '293ad', 'name' => 'Product 1', 'qty' => 1, 'price' => 9.99, 
 ```
 
 New in version 2 of the package is the possibility to work with the `Buyable` interface. The way this works is that you have a model implement the `Buyable` interface, which will make you implement a few methods so the package knows how to get the id, name and price from your model. 
-This way you can just pass the `add()` method a model and the quantity and it will automatically add it to the cart. 
+This way you can just pass the `add()` method a model and the quantity, and it will automatically add it to the cart. 
 
 **As an added bonus it will automatically associate the model with the CartItem**
 
@@ -79,7 +87,7 @@ As an optional third parameter you can add options.
 Cart::add($product, 1, ['size' => 'large']);
 ```
 
-Finally, you can also add multipe items to the cart at once.
+Finally, you can also add multiple items to the cart at once.
 You can just pass the `add()` method an array of arrays, or an array of Buyables and they will be added to the cart. 
 
 **When adding multiple items to the cart, the `add()` method will return an array of CartItems.**
@@ -118,7 +126,7 @@ Cart::update($rowId, $product); // Will update the id, name and price
 
 ### Cart::remove()
 
-To remove an item for the cart, you'll again need the rowId. This rowId you simply pass to the `remove()` method and it will remove the item from the cart.
+To remove an item for the cart, you'll again need the rowId. This rowId you simply pass to the `remove()` method, and it will remove the item from the cart.
 
 ```php
 $rowId = 'da39a3ee5e6b4b0d3255bfef95601890afd80709';
@@ -246,7 +254,7 @@ This way of searching gives you total control over the search process and gives 
 
 On multiple instances the Cart will return to you a Collection. This is just a simple Laravel Collection, so all methods you can call on a Laravel Collection are also available on the result.
 
-As an example, you can quicky get the number of unique products in a cart:
+As an example, you can quickly get the number of unique products in a cart:
 
 ```php
 Cart::content()->count();
@@ -260,7 +268,7 @@ Cart::content()->groupBy('id');
 
 ## Instances
 
-The packages supports multiple instances of the cart. The way this works is like this:
+The package supports multiple instances of the cart. The way this works is like this:
 
 You can set the current instance of the cart by calling `Cart::instance('newInstance')`. From this moment, the active instance of the cart will be `newInstance`, so when you add, remove or get the content of the cart, you're work with the `newInstance` instance of the cart.
 If you want to switch instances, you just call `Cart::instance('otherInstance')` again, and you're working with the `otherInstance` again.
@@ -297,7 +305,7 @@ That way you can access your model right from the `CartItem`!
 
 The model can be accessed via the `model` property on the CartItem.
 
-**If your model implements the `Buyable` interface and you used your model to add the item to the cart, it will associate automatically.**
+**If your model implements the `Buyable` interface, and you used your model to add the item to the cart, it will associate automatically.**
 
 Here is an example:
 
@@ -328,7 +336,7 @@ foreach(Cart::content() as $row) {
 
 ### Configuration
 To save cart into the database so you can retrieve it later, the package needs to know which database connection to use and what the name of the table is.
-By default the package will use the default database connection and use a table named `shoppingcart`.
+By default, the package will use the default database connection and use a table named `shoppingcart`.
 If you want to change these options, you'll have to publish the `config` file.
 
     php artisan vendor:publish --provider="OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider" --tag="config"
@@ -356,6 +364,14 @@ If you want to retrieve the cart from the database and restore it, all you have 
     
     // To restore a cart instance named 'wishlist'
     Cart::instance('wishlist')->restore('username');
+
+### Add a coupon to cart instance for a specific cart item
+```php
+// First we'll add the item to the cart.
+$cartItem = Cart::add('293ad', 'Product 1', 1, 9.99, ['size' => 'large']);
+
+Cart::addCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_2021','fixed', 100);
+```
 
 ## Exceptions
 
@@ -437,3 +453,31 @@ Cart::add('1239ad0', 'Product 2', 2, 5.95, ['size' => 'large']);
    	</tfoot>
 </table>
 ```
+## Testing
+
+Run the tests with:
+
+```bash
+composer test
+```
+
+## Contributing
+
+Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+
+## Security
+
+If you discover any security-related issues, please email <support@offlineagency.com> instead of using the issue tracker.
+
+## Credits
+
+- [Giacomo Fabbian](https://github.com/Giacomo92)
+- [All Contributors](../../contributors)
+
+## About us
+
+Offline Agency is a web design agency based in Padua, Italy. You'll find an overview of our projects [on our website](https://offlineagency.it/).
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

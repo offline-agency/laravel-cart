@@ -4,22 +4,10 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Default tax rate
+    | Cart database settings
     |--------------------------------------------------------------------------
     |
-    | This default tax rate will be used when you make a class implement the
-    | Taxable interface and use the HasTax trait.
-    |
-    */
-
-    'tax' => 21,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Shoppingcart database settings
-    |--------------------------------------------------------------------------
-    |
-    | Here you can set the connection that the shoppingcart should use when
+    | Here you can set the connection that the shopping cart should use when
     | storing and restoring a cart.
     |
     */
@@ -28,7 +16,7 @@ return [
 
         'connection' => null,
 
-        'table' => 'shoppingcart',
+        'table' => 'cart',
 
     ],
 
@@ -49,7 +37,7 @@ return [
     | Default number format
     |--------------------------------------------------------------------------
     |
-    | This defaults will be used for the formated numbers if you don't
+    | This defaults will be used for the formatted numbers if you don't
     | set them in the method call.
     |
     */
@@ -60,8 +48,7 @@ return [
 
         'decimal_point' => '.',
 
-        'thousand_seperator' => ','
+        'thousand_separator' => ',',
 
     ],
-
 ];

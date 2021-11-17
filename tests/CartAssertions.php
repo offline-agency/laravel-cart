@@ -1,8 +1,8 @@
 <?php
 
-namespace Gloudemans\Tests\Shoppingcart;
+namespace OfflineAgency\LaravelCart\Tests;
 
-use OfflineAgency\OaLaravelCart\Cart;
+use OfflineAgency\LaravelCart\Cart;
 use PHPUnit\Framework\Assert as PHPUnit;
 
 trait CartAssertions
@@ -10,8 +10,8 @@ trait CartAssertions
     /**
      * Assert that the cart contains the given number of items.
      *
-     * @param int|float                     $items
-     * @param \OfflineAgency\OaLaravelCart\Cart $cart
+     * @param int|float $items
+     * @param Cart      $cart
      */
     public function assertItemsInCart($items, Cart $cart)
     {
@@ -23,10 +23,10 @@ trait CartAssertions
     /**
      * Assert that the cart contains the given number of rows.
      *
-     * @param int                           $rows
-     * @param \OfflineAgency\OaLaravelCart\Cart $cart
+     * @param int  $rows
+     * @param Cart $cart
      */
-    public function assertRowsInCart($rows, Cart $cart)
+    public function assertRowsInCart(int $rows, Cart $cart)
     {
         $actual = $cart->content()->count();
 
