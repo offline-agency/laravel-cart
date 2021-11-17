@@ -133,8 +133,11 @@ class CartItem implements Arrayable, Jsonable {
    * @param int|string $id
    * @param string $name
    * @param string $subtitle
+   * @param $qty
    * @param float $price
    * @param $totalPrice
+   * @param $vatFcCode
+   * @param $productFcCode
    * @param $vat
    * @param $urlImg
    * @param array $options
@@ -210,11 +213,11 @@ class CartItem implements Arrayable, Jsonable {
 	 *
 	 * @param int|null $decimals
 	 * @param string|null $decimalPoint
-	 * @param string $thousandSeparator
+	 * @param string|null $thousandSeparator
 	 *
 	 * @return string
 	 */
-	public function subtotal(int $decimals = null, string $decimalPoint = null, $thousandSeparator = null ): string
+	public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null ): string
   {
 		return $this->numberFormat( $this->subtotal, $decimals, $decimalPoint, $thousandSeparator );
 	}
