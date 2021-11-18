@@ -13,8 +13,7 @@ class CartItemTest extends TestCase
     /**
      * Set the package service provider.
      *
-     * @param Application $app
-     *
+     * @param  Application  $app
      * @return array
      */
     protected function getPackageProviders($app): array

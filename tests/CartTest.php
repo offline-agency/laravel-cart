@@ -28,8 +28,7 @@ class CartTest extends TestCase
     /**
      * Set the package service provider.
      *
-     * @param Application $app
-     *
+     * @param  Application  $app
      * @return array
      */
     protected function getPackageProviders($app): array
@@ -40,8 +39,7 @@ class CartTest extends TestCase
     /**
      * Define environment setup.
      *
-     * @param Application $app
-     *
+     * @param  Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)
@@ -1553,9 +1551,9 @@ class CartTest extends TestCase
     /**
      * Set the config number format.
      *
-     * @param int    $decimals
-     * @param string $decimalPoint
-     * @param string $thousandSeparator
+     * @param  int  $decimals
+     * @param  string  $decimalPoint
+     * @param  string  $thousandSeparator
      */
     private function setConfigFormat(int $decimals, string $decimalPoint, string $thousandSeparator)
     {
