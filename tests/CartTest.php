@@ -1538,8 +1538,8 @@ class CartTest extends TestCase
     /** @test */
     public function it_can_remove_a_coupon_after_product_was_removed_from_cart()
     {
-      $cart = $this->getCart();
-      $cartItem = $cart->add(
+        $cart = $this->getCart();
+        $cartItem = $cart->add(
         1,
         'First Cart item',
         'This is a simple description',
@@ -1553,18 +1553,18 @@ class CartTest extends TestCase
         ['size' => 'XL', 'color' => 'red']
       );
 
-      $cart->applyCoupon(
+        $cart->applyCoupon(
         '07d5da5550494c62daf9993cf954303f',
         'BLACK_FRIDAY_PERCENTAGE_2021',
         'percentage',
         50
       );
 
-      $this->assertCount(1, $cart->coupons);
+        $this->assertCount(1, $cart->coupons);
 
-      $cart->remove($cartItem->rowId);
+        $cart->remove($cartItem->rowId);
 
-      $this->assertEmpty($cart->coupons);
+        $this->assertEmpty($cart->coupons);
     }
 
     /**

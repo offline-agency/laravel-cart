@@ -181,4 +181,4 @@ class CartItemTest extends TestCase
             100
         );
     }
-  }
+}
