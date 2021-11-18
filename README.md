@@ -6,7 +6,7 @@
 [![StyleCI](https://github.styleci.io/repos/167236902/shield)](https://styleci.io/repos/167236902)
 [![Total Downloads](https://img.shields.io/packagist/dt/offline-agency/laravel-cart.svg?style=flat-square)](https://packagist.org/packages/offline-agency/laravel-cart)
 
-A simple cart implementation for Laravel.
+A simple cart implementation for Laravel with fiscal support.
 
 ![Laravel Cart](https://banners.beyondco.de/Laravel%20Cart.png?theme=light&packageManager=composer+require&packageName=offline-agency%2Flaravel-cart&pattern=aztec&style=style_1&description=Laravel+shopping+cart+with+fiscal+support&md=1&showWatermark=0&fontSize=125px&images=shopping-cart)
 
@@ -17,22 +17,6 @@ Install the package through [Composer](http://getcomposer.org/).
 Run the Composer require command from the Terminal:
 
     composer require offline-agency/laravel-cart
-    
-If you're using Laravel 5.5, this is all there is to do. 
-
-Should you still be on version 5.4 of Laravel, the final steps for you are to add the service provider of the package and alias the package. To do this open your `config/app.php` file.
-
-Add a new line to the `providers` array:
-
-	OfflineAgency\LaravelCart\ShoppingcartServiceProvider::class
-
-And optionally add a new line to the `aliases` array:
-
-	'Cart' => OfflineAgency\LaravelCart\Facades\Cart::class,
-
-Now you're ready to start using the cart in your application.
-
-**As of version 2 of this package it's possibly to use dependency injection to inject an instance of the Cart class into your controller or other class**
 
 ## Overview
 Look at one of the following topics to learn more about Laravel Cart
@@ -48,7 +32,7 @@ Look at one of the following topics to learn more about Laravel Cart
 
 ## Usage
 
-The shoppingcart gives you the following methods to use:
+The Cart gives you the following methods to use:
 
 ### Cart::add()
 
@@ -88,7 +72,7 @@ Cart::add($product, 1, ['size' => 'large']);
 ```
 
 Finally, you can also add multiple items to the cart at once.
-You can just pass the `add()` method an array of arrays, or an array of Buyables and they will be added to the cart. 
+You can just pass the `add()` method an array of arrays, or an array of Buyables, and they will be added to the cart. 
 
 **When adding multiple items to the cart, the `add()` method will return an array of CartItems.**
 
@@ -146,7 +130,7 @@ Cart::get($rowId);
 
 ### Cart::content()
 
-Of course you also want to get the carts content. This is where you'll use the `content` method. This method will return a Collection of CartItems which you can iterate over and show the content to your customers.
+Of course, you also want to get the carts content. This is where you'll use the `content` method. This method will return a Collection of CartItems which you can iterate over and show the content to your customers.
 
 ```php
 Cart::content();
@@ -186,7 +170,7 @@ You can set the default number format in the config file.
 
 ### Cart::vat()
 
-The `vat()` method can be used to get the calculated amount of tax for all items in the cart, given there price and quantity.
+The `vat()` method can be used to get the calculated amount of vat for all items in the cart, given there price and quantity.
 
 ```php
 Cart::vat();
@@ -195,12 +179,12 @@ Cart::vat();
 The method will automatically format the result, which you can tweak using the three optional parameters
 
 ```php
-Cart::tax($decimals, $decimalSeperator, $thousandSeperator);
+Cart::vat($decimals, $decimalSeperator, $thousandSeperator);
 ```
 
 You can set the default number format in the config file.
 
-**If you're not using the Facade, but use dependency injection in your (for instance) Controller, you can also simply get the tax property `$cart->tax`**
+**If you're not using the Facade, but use dependency injection in your (for instance) Controller, you can also simply get the tax property `$cart->vat`**
 
 ### Cart::subtotal()
 
@@ -310,18 +294,19 @@ The model can be accessed via the `model` property on the CartItem.
 Here is an example:
 
 ```php
+$product = Product::find(1);
 
 // First we'll add the item to the cart.
 $cartItem = Cart::add('293ad', 'Product 1', 1, 9.99, ['size' => 'large']);
 
 // Next we associate a model with the item.
-Cart::associate($cartItem->rowId, 'Product');
+Cart::associate($cartItem->rowId, $product);
 
 // Or even easier, call the associate method on the CartItem!
-$cartItem->associate('Product');
+$cartItem->associate($product);
 
 // You can even make it a one-liner
-Cart::add('293ad', 'Product 1', 1, 9.99, ['size' => 'large'])->associate('Product');
+Cart::add('293ad', 'Product 1', 1, 9.99, ['size' => 'large'])->associate($product);
 
 // Now, when iterating over the content of the cart, you can access the model.
 foreach(Cart::content() as $row) {
@@ -335,19 +320,19 @@ foreach(Cart::content() as $row) {
 - [Restoring the cart](#retrieve-cart-from-database)
 
 ### Configuration
-To save cart into the database so you can retrieve it later, the package needs to know which database connection to use and what the name of the table is.
-By default, the package will use the default database connection and use a table named `shoppingcart`.
+To save cart into the database, so you can retrieve it later, the package needs to know which database connection to use and what the name of the table is.
+By default, the package will use the default database connection and use a table named `cart`.
 If you want to change these options, you'll have to publish the `config` file.
 
-    php artisan vendor:publish --provider="OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider" --tag="config"
+    php artisan vendor:publish --provider="OfflineAgency\LaravelCart\CartServiceProvider" --tag="config"
 
 This will give you a `cart.php` config file in which you can make the changes.
 
 To make your life easy, the package also includes a ready to use `migration` which you can publish by running:
 
-    php artisan vendor:publish --provider="OfflineAgency\OaLaravelCart\ShoppingcartServiceProvider" --tag="migrations"
+    php artisan vendor:publish --provider="OfflineAgency\LaravelCart\CartServiceProvider" --tag="migrations"
     
-This will place a `shoppingcart` table's migration file into `database/migrations` directory. Now all you have to do is run `php artisan migrate` to migrate your database.
+This will place a `cart` table's migration file into `database/migrations` directory. Now all you have to do is run `php artisan migrate` to migrate your database.
 
 ### Storing the cart    
 To store your cart instance into the database, you have to call the `store($identifier) ` method. Where `$identifier` is a random key, for instance the id or username of the user.
