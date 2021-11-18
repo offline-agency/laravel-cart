@@ -1470,7 +1470,7 @@ class CartTest extends TestCase
                 'couponType'  => 'fixed',
                 'couponValue' => 100,
             ],
-            $cart->coupons[0]
+            $cart->coupons['BLACK_FRIDAY_FIXED_2021']
         );
         $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $cartItem->couponCode);
         $this->assertEquals('fixed', $cartItem->couponType);
@@ -1519,7 +1519,7 @@ class CartTest extends TestCase
                 'couponType'  => 'percentage',
                 'couponValue' => 50,
             ],
-            $cart->coupons[0]
+            $cart->coupons['BLACK_FRIDAY_PERCENTAGE_2021']
         );
 
         $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $cartItem->couponCode);

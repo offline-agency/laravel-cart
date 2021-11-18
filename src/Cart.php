@@ -647,11 +647,13 @@ class Cart
         ];
     }
 
-    /**
-     * @param  string  $couponCode
-     */
-    public function removeCoupon(string $couponCode)
+  /**
+   * @param string|null $couponCode
+   */
+    public function removeCoupon(?string $couponCode)
     {
+      if(!is_null($couponCode)){
         unset($this->coupons[$couponCode]);
+      }
     }
 }
