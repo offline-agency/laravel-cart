@@ -9,12 +9,13 @@ use Illuminate\Support\ServiceProvider;
 
 class CartServiceProvider extends ServiceProvider
 {
-  /**
-   * Register the service provider.
-   *
-   * @return void
-   * @throws BindingResolutionException
-   */
+    /**
+     * Register the service provider.
+     *
+     * @return void
+     *
+     * @throws BindingResolutionException
+     */
     public function register()
     {
         $this->app->bind('cart', 'OfflineAgency\LaravelCart\Cart');
