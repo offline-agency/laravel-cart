@@ -28,7 +28,7 @@ class CartServiceProvider extends ServiceProvider
             }
         });
 
-        if (!class_exists('CreateCartTable')) {
+        if (! class_exists('CreateCartTable')) {
             // Publish the migration
             $timestamp = date('Y_m_d_His', time());
 

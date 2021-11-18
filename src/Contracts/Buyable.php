@@ -10,7 +10,7 @@ interface Buyable
     public function getId();
 
     /**
-     * @param int|string $id
+     * @param  int|string  $id
      */
     public function setId($id): void;
 
@@ -20,7 +20,7 @@ interface Buyable
     public function getName(): string;
 
     /**
-     * @param string $name
+     * @param  string  $name
      */
     public function setName(string $name): void;
 
@@ -30,7 +30,7 @@ interface Buyable
     public function getSubtitle(): string;
 
     /**
-     * @param string $subtitle
+     * @param  string  $subtitle
      */
     public function setSubtitle(string $subtitle): void;
 
@@ -40,7 +40,7 @@ interface Buyable
     public function getQty(): int;
 
     /**
-     * @param int $qty
+     * @param  int  $qty
      */
     public function setQty(int $qty): void;
 
@@ -50,7 +50,7 @@ interface Buyable
     public function getPrice(): float;
 
     /**
-     * @param float $price
+     * @param  float  $price
      */
     public function setPrice(float $price): void;
 
@@ -60,7 +60,7 @@ interface Buyable
     public function getTotalPrice(): float;
 
     /**
-     * @param float $totalPrice
+     * @param  float  $totalPrice
      */
     public function setTotalPrice(float $totalPrice): void;
 
@@ -70,7 +70,7 @@ interface Buyable
     public function getVat(): float;
 
     /**
-     * @param float $vat
+     * @param  float  $vat
      */
     public function setVat(float $vat): void;
 
@@ -80,7 +80,7 @@ interface Buyable
     public function getVatFcCode(): string;
 
     /**
-     * @param string $vatFcCode
+     * @param  string  $vatFcCode
      */
     public function setVatFcCode(string $vatFcCode): void;
 
@@ -90,7 +90,7 @@ interface Buyable
     public function getProductFcCode(): string;
 
     /**
-     * @param string $productFcCode
+     * @param  string  $productFcCode
      */
     public function setProductFcCode(string $productFcCode): void;
 
@@ -100,7 +100,7 @@ interface Buyable
     public function getUrlImg(): string;
 
     /**
-     * @param mixed $urlImg
+     * @param  mixed  $urlImg
      */
     public function setUrlImg($urlImg): void;
 
@@ -110,7 +110,7 @@ interface Buyable
     public function getOptions(): array;
 
     /**
-     * @param array $options
+     * @param  array  $options
      */
     public function setOptions(array $options): void;
 }

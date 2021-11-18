@@ -21,17 +21,17 @@ class BuyableProduct implements Buyable
     /**
      * BuyableProduct constructor.
      *
-     * @param int|string $id
-     * @param string     $name
-     * @param string     $subtitle
-     * @param int        $qty
-     * @param float      $price
-     * @param float      $totalPrice
-     * @param float      $vat
-     * @param string     $vatFcCode
-     * @param string     $productFcCode
-     * @param string     $urlImg
-     * @param array      $options
+     * @param  int|string  $id
+     * @param  string  $name
+     * @param  string  $subtitle
+     * @param  int  $qty
+     * @param  float  $price
+     * @param  float  $totalPrice
+     * @param  float  $vat
+     * @param  string  $vatFcCode
+     * @param  string  $productFcCode
+     * @param  string  $urlImg
+     * @param  array  $options
      */
     public function __construct(
         $id = 1,
@@ -68,7 +68,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param int|string $id
+     * @param  int|string  $id
      */
     public function setId($id): void
     {
@@ -84,7 +84,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param string $name
+     * @param  string  $name
      */
     public function setName(string $name): void
     {
@@ -100,7 +100,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param string $subtitle
+     * @param  string  $subtitle
      */
     public function setSubtitle(string $subtitle): void
     {
@@ -116,7 +116,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param int $qty
+     * @param  int  $qty
      */
     public function setQty(int $qty): void
     {
@@ -132,7 +132,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param float $price
+     * @param  float  $price
      */
     public function setPrice(float $price): void
     {
@@ -148,7 +148,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param float $totalPrice
+     * @param  float  $totalPrice
      */
     public function setTotalPrice(float $totalPrice): void
     {
@@ -164,7 +164,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param float $vat
+     * @param  float  $vat
      */
     public function setVat(float $vat): void
     {
@@ -180,7 +180,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param string $vatFcCode
+     * @param  string  $vatFcCode
      */
     public function setVatFcCode(string $vatFcCode): void
     {
@@ -196,7 +196,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param string $productFcCode
+     * @param  string  $productFcCode
      */
     public function setProductFcCode(string $productFcCode): void
     {
@@ -212,7 +212,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param mixed $urlImg
+     * @param  mixed  $urlImg
      */
     public function setUrlImg($urlImg): void
     {
@@ -228,7 +228,7 @@ class BuyableProduct implements Buyable
     }
 
     /**
-     * @param array $options
+     * @param  array  $options
      */
     public function setOptions(array $options): void
     {
