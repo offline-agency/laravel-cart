@@ -869,7 +869,7 @@ class CartTest extends TestCase
         $this->assertItemsInCart(3, $cart);
         $this->assertEquals(36.66, $cart->total());
         $this->assertEquals(30.00, $cart->subtotal());
-        $this->assertEquals(6.66, $cart->tax());
+        $this->assertEquals(6.66, $cart->vat());
     }
 
     /** @test */
@@ -1108,7 +1108,7 @@ class CartTest extends TestCase
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
         $this->assertEquals('3000', $cart->subtotal());
-        $this->assertEquals('600.66', $cart->tax());
+        $this->assertEquals('600.66', $cart->vat());
         $this->assertEquals('3600.66', $cart->total());
     }
 
@@ -1130,7 +1130,7 @@ class CartTest extends TestCase
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
         $this->assertEquals(200.22, $cartItem->vat);
-        $this->assertEquals(600.66, $cart->tax());
+        $this->assertEquals(600.66, $cart->vat());
     }
 
     /** @test */
@@ -1157,7 +1157,7 @@ class CartTest extends TestCase
             200.22
         );
 
-        $this->assertEquals(1001.1, $cart->tax());
+        $this->assertEquals(1001.1, $cart->vat());
     }
 
     /** @test */
@@ -1243,11 +1243,11 @@ class CartTest extends TestCase
         ), 2);
 
         $this->assertEquals('2000,00', $cart->subtotal());
-        $this->assertEquals('1050,00', $cart->tax());
+        $this->assertEquals('1050,00', $cart->vat());
         $this->assertEquals('6050,00', $cart->total());
 
         $this->assertEquals('5000,00', $cart->subtotal);
-        $this->assertEquals('1050,00', $cart->tax);
+        $this->assertEquals('1050,00', $cart->vat);
         $this->assertEquals('6050,00', $cart->total);
     }
 
@@ -1271,7 +1271,7 @@ class CartTest extends TestCase
         $this->assertEquals('0,00', $cartItem->priceTax());
         $this->assertEquals('0,00', $cartItem->subtotal());
         $this->assertEquals('0,00', $cartItem->total());
-        $this->assertEquals('0,00', $cartItem->tax());
+        $this->assertEquals('0,00', $cartItem->vat());
         $this->assertEquals('840,00', $cartItem->taxTotal());
     }
 
@@ -1419,7 +1419,7 @@ class CartTest extends TestCase
 
         $this->assertEquals(3000, $cart->subtotal());
         $this->assertEquals(3600.66, $cart->total());
-        $this->assertEquals(600.66, $cart->tax());
+        $this->assertEquals(600.66, $cart->vat());
     }
 
     /** @test */
@@ -1533,6 +1533,38 @@ class CartTest extends TestCase
         $this->assertNull($cartItem->discountDescription);
         $this->assertEquals(50, $cartItem->discountRate);
         $this->assertEquals(600.11, $cartItem->discountValue);
+    }
+
+    /** @test */
+    public function it_can_remove_a_coupon_after_product_was_removed_from_cart()
+    {
+      $cart = $this->getCart();
+      $cartItem = $cart->add(
+        1,
+        'First Cart item',
+        'This is a simple description',
+        1,
+        1000.00,
+        1200.22,
+        200.22,
+        '0',
+        '0',
+        'https://ecommerce.test/images/item-name.png',
+        ['size' => 'XL', 'color' => 'red']
+      );
+
+      $cart->applyCoupon(
+        '07d5da5550494c62daf9993cf954303f',
+        'BLACK_FRIDAY_PERCENTAGE_2021',
+        'percentage',
+        50
+      );
+
+      $this->assertCount(1, $cart->coupons);
+
+      $cart->remove($cartItem->rowId);
+
+      $this->assertEmpty($cart->coupons);
     }
 
     /**

@@ -197,10 +197,11 @@ class Cart
     public function remove(string $rowId)
     {
         $cartItem = $this->get($rowId);
-
+        $this->removeCoupon($cartItem->couponCode);
         $content = $this->getContent();
 
         $content->pull($cartItem->rowId);
+
 
         $this->events->dispatch('cart.removed', $cartItem);
 
@@ -276,14 +277,14 @@ class Cart
     }
 
     /**
-     * Get the total tax of the items in the cart.
+     * Get the total vat of the items in the cart.
      *
      * @param  int|null  $decimals
      * @param  string|null  $decimalPoint
      * @param  string|null  $thousandSeparator
      * @return float
      */
-    public function tax(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
+    public function vat(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         return $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
             return $tax + ($cartItem->qty * $cartItem->vat);
@@ -291,7 +292,7 @@ class Cart
     }
 
     /**
-     * Get the subtotal (total - tax) of the items in the cart.
+     * Get the subtotal (total - vat) of the items in the cart.
      *
      * @param  int|null  $decimals
      * @param  string|null  $decimalPoint
@@ -415,7 +416,7 @@ class Cart
         }
 
         if ($attribute === 'tax') {
-            return $this->tax();
+            return $this->vat();
         }
 
         if ($attribute === 'subtotal') {
@@ -430,7 +431,7 @@ class Cart
      */
     public function totalVatLabel(): string
     {
-        return $this->tax() > 0 ? 'Iva Inclusa' : 'Esente Iva';
+        return $this->vat() > 0 ? 'Iva Inclusa' : 'Esente Iva';
     }
 
     /**
@@ -639,11 +640,19 @@ class Cart
 
         $this->session->put($this->instance, $content);
 
-        array_push($this->coupons, (object) [
-            'rowId'       => $rowId,
-            'couponCode'  => $couponCode,
-            'couponType'  => $couponType,
-            'couponValue' => $couponValue,
-        ]);
+        $this->coupons[$couponCode] = (object) [
+          'rowId'       => $rowId,
+          'couponCode'  => $couponCode,
+          'couponType'  => $couponType,
+          'couponValue' => $couponValue,
+        ];
+    }
+
+  /**
+   * @param string $couponCode
+   */
+  public function removeCoupon(string $couponCode)
+    {
+      unset($this->coupons[$couponCode]);
     }
 }

@@ -184,12 +184,12 @@ You can set the default number format in the config file.
 
 **If you're not using the Facade, but use dependency injection in your (for instance) Controller, you can also simply get the total property `$cart->total`**
 
-### Cart::tax()
+### Cart::vat()
 
-The `tax()` method can be used to get the calculated amount of tax for all items in the cart, given there price and quantity.
+The `vat()` method can be used to get the calculated amount of tax for all items in the cart, given there price and quantity.
 
 ```php
-Cart::tax();
+Cart::vat();
 ```
 
 The method will automatically format the result, which you can tweak using the three optional parameters
@@ -443,7 +443,7 @@ Cart::add('1239ad0', 'Product 2', 2, 5.95, ['size' => 'large']);
    		<tr>
    			<td colspan="2">&nbsp;</td>
    			<td>Tax</td>
-   			<td><?php echo Cart::tax(); ?></td>
+   			<td><?php echo Cart::vat(); ?></td>
    		</tr>
    		<tr>
    			<td colspan="2">&nbsp;</td>
