@@ -202,7 +202,6 @@ class Cart
 
         $content->pull($cartItem->rowId);
 
-
         $this->events->dispatch('cart.removed', $cartItem);
 
         $this->session->put($this->instance, $content);
@@ -641,18 +640,18 @@ class Cart
         $this->session->put($this->instance, $content);
 
         $this->coupons[$couponCode] = (object) [
-          'rowId'       => $rowId,
-          'couponCode'  => $couponCode,
-          'couponType'  => $couponType,
-          'couponValue' => $couponValue,
+            'rowId'       => $rowId,
+            'couponCode'  => $couponCode,
+            'couponType'  => $couponType,
+            'couponValue' => $couponValue,
         ];
     }
 
-  /**
-   * @param string $couponCode
-   */
-  public function removeCoupon(string $couponCode)
+    /**
+     * @param  string  $couponCode
+     */
+    public function removeCoupon(string $couponCode)
     {
-      unset($this->coupons[$couponCode]);
+        unset($this->coupons[$couponCode]);
     }
 }
