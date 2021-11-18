@@ -3,16 +3,18 @@
 namespace OfflineAgency\LaravelCart;
 
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\ServiceProvider;
 
 class CartServiceProvider extends ServiceProvider
 {
-    /**
-     * Register the service provider.
-     *
-     * @return void
-     */
+  /**
+   * Register the service provider.
+   *
+   * @return void
+   * @throws BindingResolutionException
+   */
     public function register()
     {
         $this->app->bind('cart', 'OfflineAgency\LaravelCart\Cart');
