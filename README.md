@@ -126,7 +126,7 @@ Cart::update($rowId, $product); // Will update the id, name and price
 
 ### Cart::remove()
 
-To remove an item for the cart, you'll again need the rowId. This rowId you simply pass to the `remove()` method, and it will remove the item from the cart.
+To remove an item for the cart, you'll again need the rowId. This rowId you simply pass to the `remove()` method, and it will remove the item from the cart. If the Cart Item contains a coupon it will be removed from the coupons array on cart object.
 
 ```php
 $rowId = 'da39a3ee5e6b4b0d3255bfef95601890afd80709';
