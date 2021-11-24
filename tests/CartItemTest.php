@@ -41,32 +41,32 @@ class CartItemTest extends TestCase
         $cartItem->setQuantity(2);
 
         $this->assertEquals([
-          'rowId' => '07d5da5550494c62daf9993cf954303f',
-          'id' => 1,
-          "qty" => 2,
-          'name' => 'First Cart item',
-          'subtitle' => 'This is a simple description',
-          "price" => 1000.0,
-          "totalPrice" => 1200.22,
-          "vat" => 200.22,
-          "vatLabel" => "Iva Inclusa",
-          "vatRate" => 16.68,
-          "vatFcCode" => "0",
-          "urlImg" => "https://ecommerce.test/images/item-name.png",
-          "options" => [
-            "size" => "XL",
-            "color" => "red"
-          ],
-          "associatedModel" => null,
-          "model" => null,
-          "productFcCode" => "0",
-          "discountValue" => null,
-          "discountCode" => null,
-          "discountDescription" => null,
-          "discountRate" => null,
-          "couponCode" => null,
-          "couponType" => null,
-          "couponValue" => null
+            'rowId' => '07d5da5550494c62daf9993cf954303f',
+            'id' => 1,
+            'qty' => 2,
+            'name' => 'First Cart item',
+            'subtitle' => 'This is a simple description',
+            'price' => 1000.0,
+            'totalPrice' => 1200.22,
+            'vat' => 200.22,
+            'vatLabel' => 'Iva Inclusa',
+            'vatRate' => 16.68,
+            'vatFcCode' => '0',
+            'urlImg' => 'https://ecommerce.test/images/item-name.png',
+            'options' => [
+                'size' => 'XL',
+                'color' => 'red',
+            ],
+            'associatedModel' => null,
+            'model' => null,
+            'productFcCode' => '0',
+            'discountValue' => null,
+            'discountCode' => null,
+            'discountDescription' => null,
+            'discountRate' => null,
+            'couponCode' => null,
+            'couponType' => null,
+            'couponValue' => null,
         ], $cartItem->toArray());
     }
 
