@@ -41,20 +41,32 @@ class CartItemTest extends TestCase
         $cartItem->setQuantity(2);
 
         $this->assertEquals([
-            'id'            => 1,
-            'name'          => 'First Cart item',
-            'subtitle'      => 'This is a simple description',
-            'qty'           => 2,
-            'price'         => 1000.00,
-            'vatFcCode'     => '0',
-            'productFcCode' => '0',
-            'vat'           => 200.22,
-            'rowId'         => '07d5da5550494c62daf9993cf954303f',
-            'urlImg'        => 'https://ecommerce.test/images/item-name.png',
-            'options'       => [
-                'size'  => 'XL',
-                'color' => 'red',
-            ],
+          'rowId' => '07d5da5550494c62daf9993cf954303f',
+          'id' => 1,
+          "qty" => 2,
+          'name' => 'First Cart item',
+          'subtitle' => 'This is a simple description',
+          "price" => 1000.0,
+          "totalPrice" => 1200.22,
+          "vat" => 200.22,
+          "vatLabel" => "Iva Inclusa",
+          "vatRate" => 16.68,
+          "vatFcCode" => "0",
+          "urlImg" => "https://ecommerce.test/images/item-name.png",
+          "options" => [
+            "size" => "XL",
+            "color" => "red"
+          ],
+          "associatedModel" => null,
+          "model" => null,
+          "productFcCode" => "0",
+          "discountValue" => null,
+          "discountCode" => null,
+          "discountDescription" => null,
+          "discountRate" => null,
+          "couponCode" => null,
+          "couponType" => null,
+          "couponValue" => null
         ], $cartItem->toArray());
     }
 
@@ -78,7 +90,7 @@ class CartItemTest extends TestCase
 
         $this->assertJson($cartItem->toJson());
 
-        $json = '{"rowId":"07d5da5550494c62daf9993cf954303f","id":1,"name":"First Cart item","subtitle":"This is a simple description","qty":2,"price":1000,"vatFcCode":"0","productFcCode":"0","vat":200.22,"urlImg":"https:\/\/ecommerce.test\/images\/item-name.png","options":{"size":"XL","color":"red"}}';
+        $json = '{"rowId":"07d5da5550494c62daf9993cf954303f","id":1,"qty":2,"name":"First Cart item","subtitle":"This is a simple description","price":1000,"totalPrice":1200.22,"vat":200.22,"vatLabel":"Iva Inclusa","vatRate":16.68,"vatFcCode":"0","urlImg":"https:\/\/ecommerce.test\/images\/item-name.png","options":{"size":"XL","color":"red"},"associatedModel":null,"model":null,"productFcCode":"0","discountValue":null,"discountCode":null,"discountDescription":null,"discountRate":null,"couponCode":null,"couponType":null,"couponValue":null}';
 
         $this->assertEquals($json, $cartItem->toJson());
     }

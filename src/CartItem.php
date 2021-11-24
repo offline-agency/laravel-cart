@@ -304,21 +304,40 @@ class CartItem implements Arrayable, Jsonable
      *
      * @return array
      */
-    public function toArray(): array
-    {
-        return [
-            'rowId'         => $this->rowId,
-            'id'            => $this->id,
-            'name'          => $this->name,
-            'subtitle'      => $this->subtitle,
-            'qty'           => $this->qty,
-            'price'         => $this->price,
-            'vatFcCode'     => $this->vatFcCode,
-            'productFcCode' => $this->productFcCode,
-            'vat'           => $this->vat,
-            'urlImg'        => $this->urlImg,
-            'options'       => $this->options->toArray(),
-        ];
+  public function toArray(): array
+  {
+    return [
+      'rowId' => $this->rowId,
+      'id' => $this->id,
+      'qty' => $this->qty,
+      'name' => $this->name,
+      'subtitle' => $this->subtitle,
+
+      'price' => $this->price,
+      'totalPrice' => $this->totalPrice,
+
+      'vat' => $this->vat,
+      'vatLabel' => $this->vatLabel,
+      'vatRate' => $this->vatRate,
+      'vatFcCode' => $this->vatFcCode,
+
+      'urlImg' => $this->urlImg,
+
+      'options' => $this->options->toArray(),
+
+      'associatedModel' => $this->associatedModel,
+      'model' => $this->model,
+      'productFcCode' => $this->productFcCode,
+
+      'discountValue' => $this->discountValue,
+      'discountCode' => $this->discountCode,
+      'discountDescription' => $this->discountDescription,
+      'discountRate' => $this->discountRate,
+
+      'couponCode' => $this->couponCode,
+      'couponType' => $this->couponType,
+      'couponValue' => $this->couponValue
+    ];
     }
 
     /**
