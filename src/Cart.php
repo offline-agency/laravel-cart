@@ -305,6 +305,11 @@ class Cart
         }, 0);
     }
 
+    public function coupons(): array
+    {
+        return $this->coupons;
+    }
+
     /**
      * Search the cart content for a cart item matching the given search closure.
      *
