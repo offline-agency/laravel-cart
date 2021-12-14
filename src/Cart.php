@@ -197,7 +197,11 @@ class Cart
     public function remove(string $rowId)
     {
         $cartItem = $this->get($rowId);
-        $this->removeCoupon($cartItem->couponCode);
+
+        foreach ($cartItem->appliedCoupons as $coupon){
+            $this->removeCoupon($coupon->couponCode);
+        }
+
         $content = $this->getContent();
 
         $content->pull($cartItem->rowId);
@@ -644,12 +648,37 @@ class Cart
 
         $this->session->put($this->instance, $content);
 
-        $this->coupons[$couponCode] = (object) [
+        $this->coupons[$couponCode] = (object)[
             'rowId'       => $rowId,
             'couponCode'  => $couponCode,
             'couponType'  => $couponType,
             'couponValue' => $couponValue,
         ];
+    }
+
+    public function detachCoupon(
+        $rowId,
+        string $couponCode
+    )
+    {
+        $cartItem = $this->get($rowId);
+
+        $cartItem->detachCoupon(
+            $couponCode
+        );
+
+        $content = $this->getContent();
+
+        $content->put($cartItem->rowId, $cartItem);
+
+        $this->session->put($this->instance, $content);
+
+        unset($this->coupons[$couponCode]);
+    }
+
+    public function hasCoupons(): bool
+    {
+        return count($this->coupons) > 0;
     }
 
     /**
