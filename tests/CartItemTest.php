@@ -3,7 +3,6 @@
 namespace OfflineAgency\Tests\LaravelCart;
 
 use Illuminate\Foundation\Application;
-use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\CartServiceProvider;
@@ -65,7 +64,7 @@ class CartItemTest extends TestCase
             ],
             'associatedModel' => null,
             'model' => null,
-            'appliedCoupons' => []
+            'appliedCoupons' => [],
         ], $cartItem->toArray());
     }
 

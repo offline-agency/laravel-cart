@@ -197,7 +197,7 @@ class Cart
     {
         $cartItem = $this->get($rowId);
 
-        foreach ($cartItem->appliedCoupons as $coupon){
+        foreach ($cartItem->appliedCoupons as $coupon) {
             $this->removeCoupon($coupon->couponCode);
         }
 
@@ -626,14 +626,15 @@ class Cart
                 Arr::set(
                     $coupons,
                     $coupon->couponCode,
-                    (object)[
+                    (object) [
                         'rowId'       => $cartItem->rowId,
                         'couponCode'  => $coupon->couponCode,
                         'couponType'  => $coupon->couponType,
-                        'couponValue' => $coupon->couponValue
+                        'couponValue' => $coupon->couponValue,
                     ]
                 );
             }
+
             return $coupons;
         }, []);
     }
@@ -664,7 +665,7 @@ class Cart
 
         $this->session->put($this->instance, $content);
 
-        $this->coupons()[$couponCode] = (object)[
+        $this->coupons()[$couponCode] = (object) [
             'rowId'       => $rowId,
             'couponCode'  => $couponCode,
             'couponType'  => $couponType,
@@ -674,13 +675,12 @@ class Cart
 
     /**
      * @param $rowId
-     * @param string $couponCode
+     * @param  string  $couponCode
      */
     public function detachCoupon(
         $rowId,
         string $couponCode
-    )
-    {
+    ) {
         $cartItem = $this->get($rowId);
 
         $cartItem->detachCoupon(
@@ -705,13 +705,12 @@ class Cart
     }
 
     /**
-     * @param string $couponCode
+     * @param  string  $couponCode
      * @return array|\ArrayAccess|mixed|null
      */
     public function getCoupon(
         string $couponCode
-    )
-    {
+    ) {
         $coupons = $this->coupons();
 
         return Arr::has($coupons, $couponCode)
