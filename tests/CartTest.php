@@ -6,7 +6,6 @@ use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Application;
 use Illuminate\Session\SessionManager;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
@@ -29,7 +28,7 @@ class CartTest extends TestCase
     /**
      * Set the package service provider.
      *
-     * @param Application $app
+     * @param  Application  $app
      * @return array
      */
     protected function getPackageProviders($app): array
@@ -40,7 +39,7 @@ class CartTest extends TestCase
     /**
      * Define environment setup.
      *
-     * @param Application $app
+     * @param  Application  $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)
@@ -67,7 +66,7 @@ class CartTest extends TestCase
         parent::setUp();
 
         $this->app->afterResolving('migrator', function ($migrator) {
-            $migrator->path(realpath(__DIR__ . '/../database/migrations'));
+            $migrator->path(realpath(__DIR__.'/../database/migrations'));
         });
     }
 
@@ -810,7 +809,7 @@ class CartTest extends TestCase
                 ],
                 'associatedModel' => null,
                 'model' => null,
-                'appliedCoupons' => []
+                'appliedCoupons' => [],
             ],
             '13e04d556bd1d42c1d940962999e405a' => [
                 'rowId' => '13e04d556bd1d42c1d940962999e405a',
@@ -836,7 +835,7 @@ class CartTest extends TestCase
                 ],
                 'associatedModel' => null,
                 'model' => null,
-                'appliedCoupons' => []
+                'appliedCoupons' => [],
             ],
         ], $content->toArray());
     }
@@ -1485,7 +1484,7 @@ class CartTest extends TestCase
         $this->assertIsArray($cart->coupons());
         $this->assertCount(1, $cart->coupons());
         $this->assertEquals(
-            (object)[
+            (object) [
                 'rowId' => '07d5da5550494c62daf9993cf954303f',
                 'couponCode' => 'BLACK_FRIDAY_FIXED_2021',
                 'couponType' => 'fixed',
@@ -1532,7 +1531,7 @@ class CartTest extends TestCase
         $this->assertIsArray($cart->coupons());
         $this->assertCount(1, $cart->coupons());
         $this->assertEquals(
-            (object)[
+            (object) [
                 'rowId' => '07d5da5550494c62daf9993cf954303f',
                 'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
                 'couponType' => 'percentage',
@@ -1611,7 +1610,7 @@ class CartTest extends TestCase
         $this->assertIsArray($cart->coupons());
         $this->assertCount(1, $cart->coupons());
         $this->assertEquals(
-            (object)[
+            (object) [
                 'rowId' => '07d5da5550494c62daf9993cf954303f',
                 'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
                 'couponType' => 'percentage',
@@ -1671,7 +1670,7 @@ class CartTest extends TestCase
         $this->assertIsArray($cart->coupons());
         $this->assertCount(1, $cart->coupons());
         $this->assertEquals(
-            (object)[
+            (object) [
                 'rowId' => '07d5da5550494c62daf9993cf954303f',
                 'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
                 'couponType' => 'percentage',
@@ -1744,18 +1743,18 @@ class CartTest extends TestCase
         $this->assertCount(2, $cart->coupons());
         $this->assertEquals(
             [
-                'BLACK_FRIDAY_PERCENTAGE_2021' => (object)[
+                'BLACK_FRIDAY_PERCENTAGE_2021' => (object) [
                     'rowId' => '07d5da5550494c62daf9993cf954303f',
                     'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
                     'couponType' => 'percentage',
                     'couponValue' => 50,
                 ],
-                'BLACK_FRIDAY_FIXED_2021' => (object)[
+                'BLACK_FRIDAY_FIXED_2021' => (object) [
                     'rowId' => '07d5da5550494c62daf9993cf954303f',
                     'couponCode' => 'BLACK_FRIDAY_FIXED_2021',
                     'couponType' => 'fixed',
                     'couponValue' => 10,
-                ]
+                ],
             ],
             $cart->coupons()
         );
@@ -1797,18 +1796,18 @@ class CartTest extends TestCase
         $this->assertCount(2, $cart->coupons());
         $this->assertEquals(
             [
-                'BLACK_FRIDAY_PERCENTAGE_2021' => (object)[
+                'BLACK_FRIDAY_PERCENTAGE_2021' => (object) [
                     'rowId' => '07d5da5550494c62daf9993cf954303f',
                     'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
                     'couponType' => 'percentage',
                     'couponValue' => 50,
                 ],
-                'BLACK_FRIDAY_FIXED_2021' => (object)[
+                'BLACK_FRIDAY_FIXED_2021' => (object) [
                     'rowId' => '07d5da5550494c62daf9993cf954303f',
                     'couponCode' => 'BLACK_FRIDAY_FIXED_2021',
                     'couponType' => 'fixed',
                     'couponValue' => 10,
-                ]
+                ],
             ],
             $cart->coupons()
         );
@@ -1835,9 +1834,9 @@ class CartTest extends TestCase
     /**
      * Set the config number format.
      *
-     * @param int $decimals
-     * @param string $decimalPoint
-     * @param string $thousandSeparator
+     * @param  int  $decimals
+     * @param  string  $decimalPoint
+     * @param  string  $thousandSeparator
      */
     private function setConfigFormat(int $decimals, string $decimalPoint, string $thousandSeparator)
     {
