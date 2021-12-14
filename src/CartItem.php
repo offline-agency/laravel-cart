@@ -15,31 +15,22 @@ class CartItem implements Arrayable, Jsonable
     public $qty;
     public $name;
     public $subtitle;
-
+    public $originalPrice;
+    public $originalTotalPrice;
+    public $originalVat;
     public $price;
     public $totalPrice;
-
     public $vat;
     public $vatLabel;
     public $vatRate;
     public $vatFcCode;
-
+    public $discountValue;
+    public $productFcCode;
     public $urlImg;
-
     public $options;
-
     public $associatedModel;
     public $model;
-    public $productFcCode;
-
-    public $discountValue;
-    public $discountCode;
-    public $discountDescription;
-    public $discountRate;
-
-    public $couponCode;
-    public $couponType;
-    public $couponValue;
+    public $appliedCoupons;
 
     /**
      * CartItem constructor.
@@ -79,20 +70,28 @@ class CartItem implements Arrayable, Jsonable
             throw new InvalidArgumentException('Please supply a valid price.');
         }
 
+        $this->rowId = $this->generateRowId($id, $options);
         $this->id = $id;
+        $this->qty = $qty;
         $this->name = $name;
         $this->subtitle = $subtitle;
-        $this->qty = $qty;
+        $this->originalPrice = floatval($price);
+        $this->originalTotalPrice = floatval($totalPrice);
+        $this->originalVat = floatval($vat);
         $this->price = floatval($price);
         $this->totalPrice = floatval($totalPrice);
-        $this->vatFcCode = $vatFcCode;
-        $this->productFcCode = $productFcCode;
         $this->vat = floatval($vat);
         $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
-        $this->vatRate = $this->formatFloat(100 * $this->vat / $this->totalPrice);
+        $this->vatRate = $this->formatFloat(100 * $this->vat / $this->price);
+        $this->vatFcCode = $vatFcCode;
+        $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
         $this->options = new CartItemOptions($options);
-        $this->rowId = $this->generateRowId($id, $options);
+        // default values
+        $this->discountValue = 0.0;
+        $this->associatedModel = null;
+        $this->model = null;
+        $this->appliedCoupons = [];
     }
 
     /**
@@ -312,31 +311,22 @@ class CartItem implements Arrayable, Jsonable
             'qty' => $this->qty,
             'name' => $this->name,
             'subtitle' => $this->subtitle,
-
+            'originalPrice' => $this->originalPrice,
+            'originalTotalPrice' => $this->originalTotalPrice,
+            'originalVat' => $this->originalVat,
             'price' => $this->price,
             'totalPrice' => $this->totalPrice,
-
             'vat' => $this->vat,
             'vatLabel' => $this->vatLabel,
             'vatRate' => $this->vatRate,
             'vatFcCode' => $this->vatFcCode,
-
+            'discountValue' => $this->discountValue,
+            'productFcCode' => $this->productFcCode,
             'urlImg' => $this->urlImg,
-
             'options' => $this->options->toArray(),
-
             'associatedModel' => $this->associatedModel,
             'model' => $this->model,
-            'productFcCode' => $this->productFcCode,
-
-            'discountValue' => $this->discountValue,
-            'discountCode' => $this->discountCode,
-            'discountDescription' => $this->discountDescription,
-            'discountRate' => $this->discountRate,
-
-            'couponCode' => $this->couponCode,
-            'couponType' => $this->couponType,
-            'couponValue' => $this->couponValue,
+            'appliedCoupons' => $this->appliedCoupons,
         ];
     }
 
@@ -365,6 +355,16 @@ class CartItem implements Arrayable, Jsonable
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
+    public function getCoupon(
+        string $couponCode
+    ) {
+        $coupons = $this->appliedCoupons;
+
+        return Arr::has($coupons, $couponCode)
+            ? Arr::get($coupons, $couponCode)
+            : null;
+    }
+
     /**
      * @param  string  $couponCode
      * @param  string  $couponType
@@ -376,30 +376,57 @@ class CartItem implements Arrayable, Jsonable
         string $couponType,
         float $couponValue
     ): CartItem {
-        $this->couponCode = $couponCode;
-        $this->couponType = $couponType;
-        $this->couponValue = $couponValue;
+        $this->appliedCoupons[$couponCode] = (object) [
+            'couponCode' => $couponCode,
+            'couponType' => $couponType,
+            'couponValue' => $couponValue,
+        ];
 
-        if ($couponType === 'fixed') {
-            $this->discountValue = $couponValue;
-            $this->discountRate = $this->formatFloat(100 * $couponValue / $this->totalPrice);
+        switch ($couponType) {
+            case 'fixed':
+                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
 
-            $this->totalPrice = $this->totalPrice - $couponValue;
-            $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-            $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-        } elseif ($couponType === 'percentage') {
-            $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
-            $this->discountValue = $discountValue;
-            $this->discountRate = $couponValue;
+                $this->totalPrice = $this->totalPrice - $couponValue;
+                $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+                $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
 
-            $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
-            $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-            $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-        } else {
-            throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
+                $this->discountValue = $this->discountValue + $couponValue;
+                break;
+            case 'percentage':
+                $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
+
+                $this->appliedCoupons[$couponCode]->discountValue = $discountValue;
+
+                $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
+                $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+                $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+                $this->discountValue = $this->discountValue + $discountValue;
+                break;
+            default:
+                throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
         }
 
         return $this;
+    }
+
+    public function detachCoupon(
+        string $couponCode
+    ): CartItem {
+        $coupon = $this->appliedCoupons[$couponCode];
+        $discountValue = $coupon->discountValue;
+
+        unset($this->appliedCoupons[$couponCode]);
+
+        $this->totalPrice = $this->totalPrice + $discountValue;
+        $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+        $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+
+        return $this;
+    }
+
+    public function hasCoupons(): bool
+    {
+        return count($this->appliedCoupons) > 0;
     }
 
     /**
@@ -410,9 +437,9 @@ class CartItem implements Arrayable, Jsonable
     {
         return (float) number_format(
             $value, // the number to format
-      2, // how many decimal points
-      '.', // decimal separator
-      '' // thousands separator, set it to blank
+            2, // how many decimal points
+            '.', // decimal separator
+            '' // thousands separator, set it to blank
         );
     }
 }

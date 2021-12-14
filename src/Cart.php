@@ -38,7 +38,6 @@ class Cart
      * @var string
      */
     private $instance;
-    public $coupons = [];
 
     /**
      * Cart constructor.
@@ -197,7 +196,11 @@ class Cart
     public function remove(string $rowId)
     {
         $cartItem = $this->get($rowId);
-        $this->removeCoupon($cartItem->couponCode);
+
+        foreach ($cartItem->appliedCoupons as $coupon) {
+            $this->removeCoupon($coupon->couponCode);
+        }
+
         $content = $this->getContent();
 
         $content->pull($cartItem->rowId);
@@ -303,11 +306,6 @@ class Cart
         return $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
             return $subTotal + ($cartItem->qty * $cartItem->price);
         }, 0);
-    }
-
-    public function coupons(): array
-    {
-        return $this->coupons;
     }
 
     /**
@@ -619,6 +617,29 @@ class Cart
     }
 
     /**
+     * @return array
+     */
+    public function coupons(): array
+    {
+        return $this->getContent()->reduce(function ($coupons, CartItem $cartItem) {
+            foreach ($cartItem->appliedCoupons as $coupon) {
+                Arr::set(
+                    $coupons,
+                    $coupon->couponCode,
+                    (object) [
+                        'rowId'       => $cartItem->rowId,
+                        'couponCode'  => $coupon->couponCode,
+                        'couponType'  => $coupon->couponType,
+                        'couponValue' => $coupon->couponValue,
+                    ]
+                );
+            }
+
+            return $coupons;
+        }, []);
+    }
+
+    /**
      * @param $rowId
      * @param  string  $couponCode
      * @param  string  $couponType
@@ -644,7 +665,7 @@ class Cart
 
         $this->session->put($this->instance, $content);
 
-        $this->coupons[$couponCode] = (object) [
+        $this->coupons()[$couponCode] = (object) [
             'rowId'       => $rowId,
             'couponCode'  => $couponCode,
             'couponType'  => $couponType,
@@ -653,12 +674,57 @@ class Cart
     }
 
     /**
+     * @param $rowId
+     * @param  string  $couponCode
+     */
+    public function detachCoupon(
+        $rowId,
+        string $couponCode
+    ) {
+        $cartItem = $this->get($rowId);
+
+        $cartItem->detachCoupon(
+            $couponCode
+        );
+
+        $content = $this->getContent();
+
+        $content->put($cartItem->rowId, $cartItem);
+
+        $this->session->put($this->instance, $content);
+
+        unset($this->coupons()[$couponCode]);
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasCoupons(): bool
+    {
+        return count($this->coupons()) > 0;
+    }
+
+    /**
+     * @param  string  $couponCode
+     * @return array|\ArrayAccess|mixed|null
+     */
+    public function getCoupon(
+        string $couponCode
+    ) {
+        $coupons = $this->coupons();
+
+        return Arr::has($coupons, $couponCode)
+            ? Arr::get($coupons, $couponCode)
+            : null;
+    }
+
+    /**
      * @param  string|null  $couponCode
      */
     public function removeCoupon(?string $couponCode)
     {
         if (! is_null($couponCode)) {
-            unset($this->coupons[$couponCode]);
+            unset($this->coupons()[$couponCode]);
         }
     }
 }
