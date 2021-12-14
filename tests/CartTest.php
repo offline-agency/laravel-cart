@@ -29,7 +29,7 @@ class CartTest extends TestCase
     /**
      * Set the package service provider.
      *
-     * @param  Application  $app
+     * @param Application $app
      * @return array
      */
     protected function getPackageProviders($app): array
@@ -40,7 +40,7 @@ class CartTest extends TestCase
     /**
      * Define environment setup.
      *
-     * @param  Application  $app
+     * @param Application $app
      * @return void
      */
     protected function getEnvironmentSetUp($app)
@@ -51,9 +51,9 @@ class CartTest extends TestCase
 
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
-            'driver'   => 'sqlite',
+            'driver' => 'sqlite',
             'database' => ':memory:',
-            'prefix'   => '',
+            'prefix' => '',
         ]);
     }
 
@@ -67,7 +67,7 @@ class CartTest extends TestCase
         parent::setUp();
 
         $this->app->afterResolving('migrator', function ($migrator) {
-            $migrator->path(realpath(__DIR__.'/../database/migrations'));
+            $migrator->path(realpath(__DIR__ . '/../database/migrations'));
         });
     }
 
@@ -194,22 +194,22 @@ class CartTest extends TestCase
         $cartItems = $cart->addBatch(
             [
                 [
-                    'id'         => 1,
-                    'name'       => '1st Cart item',
-                    'subtitle'   => 'This is a simple description',
-                    'qty'        => 1,
-                    'price'      => 10.00,
+                    'id' => 1,
+                    'name' => '1st Cart item',
+                    'subtitle' => 'This is a simple description',
+                    'qty' => 1,
+                    'price' => 10.00,
                     'totalPrice' => 12.22,
-                    'vat'        => 2.22,
+                    'vat' => 2.22,
                 ],
                 [
-                    'id'         => 2,
-                    'name'       => '2nd Cart item',
-                    'subtitle'   => 'This is a simple description',
-                    'qty'        => 1,
-                    'price'      => 10.00,
+                    'id' => 2,
+                    'name' => '2nd Cart item',
+                    'subtitle' => 'This is a simple description',
+                    'qty' => 1,
+                    'price' => 10.00,
                     'totalPrice' => 12.22,
-                    'vat'        => 2.22,
+                    'vat' => 2.22,
                 ],
             ]
         );
@@ -253,13 +253,13 @@ class CartTest extends TestCase
         $cart->addBatch(
             [
                 [
-                    'id'         => 1,
-                    'name'       => 'Cart item',
-                    'subtitle'   => 'This is a simple description',
-                    'qty'        => 1,
-                    'price'      => 10.00,
+                    'id' => 1,
+                    'name' => 'Cart item',
+                    'subtitle' => 'This is a simple description',
+                    'qty' => 1,
+                    'price' => 10.00,
                     'totalPrice' => 12.22,
-                    'vat'        => 2.22,
+                    'vat' => 2.22,
                 ],
             ]
         );
@@ -279,22 +279,22 @@ class CartTest extends TestCase
         $cart->addBatch(
             [
                 [
-                    'id'         => 1,
-                    'name'       => '1st Cart item',
-                    'subtitle'   => 'This is a simple description',
-                    'qty'        => 1,
-                    'price'      => 10.00,
+                    'id' => 1,
+                    'name' => '1st Cart item',
+                    'subtitle' => 'This is a simple description',
+                    'qty' => 1,
+                    'price' => 10.00,
                     'totalPrice' => 12.22,
-                    'vat'        => 2.22,
+                    'vat' => 2.22,
                 ],
                 [
-                    'id'         => 2,
-                    'name'       => '2nd Cart item',
-                    'subtitle'   => 'This is a simple description',
-                    'qty'        => 1,
-                    'price'      => 10.00,
+                    'id' => 2,
+                    'name' => '2nd Cart item',
+                    'subtitle' => 'This is a simple description',
+                    'qty' => 1,
+                    'price' => 10.00,
                     'totalPrice' => 12.22,
-                    'vat'        => 2.22,
+                    'vat' => 2.22,
                 ],
             ]
         );
@@ -1482,16 +1482,16 @@ class CartTest extends TestCase
             100
         );
 
-        $this->assertIsArray($cart->coupons);
-        $this->assertCount(1, $cart->coupons);
+        $this->assertIsArray($cart->coupons());
+        $this->assertCount(1, $cart->coupons());
         $this->assertEquals(
-            (object) [
-                'rowId'       => '07d5da5550494c62daf9993cf954303f',
-                'couponCode'  => 'BLACK_FRIDAY_FIXED_2021',
-                'couponType'  => 'fixed',
+            (object)[
+                'rowId' => '07d5da5550494c62daf9993cf954303f',
+                'couponCode' => 'BLACK_FRIDAY_FIXED_2021',
+                'couponType' => 'fixed',
                 'couponValue' => 100,
             ],
-            $cart->coupons['BLACK_FRIDAY_FIXED_2021']
+            $cart->coupons()['BLACK_FRIDAY_FIXED_2021']
         );
 
         $coupon = $cartItem->appliedCoupons['BLACK_FRIDAY_FIXED_2021'];
@@ -1529,16 +1529,16 @@ class CartTest extends TestCase
             50
         );
 
-        $this->assertIsArray($cart->coupons);
-        $this->assertCount(1, $cart->coupons);
+        $this->assertIsArray($cart->coupons());
+        $this->assertCount(1, $cart->coupons());
         $this->assertEquals(
-            (object) [
-                'rowId'       => '07d5da5550494c62daf9993cf954303f',
-                'couponCode'  => 'BLACK_FRIDAY_PERCENTAGE_2021',
-                'couponType'  => 'percentage',
+            (object)[
+                'rowId' => '07d5da5550494c62daf9993cf954303f',
+                'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
+                'couponType' => 'percentage',
                 'couponValue' => 50,
             ],
-            $cart->coupons['BLACK_FRIDAY_PERCENTAGE_2021']
+            $cart->coupons()['BLACK_FRIDAY_PERCENTAGE_2021']
         );
 
         $coupon = $cartItem->appliedCoupons['BLACK_FRIDAY_PERCENTAGE_2021'];
@@ -1556,31 +1556,31 @@ class CartTest extends TestCase
     {
         $cart = $this->getCart();
         $cartItem = $cart->add(
-        1,
-        'First Cart item',
-        'This is a simple description',
-        1,
-        1000.00,
-        1200.22,
-        200.22,
-        '0',
-        '0',
-        'https://ecommerce.test/images/item-name.png',
-        ['size' => 'XL', 'color' => 'red']
-      );
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.22,
+            200.22,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
 
         $cart->applyCoupon(
-        '07d5da5550494c62daf9993cf954303f',
-        'BLACK_FRIDAY_PERCENTAGE_2021',
-        'percentage',
-        50
-      );
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_PERCENTAGE_2021',
+            'percentage',
+            50
+        );
 
-        $this->assertCount(1, $cart->coupons);
+        $this->assertCount(1, $cart->coupons());
 
         $cart->remove($cartItem->rowId);
 
-        $this->assertEmpty($cart->coupons);
+        $this->assertEmpty($cart->coupons());
     }
 
     /** @test */
@@ -1608,16 +1608,16 @@ class CartTest extends TestCase
             50
         );
 
-        $this->assertIsArray($cart->coupons);
-        $this->assertCount(1, $cart->coupons);
+        $this->assertIsArray($cart->coupons());
+        $this->assertCount(1, $cart->coupons());
         $this->assertEquals(
-            (object) [
-                'rowId'       => '07d5da5550494c62daf9993cf954303f',
-                'couponCode'  => 'BLACK_FRIDAY_PERCENTAGE_2021',
-                'couponType'  => 'percentage',
+            (object)[
+                'rowId' => '07d5da5550494c62daf9993cf954303f',
+                'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
+                'couponType' => 'percentage',
                 'couponValue' => 50,
             ],
-            $cart->coupons['BLACK_FRIDAY_PERCENTAGE_2021']
+            $cart->coupons()['BLACK_FRIDAY_PERCENTAGE_2021']
         );
 
         $coupon = $cartItem->appliedCoupons['BLACK_FRIDAY_PERCENTAGE_2021'];
@@ -1634,8 +1634,8 @@ class CartTest extends TestCase
             'BLACK_FRIDAY_PERCENTAGE_2021'
         );
 
-        $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cart->coupons);
-        $this->assertEmpty($cart->coupons);
+        $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cart->coupons());
+        $this->assertEmpty($cart->coupons());
 
         $cartItem = $cart->get('07d5da5550494c62daf9993cf954303f');
 
@@ -1668,16 +1668,16 @@ class CartTest extends TestCase
             50
         );
 
-        $this->assertIsArray($cart->coupons);
-        $this->assertCount(1, $cart->coupons);
+        $this->assertIsArray($cart->coupons());
+        $this->assertCount(1, $cart->coupons());
         $this->assertEquals(
-            (object) [
-                'rowId'       => '07d5da5550494c62daf9993cf954303f',
-                'couponCode'  => 'BLACK_FRIDAY_PERCENTAGE_2021',
-                'couponType'  => 'percentage',
+            (object)[
+                'rowId' => '07d5da5550494c62daf9993cf954303f',
+                'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
+                'couponType' => 'percentage',
                 'couponValue' => 50,
             ],
-            $cart->coupons['BLACK_FRIDAY_PERCENTAGE_2021']
+            $cart->coupons()['BLACK_FRIDAY_PERCENTAGE_2021']
         );
 
         $coupon = $cartItem->appliedCoupons['BLACK_FRIDAY_PERCENTAGE_2021'];
@@ -1697,8 +1697,8 @@ class CartTest extends TestCase
             'BLACK_FRIDAY_PERCENTAGE_2021'
         );
 
-        $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cart->coupons);
-        $this->assertEmpty($cart->coupons);
+        $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cart->coupons());
+        $this->assertEmpty($cart->coupons());
         $this->assertFalse($cart->hasCoupons());
 
         $cartItem = $cart->get('07d5da5550494c62daf9993cf954303f');
@@ -1706,6 +1706,117 @@ class CartTest extends TestCase
         $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cartItem->appliedCoupons);
         $this->assertEmpty($cartItem->appliedCoupons);
         $this->assertFalse($cartItem->hasCoupons());
+    }
+
+    /** @test */
+    public function it_can_return_all_applied_coupons()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.22,
+            200.22,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cart->applyCoupon(
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_PERCENTAGE_2021',
+            'percentage',
+            50
+        );
+
+        $cart->applyCoupon(
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_FIXED_2021',
+            'fixed',
+            10
+        );
+
+        $this->assertIsArray($cart->coupons());
+        $this->assertCount(2, $cart->coupons());
+        $this->assertEquals(
+            [
+                'BLACK_FRIDAY_PERCENTAGE_2021' => (object)[
+                    'rowId' => '07d5da5550494c62daf9993cf954303f',
+                    'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
+                    'couponType' => 'percentage',
+                    'couponValue' => 50,
+                ],
+                'BLACK_FRIDAY_FIXED_2021' => (object)[
+                    'rowId' => '07d5da5550494c62daf9993cf954303f',
+                    'couponCode' => 'BLACK_FRIDAY_FIXED_2021',
+                    'couponType' => 'fixed',
+                    'couponValue' => 10,
+                ]
+            ],
+            $cart->coupons()
+        );
+    }
+
+    /** @test */
+    public function it_can_return_a_coupon_by_its_code()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.22,
+            200.22,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cart->applyCoupon(
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_PERCENTAGE_2021',
+            'percentage',
+            50
+        );
+
+        $cart->applyCoupon(
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_FIXED_2021',
+            'fixed',
+            10
+        );
+
+        $this->assertIsArray($cart->coupons());
+        $this->assertCount(2, $cart->coupons());
+        $this->assertEquals(
+            [
+                'BLACK_FRIDAY_PERCENTAGE_2021' => (object)[
+                    'rowId' => '07d5da5550494c62daf9993cf954303f',
+                    'couponCode' => 'BLACK_FRIDAY_PERCENTAGE_2021',
+                    'couponType' => 'percentage',
+                    'couponValue' => 50,
+                ],
+                'BLACK_FRIDAY_FIXED_2021' => (object)[
+                    'rowId' => '07d5da5550494c62daf9993cf954303f',
+                    'couponCode' => 'BLACK_FRIDAY_FIXED_2021',
+                    'couponType' => 'fixed',
+                    'couponValue' => 10,
+                ]
+            ],
+            $cart->coupons()
+        );
+
+        $coupon = $cart->getCoupon('BLACK_FRIDAY_PERCENTAGE_2021');
+        $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $coupon->couponCode);
+        $this->assertEquals('percentage', $coupon->couponType);
+        $this->assertEquals(50, $coupon->couponValue);
     }
 
     /**
@@ -1724,9 +1835,9 @@ class CartTest extends TestCase
     /**
      * Set the config number format.
      *
-     * @param  int  $decimals
-     * @param  string  $decimalPoint
-     * @param  string  $thousandSeparator
+     * @param int $decimals
+     * @param string $decimalPoint
+     * @param string $thousandSeparator
      */
     private function setConfigFormat(int $decimals, string $decimalPoint, string $thousandSeparator)
     {

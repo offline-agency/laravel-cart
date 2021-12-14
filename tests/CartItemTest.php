@@ -268,4 +268,47 @@ class CartItemTest extends TestCase
         $this->assertEmpty($cartItem->appliedCoupons);
         $this->assertFalse($cartItem->hasCoupons());
     }
+
+    /** @test */
+    public function it_can_return_a_coupon_by_its_code()
+    {
+        $cartItem = new CartItem(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.22,
+            '0',
+            '0',
+            200.22,
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cartItem->applyCoupon(
+            'BLACK_FRIDAY_FIXED_2021',
+            'fixed',
+            100
+        );
+
+        $cartItem->applyCoupon(
+            'BLACK_FRIDAY_PERCENTAGE_2021',
+            'percentage',
+            50
+        );
+
+        $this->assertIsArray($cartItem->appliedCoupons);
+        $this->assertCount(2, $cartItem->appliedCoupons);
+
+        $coupon = $cartItem->getCoupon('BLACK_FRIDAY_FIXED_2021');
+        $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $coupon->couponCode);
+        $this->assertEquals('fixed', $coupon->couponType);
+        $this->assertEquals(100, $coupon->couponValue);
+        $this->assertEquals(471.47, $cartItem->price);
+        $this->assertEquals(78.64, $cartItem->vat);
+        $this->assertEquals(550.11, $cartItem->totalPrice);
+        $this->assertEquals(550.11, $cartItem->discountValue);
+        $this->assertTrue($cartItem->hasCoupons());
+    }
 }

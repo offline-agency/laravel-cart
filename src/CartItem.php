@@ -357,6 +357,17 @@ class CartItem implements Arrayable, Jsonable
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
+    public function getCoupon(
+        string $couponCode
+    )
+    {
+        $coupons = $this->appliedCoupons;
+
+        return Arr::has($coupons, $couponCode)
+            ? Arr::get($coupons, $couponCode)
+            : null;
+    }
+
     /**
      * @param string $couponCode
      * @param string $couponType
