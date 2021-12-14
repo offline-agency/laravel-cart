@@ -6,6 +6,7 @@ use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Application;
 use Illuminate\Session\SessionManager;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
@@ -788,30 +789,28 @@ class CartTest extends TestCase
             '07d5da5550494c62daf9993cf954303f' => [
                 'rowId' => '07d5da5550494c62daf9993cf954303f',
                 'id' => 1,
+                'qty' => 1,
                 'name' => 'First Cart item',
                 'subtitle' => 'This is a simple description',
-                'qty' => 1,
-                'price' => 1000.00,
+                'originalPrice' => 1000.0,
+                'originalTotalPrice' => 1200.22,
+                'originalVat' => 200.22,
+                'price' => 1000.0,
+                'totalPrice' => 1200.22,
+                'vat' => 200.22,
+                'vatLabel' => 'Iva Inclusa',
+                'vatRate' => 16.68,
                 'vatFcCode' => '0',
                 'productFcCode' => '0',
-                'vat' => 200.22,
+                'discountValue' => 0.0,
                 'urlImg' => 'https://ecommerce.test/images/item-name.png',
                 'options' => [
                     'size' => 'XL',
                     'color' => 'red',
                 ],
-                'totalPrice' => 1200.22,
-                'vatLabel' => 'Iva Inclusa',
-                'vatRate' => 16.68,
                 'associatedModel' => null,
                 'model' => null,
-                'discountValue' => null,
-                'discountCode' => null,
-                'discountDescription' => null,
-                'discountRate' => null,
-                'couponCode' => null,
-                'couponType' => null,
-                'couponValue' => null,
+                'appliedCoupons' => []
             ],
             '13e04d556bd1d42c1d940962999e405a' => [
                 'rowId' => '13e04d556bd1d42c1d940962999e405a',
@@ -819,27 +818,25 @@ class CartTest extends TestCase
                 'name' => 'Second Cart item',
                 'subtitle' => 'This is a simple description',
                 'qty' => 1,
+                'originalPrice' => 1000.0,
+                'originalTotalPrice' => 1200.22,
+                'originalVat' => 200.22,
                 'price' => 1000.00,
+                'totalPrice' => 1200.22,
+                'vat' => 200.22,
+                'vatLabel' => 'Iva Inclusa',
+                'vatRate' => 16.68,
                 'vatFcCode' => '0',
                 'productFcCode' => '0',
-                'vat' => 200.22,
+                'discountValue' => 0.0,
                 'urlImg' => 'https://ecommerce.test/images/item-name.png',
                 'options' => [
                     'size' => 'XL',
                     'color' => 'red',
                 ],
-                'totalPrice' => 1200.22,
-                'vatLabel' => 'Iva Inclusa',
-                'vatRate' => 16.68,
                 'associatedModel' => null,
                 'model' => null,
-                'discountValue' => null,
-                'discountCode' => null,
-                'discountDescription' => null,
-                'discountRate' => null,
-                'couponCode' => null,
-                'couponType' => null,
-                'couponValue' => null,
+                'appliedCoupons' => []
             ],
         ], $content->toArray());
     }
@@ -1496,16 +1493,14 @@ class CartTest extends TestCase
             ],
             $cart->coupons['BLACK_FRIDAY_FIXED_2021']
         );
-        $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $cartItem->couponCode);
-        $this->assertEquals('fixed', $cartItem->couponType);
-        $this->assertEquals(100, $cartItem->couponValue);
+
+        $coupon = $cartItem->appliedCoupons['BLACK_FRIDAY_FIXED_2021'];
+        $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $coupon->couponCode);
+        $this->assertEquals('fixed', $coupon->couponType);
+        $this->assertEquals(100, $coupon->couponValue);
         $this->assertEquals(942.94, $cartItem->price);
         $this->assertEquals(157.28, $cartItem->vat);
         $this->assertEquals(1100.22, $cartItem->totalPrice);
-
-        $this->assertNull($cartItem->discountCode);
-        $this->assertNull($cartItem->discountDescription);
-        $this->assertEquals(8.33, $cartItem->discountRate);
         $this->assertEquals(100, $cartItem->discountValue);
     }
 
@@ -1546,16 +1541,13 @@ class CartTest extends TestCase
             $cart->coupons['BLACK_FRIDAY_PERCENTAGE_2021']
         );
 
-        $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $cartItem->couponCode);
-        $this->assertEquals('percentage', $cartItem->couponType);
-        $this->assertEquals(50, $cartItem->couponValue);
+        $coupon = $cartItem->appliedCoupons['BLACK_FRIDAY_PERCENTAGE_2021'];
+        $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $coupon->couponCode);
+        $this->assertEquals('percentage', $coupon->couponType);
+        $this->assertEquals(50, $coupon->couponValue);
         $this->assertEquals(514.32, $cartItem->price);
         $this->assertEquals(85.79, $cartItem->vat);
         $this->assertEquals(600.11, $cartItem->totalPrice);
-
-        $this->assertNull($cartItem->discountCode);
-        $this->assertNull($cartItem->discountDescription);
-        $this->assertEquals(50, $cartItem->discountRate);
         $this->assertEquals(600.11, $cartItem->discountValue);
     }
 
@@ -1589,6 +1581,131 @@ class CartTest extends TestCase
         $cart->remove($cartItem->rowId);
 
         $this->assertEmpty($cart->coupons);
+    }
+
+    /** @test */
+    public function it_can_detach_a_coupon_of_a_cart_item()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.22,
+            200.22,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cart->applyCoupon(
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_PERCENTAGE_2021',
+            'percentage',
+            50
+        );
+
+        $this->assertIsArray($cart->coupons);
+        $this->assertCount(1, $cart->coupons);
+        $this->assertEquals(
+            (object) [
+                'rowId'       => '07d5da5550494c62daf9993cf954303f',
+                'couponCode'  => 'BLACK_FRIDAY_PERCENTAGE_2021',
+                'couponType'  => 'percentage',
+                'couponValue' => 50,
+            ],
+            $cart->coupons['BLACK_FRIDAY_PERCENTAGE_2021']
+        );
+
+        $coupon = $cartItem->appliedCoupons['BLACK_FRIDAY_PERCENTAGE_2021'];
+        $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $coupon->couponCode);
+        $this->assertEquals('percentage', $coupon->couponType);
+        $this->assertEquals(50, $coupon->couponValue);
+        $this->assertEquals(514.32, $cartItem->price);
+        $this->assertEquals(85.79, $cartItem->vat);
+        $this->assertEquals(600.11, $cartItem->totalPrice);
+        $this->assertEquals(600.11, $cartItem->discountValue);
+
+        $cart->detachCoupon(
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_PERCENTAGE_2021'
+        );
+
+        $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cart->coupons);
+        $this->assertEmpty($cart->coupons);
+
+        $cartItem = $cart->get('07d5da5550494c62daf9993cf954303f');
+
+        $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cartItem->appliedCoupons);
+        $this->assertEmpty($cartItem->appliedCoupons);
+    }
+
+    /** @test */
+    public function it_can_detect_if_has_coupons()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.22,
+            200.22,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cart->applyCoupon(
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_PERCENTAGE_2021',
+            'percentage',
+            50
+        );
+
+        $this->assertIsArray($cart->coupons);
+        $this->assertCount(1, $cart->coupons);
+        $this->assertEquals(
+            (object) [
+                'rowId'       => '07d5da5550494c62daf9993cf954303f',
+                'couponCode'  => 'BLACK_FRIDAY_PERCENTAGE_2021',
+                'couponType'  => 'percentage',
+                'couponValue' => 50,
+            ],
+            $cart->coupons['BLACK_FRIDAY_PERCENTAGE_2021']
+        );
+
+        $coupon = $cartItem->appliedCoupons['BLACK_FRIDAY_PERCENTAGE_2021'];
+        $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $coupon->couponCode);
+        $this->assertEquals('percentage', $coupon->couponType);
+        $this->assertEquals(50, $coupon->couponValue);
+        $this->assertEquals(514.32, $cartItem->price);
+        $this->assertEquals(85.79, $cartItem->vat);
+        $this->assertEquals(600.11, $cartItem->totalPrice);
+        $this->assertEquals(600.11, $cartItem->discountValue);
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertTrue($cartItem->hasCoupons());
+
+        $cart->detachCoupon(
+            '07d5da5550494c62daf9993cf954303f',
+            'BLACK_FRIDAY_PERCENTAGE_2021'
+        );
+
+        $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cart->coupons);
+        $this->assertEmpty($cart->coupons);
+        $this->assertFalse($cart->hasCoupons());
+
+        $cartItem = $cart->get('07d5da5550494c62daf9993cf954303f');
+
+        $this->assertArrayNotHasKey('BLACK_FRIDAY_FIXED_2021', $cartItem->appliedCoupons);
+        $this->assertEmpty($cartItem->appliedCoupons);
+        $this->assertFalse($cartItem->hasCoupons());
     }
 
     /**
