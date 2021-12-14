@@ -761,8 +761,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',
@@ -774,8 +774,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',
@@ -793,13 +793,13 @@ class CartTest extends TestCase
                 'name' => 'First Cart item',
                 'subtitle' => 'This is a simple description',
                 'originalPrice' => 1000.0,
-                'originalTotalPrice' => 1200.22,
-                'originalVat' => 200.22,
+                'originalTotalPrice' => 1200.00,
+                'originalVat' => 200.00,
                 'price' => 1000.0,
-                'totalPrice' => 1200.22,
-                'vat' => 200.22,
+                'totalPrice' => 1200.00,
+                'vat' => 200.00,
                 'vatLabel' => 'Iva Inclusa',
-                'vatRate' => 16.68,
+                'vatRate' => 20.00,
                 'vatFcCode' => '0',
                 'productFcCode' => '0',
                 'discountValue' => 0.0,
@@ -819,13 +819,13 @@ class CartTest extends TestCase
                 'subtitle' => 'This is a simple description',
                 'qty' => 1,
                 'originalPrice' => 1000.0,
-                'originalTotalPrice' => 1200.22,
-                'originalVat' => 200.22,
+                'originalTotalPrice' => 1200.00,
+                'originalVat' => 200.00,
                 'price' => 1000.00,
-                'totalPrice' => 1200.22,
-                'vat' => 200.22,
+                'totalPrice' => 1200.00,
+                'vat' => 200.00,
                 'vatLabel' => 'Iva Inclusa',
-                'vatRate' => 16.68,
+                'vatRate' => 20.00,
                 'vatFcCode' => '0',
                 'productFcCode' => '0',
                 'discountValue' => 0.0,
@@ -905,8 +905,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
         $cartItem = $cart->add(
             2,
@@ -914,8 +914,8 @@ class CartTest extends TestCase
             'This is a simple description',
             2,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $this->assertItemsInCart(3, $cart);
@@ -933,8 +933,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
         $cartItem = $cart->add(
             2,
@@ -942,8 +942,8 @@ class CartTest extends TestCase
             'This is a simple description',
             2,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cartItem = $cart->search(function ($cartItem, $rowId) {
@@ -967,8 +967,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '',
             '',
             '',
@@ -982,8 +982,8 @@ class CartTest extends TestCase
             'This is a simple description',
             2,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '',
             '',
             '',
@@ -1013,8 +1013,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         )->associate('OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel');
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
@@ -1033,8 +1033,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel());
@@ -1059,8 +1059,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', 'SomeModel');
@@ -1077,8 +1077,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel());
@@ -1100,15 +1100,15 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
-        $this->assertEquals(1200.22, $cartItem->totalPrice);
+        $this->assertEquals(1200.00, $cartItem->totalPrice);
         $this->assertEquals(1000.00, $cartItem->price);
-        $this->assertEquals(200.22, $cartItem->vat);
+        $this->assertEquals(200.00, $cartItem->vat);
     }
 
     /** @test */
@@ -1122,15 +1122,15 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
         $this->assertEquals('3000', $cart->subtotal());
-        $this->assertEquals('600.66', $cart->vat());
-        $this->assertEquals('3600.66', $cart->total());
+        $this->assertEquals('600.0', $cart->vat());
+        $this->assertEquals('3600.0', $cart->total());
     }
 
     /** @test */
@@ -1144,14 +1144,14 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
-        $this->assertEquals(200.22, $cartItem->vat);
-        $this->assertEquals(600.66, $cart->vat());
+        $this->assertEquals(200.00, $cartItem->vat);
+        $this->assertEquals(600.00, $cart->vat());
     }
 
     /** @test */
@@ -1165,8 +1165,8 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
         $cartItem = $cart->add(
             2,
@@ -1174,11 +1174,11 @@ class CartTest extends TestCase
             'This is a simple description',
             2,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
-        $this->assertEquals(1001.1, $cart->vat());
+        $this->assertEquals(1000.00, $cart->vat());
     }
 
     /** @test */
@@ -1192,8 +1192,8 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
         $cartItem = $cart->add(
             2,
@@ -1201,8 +1201,8 @@ class CartTest extends TestCase
             'This is a simple description',
             2,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $this->assertEquals(5000.00, $cart->subtotal);
@@ -1220,8 +1220,8 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
         $cartItem = $cart->add(
             2,
@@ -1229,8 +1229,8 @@ class CartTest extends TestCase
             'This is a simple description',
             2,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $this->assertEquals('5000,00', $cart->subtotal(2, ',', ''));
@@ -1313,8 +1313,8 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cart->store($identifier = 123);
@@ -1347,8 +1347,8 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cart->store($identifier = 123);
@@ -1375,8 +1375,8 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22
+            1200.00,
+            200.00
         );
 
         $cart->store($identifier = 123);
@@ -1419,8 +1419,8 @@ class CartTest extends TestCase
             'This is a simple description',
             3,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '10',
             'https://ecommerce.test/images/item-name.png'
@@ -1432,15 +1432,15 @@ class CartTest extends TestCase
         $this->assertEquals('This is a simple description', $cartItem->subtitle);
         $this->assertEquals(3, $cartItem->qty);
         $this->assertEquals(1000, $cartItem->price);
-        $this->assertEquals(1200.22, $cartItem->totalPrice);
-        $this->assertEquals(200.22, $cartItem->vat);
+        $this->assertEquals(1200.00, $cartItem->totalPrice);
+        $this->assertEquals(200.00, $cartItem->vat);
         $this->assertEquals('0', $cartItem->vatFcCode);
         $this->assertEquals('10', $cartItem->productFcCode);
         $this->assertEquals('https://ecommerce.test/images/item-name.png', $cartItem->urlImg);
 
         $this->assertEquals(3000, $cart->subtotal());
-        $this->assertEquals(3600.66, $cart->total());
-        $this->assertEquals(600.66, $cart->vat());
+        $this->assertEquals(3600.00, $cart->total());
+        $this->assertEquals(600.00, $cart->vat());
     }
 
     /** @test */
@@ -1467,8 +1467,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',
@@ -1498,9 +1498,9 @@ class CartTest extends TestCase
         $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $coupon->couponCode);
         $this->assertEquals('fixed', $coupon->couponType);
         $this->assertEquals(100, $coupon->couponValue);
-        $this->assertEquals(942.94, $cartItem->price);
-        $this->assertEquals(157.28, $cartItem->vat);
-        $this->assertEquals(1100.22, $cartItem->totalPrice);
+        $this->assertEquals(916.67, $cartItem->price);
+        $this->assertEquals(183.33, $cartItem->vat);
+        $this->assertEquals(1100.00, $cartItem->totalPrice);
         $this->assertEquals(100, $cartItem->discountValue);
     }
 
@@ -1514,8 +1514,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',
@@ -1545,10 +1545,10 @@ class CartTest extends TestCase
         $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $coupon->couponCode);
         $this->assertEquals('percentage', $coupon->couponType);
         $this->assertEquals(50, $coupon->couponValue);
-        $this->assertEquals(514.32, $cartItem->price);
-        $this->assertEquals(85.79, $cartItem->vat);
-        $this->assertEquals(600.11, $cartItem->totalPrice);
-        $this->assertEquals(600.11, $cartItem->discountValue);
+        $this->assertEquals(500.00, $cartItem->price);
+        $this->assertEquals(100.00, $cartItem->vat);
+        $this->assertEquals(600.00, $cartItem->totalPrice);
+        $this->assertEquals(600.00, $cartItem->discountValue);
     }
 
     /** @test */
@@ -1561,8 +1561,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',
@@ -1593,8 +1593,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',
@@ -1624,10 +1624,10 @@ class CartTest extends TestCase
         $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $coupon->couponCode);
         $this->assertEquals('percentage', $coupon->couponType);
         $this->assertEquals(50, $coupon->couponValue);
-        $this->assertEquals(514.32, $cartItem->price);
-        $this->assertEquals(85.79, $cartItem->vat);
-        $this->assertEquals(600.11, $cartItem->totalPrice);
-        $this->assertEquals(600.11, $cartItem->discountValue);
+        $this->assertEquals(500.00, $cartItem->price);
+        $this->assertEquals(100.00, $cartItem->vat);
+        $this->assertEquals(600.00, $cartItem->totalPrice);
+        $this->assertEquals(600.00, $cartItem->discountValue);
 
         $cart->detachCoupon(
             '07d5da5550494c62daf9993cf954303f',
@@ -1653,8 +1653,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',
@@ -1684,10 +1684,10 @@ class CartTest extends TestCase
         $this->assertEquals('BLACK_FRIDAY_PERCENTAGE_2021', $coupon->couponCode);
         $this->assertEquals('percentage', $coupon->couponType);
         $this->assertEquals(50, $coupon->couponValue);
-        $this->assertEquals(514.32, $cartItem->price);
-        $this->assertEquals(85.79, $cartItem->vat);
-        $this->assertEquals(600.11, $cartItem->totalPrice);
-        $this->assertEquals(600.11, $cartItem->discountValue);
+        $this->assertEquals(500.00, $cartItem->price);
+        $this->assertEquals(100.00, $cartItem->vat);
+        $this->assertEquals(600.00, $cartItem->totalPrice);
+        $this->assertEquals(600.00, $cartItem->discountValue);
 
         $this->assertTrue($cart->hasCoupons());
         $this->assertTrue($cartItem->hasCoupons());
@@ -1718,8 +1718,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',
@@ -1771,8 +1771,8 @@ class CartTest extends TestCase
             'This is a simple description',
             1,
             1000.00,
-            1200.22,
-            200.22,
+            1200.00,
+            200.00,
             '0',
             '0',
             'https://ecommerce.test/images/item-name.png',

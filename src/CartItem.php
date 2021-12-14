@@ -83,7 +83,7 @@ class CartItem implements Arrayable, Jsonable
         $this->totalPrice = floatval($totalPrice);
         $this->vat = floatval($vat);
         $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
-        $this->vatRate = $this->formatFloat(100 * $this->vat / $this->totalPrice);
+        $this->vatRate = $this->formatFloat(100 * $this->vat / $this->price);
         $this->vatFcCode = $vatFcCode;
         $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
@@ -394,7 +394,7 @@ class CartItem implements Arrayable, Jsonable
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
                 $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
 
-                $this->discountValue = $couponValue;
+                $this->discountValue = $this->discountValue + $couponValue;
                 break;
             case 'percentage':
                 $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
@@ -404,7 +404,7 @@ class CartItem implements Arrayable, Jsonable
                 $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
                 $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-                $this->discountValue = $discountValue;
+                $this->discountValue = $this->discountValue + $discountValue;
                 break;
             default:
                 throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
