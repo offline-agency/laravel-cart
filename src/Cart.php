@@ -2,6 +2,7 @@
 
 namespace OfflineAgency\LaravelCart;
 
+use Carbon\Carbon;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Connection;
@@ -198,10 +199,8 @@ class Cart
     {
         $cartItem = $this->get($rowId);
 
-        if (isset($cartItem->appliedCoupons)) {
-            foreach ($cartItem->appliedCoupons as $coupon) {
-                $this->removeCoupon($coupon->couponCode);
-            }
+        foreach ($cartItem->appliedCoupons as $coupon) {
+            $this->removeCoupon($coupon->couponCode);
         }
 
         $content = $this->getContent();
@@ -276,9 +275,13 @@ class Cart
      */
     public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
-        return $this->getContent()->reduce(function ($total, CartItem $cartItem) {
+        $total = $this->getContent()->reduce(function ($total, CartItem $cartItem) {
             return $total + ($cartItem->qty * $cartItem->totalPrice);
         }, 0);
+
+        return $total < 0
+            ? 0
+            : $total;
     }
 
     /**
@@ -307,7 +310,18 @@ class Cart
     public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         return $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
-            return $subTotal + ($cartItem->qty * $cartItem->price);
+            $cartItemSubTotal = $cartItem->name !== 'discountCartItem'
+                ? ($cartItem->qty * $cartItem->price)
+                : 0;
+
+            return $subTotal + $cartItemSubTotal;
+        }, 0);
+    }
+
+    public function originalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
+    {
+        return $this->getContent()->reduce(function ($originalPrice, CartItem $cartItem) {
+            return $originalPrice + $cartItem->originalPrice;
         }, 0);
     }
 
@@ -656,32 +670,36 @@ class Cart
         float $couponValue
     )
     {
-        $cartItem = $this->get($rowId);
+        if (!is_null($rowId)) {
+            $cartItem = $this->get($rowId);
 
-        $cartItem->applyCoupon(
-            $couponCode,
-            $couponType,
-            $couponValue
-        );
+            $cartItem->applyCoupon(
+                $couponCode,
+                $couponType,
+                $couponValue
+            );
 
-        $content = $this->getContent();
+            $content = $this->getContent();
 
-        $content->put($cartItem->rowId, $cartItem);
+            $content->put($cartItem->rowId, $cartItem);
 
-        $this->session->put($this->instance, $content);
+            $this->session->put($this->instance, $content);
 
-        $this->coupons()[$couponCode] = (object)[
-            'rowId' => $rowId,
-            'couponCode' => $couponCode,
-            'couponType' => $couponType,
-            'couponValue' => $couponValue,
-        ];
+            $this->coupons()[$couponCode] = (object)[
+                'rowId' => $rowId,
+                'couponCode' => $couponCode,
+                'couponType' => $couponType,
+                'couponValue' => $couponValue,
+            ];
+        } else {
+            $this->applyGlobalCoupon(
+                $couponCode,
+                $couponType,
+                $couponValue
+            );
+        }
     }
 
-    /**
-     * @param $rowId
-     * @param string $couponCode
-     */
     public function detachCoupon(
         $rowId,
         string $couponCode
@@ -700,6 +718,10 @@ class Cart
         $this->session->put($this->instance, $content);
 
         unset($this->coupons()[$couponCode]);
+
+        if ($cartItem->name === 'discountCartItem') {
+            $this->remove($rowId);
+        }
     }
 
     /**
@@ -708,6 +730,21 @@ class Cart
     public function hasCoupons(): bool
     {
         return count($this->coupons()) > 0;
+    }
+
+    public function hasGlobalCoupon()
+    {
+        $coupons = $this->coupons();
+
+        if (count($coupons) > 0) {
+            foreach ($coupons as $coupon) {
+                if ($coupon->couponType === 'global') {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -733,5 +770,55 @@ class Cart
         if (!is_null($couponCode)) {
             unset($this->coupons()[$couponCode]);
         }
+    }
+
+    /**
+     * @param float $value
+     * @return float
+     */
+    private function formatFloat(float $value): float
+    {
+        return (float)number_format(
+            $value, // the number to format
+            2, // how many decimal points
+            '.', // decimal separator
+            '' // thousands separator, set it to blank
+        );
+    }
+
+    private function applyGlobalCoupon(
+        $couponCode,
+        $couponType,
+        $couponValue
+    )
+    {
+        $discount_value = 0;
+        $originalPrice = $this->originalPrice();
+        switch ($couponType) {
+            case 'fixed':
+                $discount_value = $couponValue;
+                break;
+            case 'percentage':
+                $discount_value = $this->formatFloat($originalPrice * $couponValue / 100);
+                break;
+        }
+        $discount_value = $discount_value;
+
+        $cartItem = $this->add(
+            md5(Carbon::now()),
+            'discountCartItem',
+            '',
+            1,
+            0,
+            0,
+            0
+        );
+
+        $cartItem->applyCoupon(
+            $couponCode,
+            'global',
+            $discount_value,
+            $originalPrice
+        );
     }
 }
