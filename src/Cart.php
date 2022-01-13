@@ -10,7 +10,6 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
 use OfflineAgency\LaravelCart\Exceptions\CartAlreadyStoredException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidRowIDException;
@@ -200,8 +199,10 @@ class Cart
     {
         $cartItem = $this->get($rowId);
 
-        foreach ($cartItem->appliedCoupons as $coupon) {
-            $this->removeCoupon($coupon->couponCode);
+        if (isset($cartItem->appliedCoupons)) {
+            foreach ($cartItem->appliedCoupons as $coupon) {
+                $this->removeCoupon($coupon->couponCode);
+            }
         }
 
         $content = $this->getContent();
@@ -319,6 +320,12 @@ class Cart
         }, 0);
     }
 
+    /**
+     * @param int|null $decimals
+     * @param string|null $decimalPoint
+     * @param string|null $thousandSeparator
+     * @return mixed
+     */
     public function originalTotalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
     {
         return $this->getContent()->reduce(function ($originalTotalPrice, CartItem $cartItem) {
@@ -701,6 +708,10 @@ class Cart
         }
     }
 
+    /**
+     * @param $rowId
+     * @param string $couponCode
+     */
     public function detachCoupon(
         $rowId,
         string $couponCode
@@ -733,6 +744,9 @@ class Cart
         return count($this->coupons()) > 0;
     }
 
+    /**
+     * @return bool
+     */
     public function hasGlobalCoupon()
     {
         $coupons = $this->coupons();
@@ -787,6 +801,11 @@ class Cart
         );
     }
 
+    /**
+     * @param $couponCode
+     * @param $couponType
+     * @param $couponValue
+     */
     private function applyGlobalCoupon(
         $couponCode,
         $couponType,
