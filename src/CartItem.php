@@ -374,8 +374,7 @@ class CartItem implements Arrayable, Jsonable
     public function applyCoupon(
         string $couponCode,
         string $couponType,
-        float $couponValue,
-        float $current_total = 0
+        float $couponValue
     ): CartItem {
         $this->appliedCoupons[$couponCode] = (object) [
             'couponCode' => $couponCode,
@@ -385,35 +384,37 @@ class CartItem implements Arrayable, Jsonable
 
         switch ($couponType) {
             case 'fixed':
-                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
-
-                $temporaryTotalPrice = $this->originalTotalPrice - $couponValue;
-                $this->price = $this->formatFloat($temporaryTotalPrice * 100 / (100 + $this->vatRate));
-                $this->vat = $this->formatFloat($this->price * 100 / $this->vatRate);
-                $this->totalPrice = $this->price + $this->vat;
-
-                $this->discountValue = $this->discountValue + $couponValue;
-                break;
-            case 'percentage':
-                $discountValue = $this->formatFloat($this->originalTotalPrice * $couponValue / 100);
-
-                $this->appliedCoupons[$couponCode]->discountValue = $discountValue;
-
-                $temporaryTotalPrice = $this->formatFloat($this->originalTotalPrice - $discountValue);
-                $this->price = $this->formatFloat($temporaryTotalPrice * 100 / (100 + $this->vatRate));
-                $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-                $this->totalPrice = $this->price + $this->vat;
-
-                $this->discountValue = $this->discountValue + $discountValue;
-                break;
-            case 'global':
-                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
-
                 $this->totalPrice = $this->formatFloat($this->totalPrice - $couponValue);
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
                 $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
 
-                $this->discountValue = $this->discountValue + $couponValue;
+                $this->discountValue = $this->formatFloat($this->discountValue + $couponValue);
+
+                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
+                break;
+            case 'percentage':
+                $discountValue = $this->formatFloat($this->originalTotalPrice * $couponValue / 100);
+
+                $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
+                $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+                $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+
+                $this->discountValue = $this->formatFloat($this->discountValue + $discountValue);
+
+                $this->appliedCoupons[$couponCode]->discountValue = $discountValue;
+                break;
+            case 'global':
+                $totalPrice = $couponValue;
+                $price = $this->formatFloat($totalPrice * 100 / (100 + $this->vatRate));
+                $vat = $this->formatFloat($price * $this->vatRate / 100);
+
+                $this->totalPrice = $this->formatFloat($totalPrice * -1);
+                $this->price = $this->formatFloat($price * -1);
+                $this->vat = $this->formatFloat($vat * -1);
+
+                $this->discountValue = $this->formatFloat(($this->discountValue + $couponValue));
+
+                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
                 break;
             default:
                 throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
@@ -430,9 +431,11 @@ class CartItem implements Arrayable, Jsonable
 
         unset($this->appliedCoupons[$couponCode]);
 
-        $this->totalPrice = $this->totalPrice + $discountValue;
+        $this->totalPrice = $this->formatFloat($this->totalPrice + $discountValue);
         $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
         $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+
+        $this->discountValue = $this->formatFloat($this->discountValue - $discountValue);
 
         return $this;
     }

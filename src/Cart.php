@@ -10,6 +10,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
 use OfflineAgency\LaravelCart\Exceptions\CartAlreadyStoredException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidRowIDException;
@@ -318,10 +319,10 @@ class Cart
         }, 0);
     }
 
-    public function originalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
+    public function originalTotalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
     {
-        return $this->getContent()->reduce(function ($originalPrice, CartItem $cartItem) {
-            return $originalPrice + $cartItem->originalPrice;
+        return $this->getContent()->reduce(function ($originalTotalPrice, CartItem $cartItem) {
+            return $originalTotalPrice + $cartItem->originalTotalPrice;
         }, 0);
     }
 
@@ -793,16 +794,15 @@ class Cart
     )
     {
         $discount_value = 0;
-        $originalPrice = $this->originalPrice();
+        $originalTotalPrice = $this->originalTotalPrice();
         switch ($couponType) {
             case 'fixed':
                 $discount_value = $couponValue;
                 break;
             case 'percentage':
-                $discount_value = $this->formatFloat($originalPrice * $couponValue / 100);
+                $discount_value = $this->formatFloat($originalTotalPrice * $couponValue / 100);
                 break;
         }
-        $discount_value = $discount_value;
 
         $cartItem = $this->add(
             md5(Carbon::now()),
@@ -817,8 +817,7 @@ class Cart
         $cartItem->applyCoupon(
             $couponCode,
             'global',
-            $discount_value,
-            $originalPrice
+            $discount_value
         );
     }
 }
