@@ -304,10 +304,10 @@ class CartItemTest extends TestCase
         $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $coupon->couponCode);
         $this->assertEquals('fixed', $coupon->couponType);
         $this->assertEquals(100, $coupon->couponValue);
-        $this->assertEquals(458.33, $cartItem->price);
-        $this->assertEquals(91.67, $cartItem->vat);
-        $this->assertEquals(550.00, $cartItem->totalPrice);
-        $this->assertEquals(650.00, $cartItem->discountValue);
+        $this->assertEquals(416.67, $cartItem->price);
+        $this->assertEquals(83.33, $cartItem->vat);
+        $this->assertEquals(500.00, $cartItem->totalPrice);
+        $this->assertEquals(700.00, $cartItem->discountValue);
         $this->assertTrue($cartItem->hasCoupons());
     }
 
@@ -348,10 +348,10 @@ class CartItemTest extends TestCase
         $this->assertIsArray($cartItem->appliedCoupons);
         $this->assertCount(2, $cartItem->appliedCoupons);
 
-        $this->assertEquals(40.98, $cartItem->price);
-        $this->assertEquals(9.02, $cartItem->vat);
-        $this->assertEquals(50, $cartItem->totalPrice);
-        $this->assertEquals(72, $cartItem->discountValue);
+        $this->assertEquals(31.97, $cartItem->price);
+        $this->assertEquals(7.03, $cartItem->vat);
+        $this->assertEquals(39, $cartItem->totalPrice);
+        $this->assertEquals(83, $cartItem->discountValue);
 
         $this->assertTrue($cartItem->hasCoupons());
     }
