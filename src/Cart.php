@@ -23,7 +23,7 @@ class Cart
      * @var
      */
     private $options;
-    
+
     /**
      * Instance of the session manager.
      *
@@ -848,7 +848,7 @@ class Cart
     }
 
     /**
-     * @param mixed $options
+     * @param  mixed  $options
      */
     public function setOptions($options): void
     {
