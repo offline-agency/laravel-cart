@@ -20,7 +20,7 @@ class Cart
     const DEFAULT_INSTANCE = 'default';
 
     /**
-     * @var
+     * @var array
      */
     private $options;
 
@@ -840,17 +840,17 @@ class Cart
     }
 
     /**
-     * @return mixed
+     * @return array
      */
-    public function getOptions()
+    public function getOptions(): array
     {
         return $this->options;
     }
 
     /**
-     * @param  mixed  $options
+     * @param  array  $options
      */
-    public function setOptions($options): void
+    public function setOptions(array $options): void
     {
         $this->options = $options;
     }
