@@ -1818,6 +1818,14 @@ class CartTest extends TestCase
         $this->assertEquals(50, $coupon->couponValue);
     }
 
+    /** @test */
+    public function it_can_set_and_get_options_on_cart()
+    {
+        $cart = $this->getCart();
+        $cart->setOptions(['test' => 'test']);
+        $this->assertEquals(['test' => 'test'], $cart->getOptions());
+    }
+
     /**
      * Get an instance of the cart.
      *
