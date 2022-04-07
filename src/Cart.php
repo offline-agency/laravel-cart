@@ -20,6 +20,11 @@ class Cart
     const DEFAULT_INSTANCE = 'default';
 
     /**
+     * @var
+     */
+    private $options;
+    
+    /**
      * Instance of the session manager.
      *
      * @var SessionManager
@@ -832,5 +837,21 @@ class Cart
             'global',
             $discount_value
         );
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    /**
+     * @param mixed $options
+     */
+    public function setOptions($options): void
+    {
+        $this->options = $options;
     }
 }
