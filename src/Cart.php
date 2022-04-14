@@ -18,11 +18,12 @@ use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
 class Cart
 {
     const DEFAULT_INSTANCE = 'default';
+    const CART_OPTIONS_KEY = 'cart_options';
 
     /**
-     * @var array
+     * @var
      */
-    private $options;
+    private $options = [];
 
     /**
      * Instance of the session manager.
@@ -840,11 +841,11 @@ class Cart
     }
 
     /**
-     * @return array
+     * @return array|CartItem
      */
-    public function getOptions(): array
+    public function getOptions()
     {
-        return $this->options;
+        return $this->get(self::CART_OPTIONS_KEY);
     }
 
     /**
@@ -852,6 +853,17 @@ class Cart
      */
     public function setOptions(array $options): void
     {
-        $this->options = $options;
+        $content = $this->getContent();
+
+
+        $content->put(self::CART_OPTIONS_KEY,$options );
+
+        $this->session->put($this->instance, $content);
+    }
+
+    public function getOptionsByKey($key, $default_value = null)
+    {
+        $options = $this->getOptions();
+        return Arr::has($key, $options) ? Arr::get($key ,$options) : $default_value;
     }
 }
