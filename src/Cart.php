@@ -486,7 +486,7 @@ class Cart
      */
     protected function getCartInfo(): Collection
     {
-      return $this->session->has($this->getCartInstance())
+        return $this->session->has($this->getCartInstance())
         ? $this->session->get($this->getCartInstance())
         : new Collection();
     }
@@ -859,7 +859,8 @@ class Cart
     public function getOptions(): array
     {
         $cart_info = $this->getCartInfo();
-        return Arr::has($cart_info, self::CART_OPTIONS_KEY) ? Arr::get($cart_info ,self::CART_OPTIONS_KEY) : [];
+
+        return Arr::has($cart_info, self::CART_OPTIONS_KEY) ? Arr::get($cart_info, self::CART_OPTIONS_KEY) : [];
     }
 
     /**
@@ -869,28 +870,28 @@ class Cart
     {
         $content = $this->getCartInfo();
 
-
-        $content->put(self::CART_OPTIONS_KEY, $options );
+        $content->put(self::CART_OPTIONS_KEY, $options);
 
         $this->session->put($this->getCartInstance(), $content);
     }
 
-  /**
-   * @return string
-   */
-  private function getCartInstance(): string
+    /**
+     * @return string
+     */
+    private function getCartInstance(): string
     {
-      return $this->instance . '_cart_info';
+        return $this->instance.'_cart_info';
     }
 
-  /**
-   * @param $key
-   * @param $default_value
-   * @return array|ArrayAccess|mixed|null
-   */
-  public function getOptionsByKey($key, $default_value = null)
+    /**
+     * @param $key
+     * @param $default_value
+     * @return array|ArrayAccess|mixed|null
+     */
+    public function getOptionsByKey($key, $default_value = null)
     {
         $options = $this->getOptions();
-        return Arr::has($options, $key) ? Arr::get($options ,$key) : $default_value;
+
+        return Arr::has($options, $key) ? Arr::get($options, $key) : $default_value;
     }
 }
