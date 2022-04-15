@@ -1829,11 +1829,11 @@ class CartTest extends TestCase
         $cart->getOptionsByKey('test');
         $this->assertEquals('test', $cart->getOptionsByKey('test'));
 
-      $cart->getOptionsByKey('option_not_existing_with_default_value', false);
-      $this->assertEquals(false, $cart->getOptionsByKey('option_not_existing_with_default_value'));
+        $cart->getOptionsByKey('option_not_existing_with_default_value', false);
+        $this->assertEquals(false, $cart->getOptionsByKey('option_not_existing_with_default_value'));
 
-      $cart->getOptionsByKey('option_not_existing_without_default_value');
-      $this->assertNull($cart->getOptionsByKey('option_not_existing_without_default_value'));
+        $cart->getOptionsByKey('option_not_existing_without_default_value');
+        $this->assertNull($cart->getOptionsByKey('option_not_existing_without_default_value'));
     }
 
     /**
