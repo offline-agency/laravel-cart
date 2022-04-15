@@ -82,7 +82,7 @@ class CartItem implements Arrayable, Jsonable
         $this->totalPrice = floatval($totalPrice);
         $this->vat = floatval($vat);
         $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
-        $this->vatRate = $this->formatFloat(100 * $this->vat / $this->price);
+        $this->vatRate = $this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0;
         $this->vatFcCode = $vatFcCode;
         $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
@@ -355,6 +355,10 @@ class CartItem implements Arrayable, Jsonable
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
+    /**
+     * @param  string  $couponCode
+     * @return array|\ArrayAccess|mixed|null
+     */
     public function getCoupon(
         string $couponCode
     ) {
@@ -384,23 +388,37 @@ class CartItem implements Arrayable, Jsonable
 
         switch ($couponType) {
             case 'fixed':
-                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
-
-                $this->totalPrice = $this->totalPrice - $couponValue;
+                $this->totalPrice = $this->formatFloat($this->totalPrice - $couponValue);
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
                 $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
 
-                $this->discountValue = $this->discountValue + $couponValue;
+                $this->discountValue = $this->formatFloat($this->discountValue + $couponValue);
+
+                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
                 break;
             case 'percentage':
-                $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
-
-                $this->appliedCoupons[$couponCode]->discountValue = $discountValue;
+                $discountValue = $this->formatFloat($this->originalTotalPrice * $couponValue / 100);
 
                 $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
                 $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-                $this->discountValue = $this->discountValue + $discountValue;
+
+                $this->discountValue = $this->formatFloat($this->discountValue + $discountValue);
+
+                $this->appliedCoupons[$couponCode]->discountValue = $discountValue;
+                break;
+            case 'global':
+                $totalPrice = $couponValue;
+                $price = $this->formatFloat($totalPrice * 100 / (100 + $this->vatRate));
+                $vat = $this->formatFloat($price * $this->vatRate / 100);
+
+                $this->totalPrice = $this->formatFloat($totalPrice * -1);
+                $this->price = $this->formatFloat($price * -1);
+                $this->vat = $this->formatFloat($vat * -1);
+
+                $this->discountValue = $this->formatFloat(($this->discountValue + $couponValue));
+
+                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
                 break;
             default:
                 throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
@@ -409,6 +427,10 @@ class CartItem implements Arrayable, Jsonable
         return $this;
     }
 
+    /**
+     * @param  string  $couponCode
+     * @return $this
+     */
     public function detachCoupon(
         string $couponCode
     ): CartItem {
@@ -417,13 +439,18 @@ class CartItem implements Arrayable, Jsonable
 
         unset($this->appliedCoupons[$couponCode]);
 
-        $this->totalPrice = $this->totalPrice + $discountValue;
+        $this->totalPrice = $this->formatFloat($this->totalPrice + $discountValue);
         $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
         $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+
+        $this->discountValue = $this->formatFloat($this->discountValue - $discountValue);
 
         return $this;
     }
 
+    /**
+     * @return bool
+     */
     public function hasCoupons(): bool
     {
         return count($this->appliedCoupons) > 0;
