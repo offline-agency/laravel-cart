@@ -2,6 +2,7 @@
 
 namespace OfflineAgency\LaravelCart;
 
+use ArrayAccess;
 use Carbon\Carbon;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -18,11 +19,12 @@ use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
 class Cart
 {
     const DEFAULT_INSTANCE = 'default';
+    const CART_OPTIONS_KEY = 'options';
 
     /**
-     * @var array
+     * @var
      */
-    private $options;
+    private $options = [];
 
     /**
      * Instance of the session manager.
@@ -478,6 +480,18 @@ class Cart
     }
 
     /**
+     * Get the cart generic info, if there is no cart set yet, return a new empty Collection.
+     *
+     * @return Collection
+     */
+    protected function getCartInfo(): Collection
+    {
+        return $this->session->has($this->getCartInstance())
+        ? $this->session->get($this->getCartInstance())
+        : new Collection();
+    }
+
+    /**
      * * Create a new CartItem from the supplied attributes.
      *
      *
@@ -765,7 +779,7 @@ class Cart
 
     /**
      * @param  string  $couponCode
-     * @return array|\ArrayAccess|mixed|null
+     * @return array|ArrayAccess|mixed|null
      */
     public function getCoupon(
         string $couponCode
@@ -844,7 +858,9 @@ class Cart
      */
     public function getOptions(): array
     {
-        return $this->options;
+        $cart_info = $this->getCartInfo();
+
+        return Arr::has($cart_info, self::CART_OPTIONS_KEY) ? Arr::get($cart_info, self::CART_OPTIONS_KEY) : [];
     }
 
     /**
@@ -852,6 +868,30 @@ class Cart
      */
     public function setOptions(array $options): void
     {
-        $this->options = $options;
+        $content = $this->getCartInfo();
+
+        $content->put(self::CART_OPTIONS_KEY, $options);
+
+        $this->session->put($this->getCartInstance(), $content);
+    }
+
+    /**
+     * @return string
+     */
+    private function getCartInstance(): string
+    {
+        return $this->instance.'_cart_info';
+    }
+
+    /**
+     * @param $key
+     * @param $default_value
+     * @return array|ArrayAccess|mixed|null
+     */
+    public function getOptionsByKey($key, $default_value = null)
+    {
+        $options = $this->getOptions();
+
+        return Arr::has($options, $key) ? Arr::get($options, $key) : $default_value;
     }
 }
