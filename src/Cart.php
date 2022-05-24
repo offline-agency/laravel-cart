@@ -244,6 +244,7 @@ class Cart
      */
     public function destroy()
     {
+        $this->setOptions([]);
         $this->session->remove($this->instance);
     }
 
