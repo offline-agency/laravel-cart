@@ -1837,7 +1837,7 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    public function it_remove_options_after_cart_destroy()
+    public function it_will_remove_options_when_cart_is_destroyed()
     {
         $cart = $this->getCart();
         $cart->setOptions(['test' => 'test']);
