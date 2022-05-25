@@ -1836,6 +1836,19 @@ class CartTest extends TestCase
         $this->assertNull($cart->getOptionsByKey('option_not_existing_without_default_value'));
     }
 
+    /** @test */
+    public function it_will_remove_options_when_cart_is_destroyed()
+    {
+        $cart = $this->getCart();
+        $cart->setOptions(['test' => 'test']);
+
+        $this->assertEquals(['test' => 'test'], $cart->getOptions());
+
+        $cart->destroy();
+
+        $this->assertEquals([], $cart->getOptions());
+    }
+
     /**
      * Get an instance of the cart.
      *
