@@ -375,7 +375,7 @@ class CartItemTest extends TestCase
 
         $cartItem->associate([
             'associatedModel' => 'OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel',
-            'modelId' => 'fake_id'
+            'modelId' => 'fake_id',
         ], false);
 
         $this->assertEquals('OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel', $cartItem->associatedModel);

@@ -143,7 +143,7 @@ class CartItem implements Arrayable, Jsonable
      * Associate the cart item with a given model or something else.
      *
      * @param $item
-     * @param bool $is_model
+     * @param  bool  $is_model
      * @return $this
      */
     public function associate($item, bool $is_model = true): CartItem
