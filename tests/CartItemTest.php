@@ -355,4 +355,30 @@ class CartItemTest extends TestCase
 
         $this->assertTrue($cartItem->hasCoupons());
     }
+
+    /** @test */
+    public function it_can_associate_model_id()
+    {
+        $cartItem = new CartItem(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            100.00,
+            122.00,
+            '0',
+            '0',
+            22.00,
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cartItem->associate([
+            'associatedModel' => 'OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel',
+            'modelId' => 'fake_id',
+        ], false);
+
+        $this->assertEquals('OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel', $cartItem->associatedModel);
+        $this->assertEquals('fake_id', $cartItem->model);
+    }
 }

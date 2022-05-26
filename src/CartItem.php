@@ -140,15 +140,23 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
-     * Associate the cart item with the given model.
+     * Associate the cart item with a given model or something else.
      *
-     * @param  mixed  $model
-     * @return CartItem
+     * @param $item
+     * @param  bool  $is_model
+     * @return $this
      */
-    public function associate($model): CartItem
+    public function associate($item, bool $is_model = true): CartItem
     {
-        $this->associatedModel = is_string($model) ? $model : get_class($model);
-        $this->model = $model;
+        if ($is_model) {
+            $this->associatedModel = is_string($item) ? $item : get_class($item);
+            $this->model = $item;
+
+            return $this;
+        }
+
+        $this->associatedModel = Arr::has($item, 'associatedModel') ? Arr::get($item, 'associatedModel') : null;
+        $this->model = Arr::has($item, 'modelId') ? Arr::get($item, 'modelId') : null;
 
         return $this;
     }
