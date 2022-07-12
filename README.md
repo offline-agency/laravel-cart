@@ -18,7 +18,7 @@ Run the Composer require command from the Terminal:
 
     composer require offline-agency/laravel-cart
 
-##Documentation 
+## Documentation 
 
 You can find the documentation [here](https://docs.offlineagency.com/laravel-cart/)
 
