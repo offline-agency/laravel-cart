@@ -87,20 +87,20 @@ class Cart
     }
 
     /**
-     * Add an item to the cart.
-     *
-     * @param  mixed  $id
-     * @param  mixed  $name
-     * @param  string|null  $subtitle
-     * @param  int|null  $qty
-     * @param  float|null  $price
-     * @param  float|null  $totalPrice
-     * @param  float|null  $vat
-     * @param  string|null  $vatFcCode
-     * @param  string|null  $productFcCode
-     * @param  string|null  $urlImg
-     * @param  array  $options
-     * @return array|CartItem|CartItem[]
+     * @param $id
+     * @param string $name
+     * @param string $subtitle
+     * @param int $qty
+     * @param float $price
+     * @param float $totalPrice
+     * @param float $vat
+     * @param string $vatFcCode
+     * @param string $productFcCode
+     * @param string $urlImg
+     * @param Carbon|null $createdAt
+     * @param Carbon|null $updatedAt
+     * @param array $options
+     * @return array|CartItem
      */
     public function add(
         $id,
@@ -113,8 +113,18 @@ class Cart
         string $vatFcCode = '',
         string $productFcCode = '',
         string $urlImg = '',
+        ?Carbon $createdAt = null,
+        ?Carbon $updatedAt = null,
         array $options = []
     ) {
+        if (is_null($createdAt)) {
+            $createdAt = Carbon::now();
+        }
+
+        if (is_null($updatedAt)) {
+            $updatedAt = Carbon::now();
+        }
+
         if ($this->isMulti($id)) {
             return array_map(function ($item) {
                 return $this->add($item);
@@ -132,6 +142,8 @@ class Cart
             $productFcCode,
             $vat,
             $urlImg,
+            $createdAt,
+            $updatedAt,
             $options
         );
 
@@ -520,6 +532,8 @@ class Cart
         $productFcCode,
         $vat,
         $urlImg,
+        Carbon $createdAt,
+        Carbon $updatedAt,
         array $options
     ): CartItem {
         if ($id instanceof Buyable) {
@@ -541,6 +555,8 @@ class Cart
                 $productFcCode,
                 $vat,
                 $urlImg,
+                $createdAt,
+                $updatedAt,
                 $options
             );
             $cartItem->setQuantity($qty);
@@ -894,5 +910,44 @@ class Cart
         $options = $this->getOptions();
 
         return Arr::has($options, $key) ? Arr::get($options, $key) : $default_value;
+    }
+
+    /**
+     * @param string|int $id
+     * @param string $model
+     * @return bool
+     */
+    public function isAlreadyAdded(string|int $id, string $model): bool
+    {
+        $content = $this->getContent();
+
+        $duplicates = $content->filter(function ($cartItem) use ($id, $model) {
+            return (int)$cartItem->id === (int)$id
+                && $cartItem->model === $model;
+        });
+
+        return $duplicates->isNotEmpty();
+    }
+
+    /**
+     * @param string|int $id
+     * @param string $model
+     * @return mixed
+     */
+    public function searchById(
+        string|int $id,
+        string $model
+    ): mixed
+    {
+        $duplicates = $this->search(function ($cartItem) use ($id, $model) {
+            return (int)$cartItem->id === (int)$id
+                && $cartItem->model->getTable() === $model;
+        });
+
+        if ($duplicates->isNotEmpty()) {
+            return $duplicates->first();
+        }
+
+        return null;
     }
 }

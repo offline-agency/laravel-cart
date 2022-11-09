@@ -2,6 +2,7 @@
 
 namespace OfflineAgency\LaravelCart;
 
+use Carbon\Carbon;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
@@ -28,24 +29,26 @@ class CartItem implements Arrayable, Jsonable
     public $productFcCode;
     public $urlImg;
     public $options;
+    public $createdAt;
+    public $updatedAt;
     public $associatedModel;
     public $model;
     public $appliedCoupons;
 
     /**
-     * CartItem constructor.
-     *
-     * @param  int|string  $id
-     * @param  string  $name
-     * @param  string  $subtitle
+     * @param $id
+     * @param string $name
+     * @param string $subtitle
      * @param $qty
-     * @param  float  $price
+     * @param float $price
      * @param $totalPrice
      * @param $vatFcCode
      * @param $productFcCode
      * @param $vat
      * @param $urlImg
-     * @param  array  $options
+     * @param Carbon $createdAt
+     * @param Carbon $updatedAt
+     * @param array $options
      */
     public function __construct(
         $id,
@@ -58,6 +61,8 @@ class CartItem implements Arrayable, Jsonable
         $productFcCode,
         $vat,
         $urlImg,
+        Carbon $createdAt,
+        Carbon $updatedAt,
         array $options = []
     ) {
         if (empty($id)) {
@@ -87,6 +92,8 @@ class CartItem implements Arrayable, Jsonable
         $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
         $this->options = new CartItemOptions($options);
+        $this->createdAt = $createdAt;
+        $this->updatedAt = $updatedAt;
         // default values
         $this->discountValue = 0.0;
         $this->associatedModel = null;
@@ -218,7 +225,7 @@ class CartItem implements Arrayable, Jsonable
             $item->getVatFcCode(),
             $item->getProductFcCode(),
             $item->getVat(),
-            $item->getSubtitle(),
+            $item->getUrlImg(),
             $item->getOptions()
         );
     }
@@ -242,6 +249,8 @@ class CartItem implements Arrayable, Jsonable
             $attributes['totalPrice'],
             $attributes['vatFcCode'],
             $attributes['productFcCode'],
+            $attributes['createdAt'],
+            $attributes['updatedAt'],
             $attributes['vat'],
             $attributes['urlImg'],
             $options
@@ -249,8 +258,6 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
-     *  * Create a new instance from the given attributes.
-     *
      * @param $id
      * @param $name
      * @param $subtitle
@@ -261,7 +268,9 @@ class CartItem implements Arrayable, Jsonable
      * @param $productFcCode
      * @param $vat
      * @param $urlImg
-     * @param  array  $options
+     * @param Carbon $createdAt
+     * @param Carbon $updatedAt
+     * @param array $options
      * @return CartItem
      */
     public static function fromAttributes(
@@ -275,6 +284,8 @@ class CartItem implements Arrayable, Jsonable
         $productFcCode,
         $vat,
         $urlImg,
+        Carbon $createdAt,
+        Carbon $updatedAt,
         array $options = []
     ): CartItem {
         return new self(
@@ -288,6 +299,8 @@ class CartItem implements Arrayable, Jsonable
             $productFcCode,
             $vat,
             $urlImg,
+            $createdAt,
+            $updatedAt,
             $options
         );
     }
@@ -331,6 +344,8 @@ class CartItem implements Arrayable, Jsonable
             'discountValue' => $this->discountValue,
             'productFcCode' => $this->productFcCode,
             'urlImg' => $this->urlImg,
+            'createdAt' => $this->createdAt,
+            'updatedAt' => $this->updatedAt,
             'options' => $this->options->toArray(),
             'associatedModel' => $this->associatedModel,
             'model' => $this->model,
