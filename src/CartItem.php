@@ -38,13 +38,13 @@ class CartItem implements Arrayable, Jsonable
      * @param  int|string  $id
      * @param  string  $name
      * @param  string  $subtitle
-     * @param $qty
+     * @param  $qty
      * @param  float  $price
-     * @param $totalPrice
-     * @param $vatFcCode
-     * @param $productFcCode
-     * @param $vat
-     * @param $urlImg
+     * @param  $totalPrice
+     * @param  $vatFcCode
+     * @param  $productFcCode
+     * @param  $vat
+     * @param  $urlImg
      * @param  array  $options
      */
     public function __construct(
@@ -142,7 +142,7 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Associate the cart item with a given model or something else.
      *
-     * @param $item
+     * @param  $item
      * @param  bool  $is_model
      * @return $this
      */
@@ -182,7 +182,7 @@ class CartItem implements Arrayable, Jsonable
         }
 
         if ($attribute === 'total') {
-            return $this->qty * ($this->priceTax);
+            return $this->qty * $this->priceTax;
         }
 
         if ($attribute === 'tax') {
@@ -251,16 +251,16 @@ class CartItem implements Arrayable, Jsonable
     /**
      *  * Create a new instance from the given attributes.
      *
-     * @param $id
-     * @param $name
-     * @param $subtitle
-     * @param $qty
-     * @param $price
-     * @param $totalPrice
-     * @param $vatFcCode
-     * @param $productFcCode
-     * @param $vat
-     * @param $urlImg
+     * @param  $id
+     * @param  $name
+     * @param  $subtitle
+     * @param  $qty
+     * @param  $price
+     * @param  $totalPrice
+     * @param  $vatFcCode
+     * @param  $productFcCode
+     * @param  $vat
+     * @param  $urlImg
      * @param  array  $options
      * @return CartItem
      */
@@ -424,7 +424,7 @@ class CartItem implements Arrayable, Jsonable
                 $this->price = $this->formatFloat($price * -1);
                 $this->vat = $this->formatFloat($vat * -1);
 
-                $this->discountValue = $this->formatFloat(($this->discountValue + $couponValue));
+                $this->discountValue = $this->formatFloat($this->discountValue + $couponValue);
 
                 $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
                 break;
