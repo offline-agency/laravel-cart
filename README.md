@@ -8,7 +8,7 @@
 
 A simple cart implementation for Laravel with fiscal support.
 
-![Laravel Cart](https://banners.beyondco.de/Laravel%20Cart.png?theme=light&packageManager=composer+require&packageName=offlineagency%2Flaravel-cart&pattern=aztec&style=style_1&description=Laravel+shopping+cart+with+fiscal+support&md=1&showWatermark=0&fontSize=125px&images=shopping-cart)
+![Laravel Cart](https://banners.beyondco.de/Laravel%20Cart.png?theme=light&packageManager=composer+require&packageName=offline-agency%2Flaravel-cart&pattern=aztec&style=style_1&description=Laravel+shopping+cart+with+fiscal+support&md=1&showWatermark=0&fontSize=125px&images=shopping-cart)
 
 ## Installation
 
@@ -16,7 +16,7 @@ Install the package through [Composer](http://getcomposer.org/).
 
 Run the Composer require command from the Terminal:
 
-    composer require offlineagency/laravel-cart
+    composer require offline-agency/laravel-cart
 
 ## Documentation 
 
