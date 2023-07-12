@@ -496,16 +496,16 @@ class Cart
      * * Create a new CartItem from the supplied attributes.
      *
      *
-     * @param $id
-     * @param $name
-     * @param $subtitle
-     * @param $qty
-     * @param $price
-     * @param $totalPrice
-     * @param $vatFcCode
-     * @param $productFcCode
-     * @param $vat
-     * @param $urlImg
+     * @param  $id
+     * @param  $name
+     * @param  $subtitle
+     * @param  $qty
+     * @param  $price
+     * @param  $totalPrice
+     * @param  $vatFcCode
+     * @param  $productFcCode
+     * @param  $vat
+     * @param  $urlImg
      * @param  array  $options
      * @return CartItem
      */
@@ -565,7 +565,7 @@ class Cart
     }
 
     /**
-     * @param $identifier
+     * @param  $identifier
      * @return bool
      */
     private function storedCartWithIdentifierExists($identifier): bool
@@ -639,10 +639,10 @@ class Cart
     /**
      * Get the Formatted number.
      *
-     * @param $value
-     * @param $decimals
-     * @param $decimalPoint
-     * @param $thousandSeparator
+     * @param  $value
+     * @param  $decimals
+     * @param  $decimalPoint
+     * @param  $thousandSeparator
      * @return string
      */
     private function numberFormat($value, $decimals, $decimalPoint, $thousandSeparator): string
@@ -684,7 +684,7 @@ class Cart
     }
 
     /**
-     * @param $rowId
+     * @param  $rowId
      * @param  string  $couponCode
      * @param  string  $couponType
      * @param  float  $couponValue
@@ -726,7 +726,7 @@ class Cart
     }
 
     /**
-     * @param $rowId
+     * @param  $rowId
      * @param  string  $couponCode
      */
     public function detachCoupon(
@@ -817,9 +817,9 @@ class Cart
     }
 
     /**
-     * @param $couponCode
-     * @param $couponType
-     * @param $couponValue
+     * @param  $couponCode
+     * @param  $couponType
+     * @param  $couponValue
      */
     private function applyGlobalCoupon(
         $couponCode,
@@ -885,8 +885,8 @@ class Cart
     }
 
     /**
-     * @param $key
-     * @param $default_value
+     * @param  $key
+     * @param  $default_value
      * @return array|ArrayAccess|mixed|null
      */
     public function getOptionsByKey($key, $default_value = null)
