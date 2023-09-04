@@ -285,7 +285,7 @@ class Cart
     public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         $total = $this->getContent()->reduce(function ($total, CartItem $cartItem) {
-            return $total + ($cartItem->qty * $cartItem->totalPrice);
+            return $total + $cartItem->totalPrice + (($cartItem->qty - 1) * $cartItem->originalTotalPrice);
         }, 0);
 
         return $total < 0
@@ -304,7 +304,7 @@ class Cart
     public function vat(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         return $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
-            return $tax + ($cartItem->qty * $cartItem->vat);
+            return $tax + $cartItem->vat + (($cartItem->qty - 1) * $cartItem->originalVat);
         }, 0);
     }
 
@@ -320,7 +320,7 @@ class Cart
     {
         return $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
             $cartItemSubTotal = $cartItem->name !== 'discountCartItem'
-                ? ($cartItem->qty * $cartItem->price)
+                ? $cartItem->price + (($cartItem->qty - 1) * $cartItem->originalPrice)
                 : 0;
 
             return $subTotal + $cartItemSubTotal;
