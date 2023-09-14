@@ -50,8 +50,8 @@ class Cart
     /**
      * Cart constructor.
      *
-     * @param SessionManager $session
-     * @param Dispatcher $events
+     * @param  SessionManager  $session
+     * @param  Dispatcher  $events
      */
     public function __construct(SessionManager $session, Dispatcher $events)
     {
@@ -64,7 +64,7 @@ class Cart
     /**
      * Set the current cart instance.
      *
-     * @param string|null $instance
+     * @param  string|null  $instance
      * @return Cart
      */
     public function instance(string $instance = null): Cart
@@ -89,17 +89,17 @@ class Cart
     /**
      * Add an item to the cart.
      *
-     * @param mixed $id
-     * @param mixed $name
-     * @param string|null $subtitle
-     * @param int|null $qty
-     * @param float|null $price
-     * @param float|null $totalPrice
-     * @param float|null $vat
-     * @param string|null $vatFcCode
-     * @param string|null $productFcCode
-     * @param string|null $urlImg
-     * @param array $options
+     * @param  mixed  $id
+     * @param  mixed  $name
+     * @param  string|null  $subtitle
+     * @param  int|null  $qty
+     * @param  float|null  $price
+     * @param  float|null  $totalPrice
+     * @param  float|null  $vat
+     * @param  string|null  $vatFcCode
+     * @param  string|null  $productFcCode
+     * @param  string|null  $urlImg
+     * @param  array  $options
      * @return array|CartItem|CartItem[]
      */
     public function add(
@@ -114,8 +114,7 @@ class Cart
         string $productFcCode = '',
         string $urlImg = '',
         array $options = []
-    )
-    {
+    ) {
         if ($this->isMulti($id)) {
             return array_map(function ($item) {
                 return $this->add($item);
@@ -154,8 +153,8 @@ class Cart
     /**
      * Update the cart item with the given rowId.
      *
-     * @param string $rowId
-     * @param mixed $qty
+     * @param  string  $rowId
+     * @param  mixed  $qty
      * @return CartItem|void
      */
     public function update(string $rowId, $qty)
@@ -199,7 +198,7 @@ class Cart
     /**
      * Remove the cart item with the given rowId from the cart.
      *
-     * @param string $rowId
+     * @param  string  $rowId
      * @return void
      */
     public function remove(string $rowId)
@@ -224,14 +223,14 @@ class Cart
     /**
      * Get a cart item from the cart by its rowId.
      *
-     * @param string $rowId
+     * @param  string  $rowId
      * @return CartItem
      */
     public function get(string $rowId)
     {
         $content = $this->getContent();
 
-        if (!$content->has($rowId)) {
+        if (! $content->has($rowId)) {
             throw new InvalidRowIDException("The cart does not contain rowId {$rowId}.");
         }
 
@@ -278,15 +277,15 @@ class Cart
     /**
      * Get the total price of the items in the cart.
      *
-     * @param int|null $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
+     * @param  int|null  $decimals
+     * @param  string|null  $decimalPoint
+     * @param  string|null  $thousandSeparator
      * @return float
      */
     public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         $total = $this->getContent()->reduce(function ($total, CartItem $cartItem) {
-            return $total + $cartItem->totalPrice + (float)(($cartItem->qty - 1) * $cartItem->originalTotalPrice);
+            return $total + $cartItem->totalPrice + (float) (($cartItem->qty - 1) * $cartItem->originalTotalPrice);
         }, 0);
 
         return $total < 0
@@ -297,15 +296,15 @@ class Cart
     /**
      * Get the total vat of the items in the cart.
      *
-     * @param int|null $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
+     * @param  int|null  $decimals
+     * @param  string|null  $decimalPoint
+     * @param  string|null  $thousandSeparator
      * @return float
      */
     public function vat(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         $vat = $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
-            return $tax + $cartItem->vat + (float)(($cartItem->qty - 1) * $cartItem->originalVat);
+            return $tax + $cartItem->vat + (float) (($cartItem->qty - 1) * $cartItem->originalVat);
         }, 0);
 
         return $vat < 0
@@ -316,16 +315,16 @@ class Cart
     /**
      * Get the subtotal (total - vat) of the items in the cart.
      *
-     * @param int|null $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
+     * @param  int|null  $decimals
+     * @param  string|null  $decimalPoint
+     * @param  string|null  $thousandSeparator
      * @return float
      */
     public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         $subtotal = $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
             $cartItemSubTotal = $cartItem->name !== 'discountCartItem'
-                ? $cartItem->price + (float)(($cartItem->qty - 1) * $cartItem->originalPrice)
+                ? $cartItem->price + (float) (($cartItem->qty - 1) * $cartItem->originalPrice)
                 : 0;
 
             return $subTotal + $cartItemSubTotal;
@@ -337,9 +336,9 @@ class Cart
     }
 
     /**
-     * @param int|null $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
+     * @param  int|null  $decimals
+     * @param  string|null  $decimalPoint
+     * @param  string|null  $thousandSeparator
      * @return mixed
      */
     public function originalTotalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
@@ -352,7 +351,7 @@ class Cart
     /**
      * Search the cart content for a cart item matching the given search closure.
      *
-     * @param Closure $search
+     * @param  Closure  $search
      * @return Collection
      */
     public function search(Closure $search): Collection
@@ -365,13 +364,13 @@ class Cart
     /**
      * Associate the cart item with the given rowId with the given model.
      *
-     * @param string $rowId
-     * @param mixed $model
+     * @param  string  $rowId
+     * @param  mixed  $model
      * @return void
      */
     public function associate(string $rowId, $model)
     {
-        if (is_string($model) && !class_exists($model)) {
+        if (is_string($model) && ! class_exists($model)) {
             throw new UnknownModelException("The supplied model {$model} does not exist.");
         }
 
@@ -389,7 +388,7 @@ class Cart
     /**
      * Store the current instance of the cart.
      *
-     * @param mixed $identifier
+     * @param  mixed  $identifier
      * @return void
      */
     public function store($identifier)
@@ -412,12 +411,12 @@ class Cart
     /**
      * Restore the cart with the given identifier.
      *
-     * @param mixed $identifier
+     * @param  mixed  $identifier
      * @return void
      */
     public function restore($identifier)
     {
-        if (!$this->storedCartWithIdentifierExists($identifier)) {
+        if (! $this->storedCartWithIdentifierExists($identifier)) {
             return;
         }
 
@@ -449,7 +448,7 @@ class Cart
     /**
      * Magic method to make accessing the total, tax and subtotal properties possible.
      *
-     * @param string $attribute
+     * @param  string  $attribute
      * @return float|null
      */
     public function __get(string $attribute)
@@ -515,7 +514,7 @@ class Cart
      * @param  $productFcCode
      * @param  $vat
      * @param  $urlImg
-     * @param array $options
+     * @param  array  $options
      * @return CartItem
      */
     private function createCartItem(
@@ -530,8 +529,7 @@ class Cart
         $vat,
         $urlImg,
         array $options
-    ): CartItem
-    {
+    ): CartItem {
         if ($id instanceof Buyable) {
             $cartItem = CartItem::fromBuyable($id);
             $cartItem->setQuantity($name ?: 1);
@@ -562,12 +560,12 @@ class Cart
     /**
      * Check if the item is a multidimensional array or an array of Buyable.
      *
-     * @param mixed $item
+     * @param  mixed  $item
      * @return bool
      */
     private function isMulti($item): bool
     {
-        if (!is_array($item)) {
+        if (! is_array($item)) {
             return false;
         }
 
@@ -619,7 +617,7 @@ class Cart
     }
 
     /**
-     * @param array $items
+     * @param  array  $items
      * @return Collection
      */
     public function addBatch(array $items): Collection
@@ -681,7 +679,7 @@ class Cart
                 Arr::set(
                     $coupons,
                     $coupon->couponCode,
-                    (object)[
+                    (object) [
                         'rowId' => $cartItem->rowId,
                         'couponCode' => $coupon->couponCode,
                         'couponType' => $coupon->couponType,
@@ -696,18 +694,17 @@ class Cart
 
     /**
      * @param  $rowId
-     * @param string $couponCode
-     * @param string $couponType
-     * @param float $couponValue
+     * @param  string  $couponCode
+     * @param  string  $couponType
+     * @param  float  $couponValue
      */
     public function applyCoupon(
         $rowId,
         string $couponCode,
         string $couponType,
         float $couponValue
-    )
-    {
-        if (!is_null($rowId)) {
+    ) {
+        if (! is_null($rowId)) {
             $cartItem = $this->get($rowId);
 
             $cartItem->applyCoupon(
@@ -722,7 +719,7 @@ class Cart
 
             $this->session->put($this->instance, $content);
 
-            $this->coupons()[$couponCode] = (object)[
+            $this->coupons()[$couponCode] = (object) [
                 'rowId' => $rowId,
                 'couponCode' => $couponCode,
                 'couponType' => $couponType,
@@ -739,13 +736,12 @@ class Cart
 
     /**
      * @param  $rowId
-     * @param string $couponCode
+     * @param  string  $couponCode
      */
     public function detachCoupon(
         $rowId,
         string $couponCode
-    )
-    {
+    ) {
         $cartItem = $this->get($rowId);
 
         $cartItem->detachCoupon(
@@ -792,13 +788,12 @@ class Cart
     }
 
     /**
-     * @param string $couponCode
+     * @param  string  $couponCode
      * @return array|ArrayAccess|mixed|null
      */
     public function getCoupon(
         string $couponCode
-    )
-    {
+    ) {
         $coupons = $this->coupons();
 
         return Arr::has($coupons, $couponCode)
@@ -807,22 +802,22 @@ class Cart
     }
 
     /**
-     * @param string|null $couponCode
+     * @param  string|null  $couponCode
      */
     public function removeCoupon(?string $couponCode)
     {
-        if (!is_null($couponCode)) {
+        if (! is_null($couponCode)) {
             unset($this->coupons()[$couponCode]);
         }
     }
 
     /**
-     * @param float $value
+     * @param  float  $value
      * @return float
      */
     private function formatFloat(float $value): float
     {
-        return (float)number_format(
+        return (float) number_format(
             $value, // the number to format
             2, // how many decimal points
             '.', // decimal separator
@@ -839,8 +834,7 @@ class Cart
         $couponCode,
         $couponType,
         $couponValue
-    )
-    {
+    ) {
         $discount_value = 0;
         $originalTotalPrice = $this->originalTotalPrice();
         switch ($couponType) {
@@ -880,7 +874,7 @@ class Cart
     }
 
     /**
-     * @param array $options
+     * @param  array  $options
      */
     public function setOptions(array $options): void
     {
@@ -896,7 +890,7 @@ class Cart
      */
     private function getCartInstance(): string
     {
-        return $this->instance . '_cart_info';
+        return $this->instance.'_cart_info';
     }
 
     /**
