@@ -580,7 +580,8 @@ class Cart
      */
     private function storedCartWithIdentifierExists($identifier): bool
     {
-        return $this->getConnection()->table($this->getTableName())->where('identifier', $identifier)->exists();
+        return $this->getConnection()
+            ->table($this->getTableName())->where('identifier', $identifier)->exists();
     }
 
     /**
