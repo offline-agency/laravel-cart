@@ -345,7 +345,7 @@ class Cart
     public function originalTotalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
     {
         return $this->getContent()->reduce(function ($originalTotalPrice, CartItem $cartItem) {
-            return $originalTotalPrice + $cartItem->originalTotalPrice;
+            return $originalTotalPrice + ($cartItem->originalTotalPrice * $cartItem->qty);
         }, 0);
     }
 
