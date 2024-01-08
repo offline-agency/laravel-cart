@@ -285,12 +285,12 @@ class Cart
     public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
         $total = $this->getContent()->reduce(function ($total, CartItem $cartItem) {
-            return $total + ($cartItem->qty * $cartItem->totalPrice);
+            return $total + $cartItem->totalPrice + (float) (($cartItem->qty - 1) * $cartItem->originalTotalPrice);
         }, 0);
 
         return $total < 0
             ? 0
-            : $total;
+            : $this->formatFloat($total);
     }
 
     /**
@@ -303,9 +303,13 @@ class Cart
      */
     public function vat(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
-        return $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
-            return $tax + ($cartItem->qty * $cartItem->vat);
+        $vat = $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
+            return $tax + $cartItem->vat + (float) (($cartItem->qty - 1) * $cartItem->originalVat);
         }, 0);
+
+        return $vat < 0
+            ? 0
+            : $this->formatFloat($vat);
     }
 
     /**
@@ -318,13 +322,17 @@ class Cart
      */
     public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
-        return $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
+        $subtotal = $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
             $cartItemSubTotal = $cartItem->name !== 'discountCartItem'
-                ? ($cartItem->qty * $cartItem->price)
+                ? $cartItem->price + (float) (($cartItem->qty - 1) * $cartItem->originalPrice)
                 : 0;
 
             return $subTotal + $cartItemSubTotal;
         }, 0);
+
+        return $subtotal < 0
+            ? 0
+            : $this->formatFloat($subtotal);
     }
 
     /**
@@ -336,7 +344,7 @@ class Cart
     public function originalTotalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
     {
         return $this->getContent()->reduce(function ($originalTotalPrice, CartItem $cartItem) {
-            return $originalTotalPrice + $cartItem->originalTotalPrice;
+            return $originalTotalPrice + ($cartItem->originalTotalPrice * $cartItem->qty);
         }, 0);
     }
 
@@ -488,8 +496,8 @@ class Cart
     protected function getCartInfo(): Collection
     {
         return $this->session->has($this->getCartInstance())
-        ? $this->session->get($this->getCartInstance())
-        : new Collection();
+            ? $this->session->get($this->getCartInstance())
+            : new Collection();
     }
 
     /**
@@ -570,7 +578,8 @@ class Cart
      */
     private function storedCartWithIdentifierExists($identifier): bool
     {
-        return $this->getConnection()->table($this->getTableName())->where('identifier', $identifier)->exists();
+        return $this->getConnection()
+            ->table($this->getTableName())->where('identifier', $identifier)->exists();
     }
 
     /**

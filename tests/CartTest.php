@@ -1819,6 +1819,55 @@ class CartTest extends TestCase
     }
 
     /** @test */
+    public function it_can_calculate_cart_totals_after_applied_item_coupon()
+    {
+        $cart = $this->getCart();
+
+        $cartItem = $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.00,
+            200.00,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+        $cartItem = $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.00,
+            200.00,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $this->assertItemsInCart(2, $cart);
+        $this->assertRowsInCart(1, $cart);
+
+        $cart->applyCoupon(
+            $cartItem->rowId,
+            'BLACK_FRIDAY_FIXED_2021',
+            'fixed',
+            400
+        );
+
+        $this->assertIsArray($cart->coupons());
+        $this->assertCount(1, $cart->coupons());
+        $this->assertEquals(1666.67, $cart->subtotal());
+        $this->assertEquals(2000, $cart->total());
+        $this->assertEquals(333.33, $cart->vat());
+    }
+
+    /** @test */
     public function it_can_set_and_get_options_on_cart()
     {
         $cart = $this->getCart();
