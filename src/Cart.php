@@ -561,7 +561,9 @@ class Cart
             return false;
         }
 
-        return is_array(head($item)) || head($item) instanceof Buyable;
+        $firstItem = Arr::first($item);
+
+        return is_array($firstItem) || $firstItem instanceof Buyable;
     }
 
     /**

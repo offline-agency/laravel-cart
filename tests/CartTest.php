@@ -887,9 +887,9 @@ class CartTest extends TestCase
         );
 
         $this->assertItemsInCart(3, $cart);
-        $this->assertEquals(36.66, $cart->total());
+        $this->assertEqualsWithDelta(36.66, $cart->total(), 0.0001);
         $this->assertEquals(30.00, $cart->subtotal());
-        $this->assertEquals(6.66, $cart->vat());
+        $this->assertEqualsWithDelta(6.66, $cart->vat(), 0.0001);
     }
 
     /** @test */

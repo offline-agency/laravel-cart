@@ -3,7 +3,6 @@
 namespace OfflineAgency\LaravelCart;
 
 use Illuminate\Auth\Events\Logout;
-use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\ServiceProvider;
 
@@ -11,33 +10,42 @@ class CartServiceProvider extends ServiceProvider
 {
     /**
      * Register the service provider.
-     *
-     * @return void
-     *
-     * @throws BindingResolutionException
      */
-    public function register()
+    public function register(): void
     {
-        $this->app->bind('cart', 'OfflineAgency\LaravelCart\Cart');
+        $this->app->singleton('cart', Cart::class);
 
-        $config = __DIR__.'/../config/cart.php';
-        $this->mergeConfigFrom($config, 'cart');
+        $this->mergeConfigFrom(__DIR__.'/../config/cart.php', 'cart');
+    }
 
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        $this->registerPublishables();
+        $this->registerLogoutListener();
+    }
+
+    private function registerPublishables(): void
+    {
         $this->publishes([__DIR__.'/../config/cart.php' => config_path('cart.php')], 'config');
 
-        $this->app['events']->listen(Logout::class, function () {
+        if (! class_exists('CreateCartTable')) {
+            $timestamp = date('Y_m_d_His');
+
+            $this->publishes([
+                __DIR__.'/../database/migrations/0000_00_00_000000_create_cart_table.php' => database_path("migrations/{$timestamp}_create_cart_table.php"),
+            ], 'migrations');
+        }
+    }
+
+    private function registerLogoutListener(): void
+    {
+        $this->app['events']->listen(Logout::class, function (): void {
             if ($this->app['config']->get('cart.destroy_on_logout')) {
                 $this->app->make(SessionManager::class)->forget('cart');
             }
         });
-
-        if (! class_exists('CreateCartTable')) {
-            // Publish the migration
-            $timestamp = date('Y_m_d_His', time());
-
-            $this->publishes([
-                __DIR__.'/../database/migrations/0000_00_00_000000_create_cart_table.php' => database_path('migrations/'.$timestamp.'_create_cart_table.php'),
-            ], 'migrations');
-        }
     }
 }

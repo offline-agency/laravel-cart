@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\CartServiceProvider;
+use OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel;
 use Orchestra\Testbench\TestCase;
 
 class CartItemTest extends TestCase
@@ -380,5 +381,29 @@ class CartItemTest extends TestCase
 
         $this->assertEquals('OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel', $cartItem->associatedModel);
         $this->assertEquals('fake_id', $cartItem->model);
+    }
+
+    /** @test */
+    public function it_can_resolve_the_associated_model_through_magic_accessor(): void
+    {
+        $cartItem = new CartItem(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            100.00,
+            122.00,
+            '0',
+            '0',
+            22.00,
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cartItem->associate(ProductModel::class);
+
+        unset($cartItem->model);
+
+        $this->assertInstanceOf(ProductModel::class, $cartItem->model);
     }
 }

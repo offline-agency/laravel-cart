@@ -169,7 +169,19 @@ class CartItem implements Arrayable, Jsonable
      */
     public function __get(string $attribute)
     {
-        if (property_exists($this, $attribute)) {
+        $properties = get_object_vars($this);
+
+        if ($attribute === 'model' && isset($this->associatedModel)) {
+            $associatedModel = $this->associatedModel;
+
+            if (! class_exists($associatedModel)) {
+                return null;
+            }
+
+            return (new $associatedModel())->find($this->id);
+        }
+
+        if (array_key_exists($attribute, $properties)) {
             return $this->{$attribute};
         }
 
@@ -191,10 +203,6 @@ class CartItem implements Arrayable, Jsonable
 
         if ($attribute === 'taxTotal') {
             return $this->tax * $this->qty;
-        }
-
-        if ($attribute === 'model' && isset($this->associatedModel)) {
-            return with(new $this->associatedModel())->find($this->id);
         }
 
         return null;
