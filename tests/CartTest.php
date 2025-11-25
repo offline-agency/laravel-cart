@@ -1877,7 +1877,6 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    /** @test */
     public function it_can_calculate_original_total_price_with_decimals()
     {
         $cart = $this->getCart();
@@ -1935,7 +1934,6 @@ class CartTest extends TestCase
         );
 
         $this->assertEquals(1000.00, $cartItem->price);
-
     }
 
     /** @test */

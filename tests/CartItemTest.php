@@ -431,7 +431,7 @@ class CartItemTest extends TestCase
 
         $this->assertEquals(1000.00, $cartItem->subtotal);
     }
-    /** @test */
+
     /** @test */
     public function it_can_apply_a_coupon_to_cart_item()
     {
@@ -461,5 +461,4 @@ class CartItemTest extends TestCase
 
         $this->assertCount(1, $cartItem->appliedCoupons);
     }
-
 }
