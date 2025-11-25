@@ -67,7 +67,7 @@ class Cart
      * @param  string|null  $instance
      * @return Cart
      */
-    public function instance(string $instance = null): Cart
+    public function instance(?string $instance = null): Cart
     {
         $instance = $instance ?: self::DEFAULT_INSTANCE;
 
@@ -282,7 +282,7 @@ class Cart
      * @param  string|null  $thousandSeparator
      * @return float
      */
-    public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
+    public function total(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): float
     {
         $total = $this->getContent()->reduce(function ($total, CartItem $cartItem) {
             return $total + ($cartItem->qty * $cartItem->totalPrice);
@@ -301,7 +301,7 @@ class Cart
      * @param  string|null  $thousandSeparator
      * @return float
      */
-    public function vat(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
+    public function vat(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): float
     {
         return $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
             return $tax + ($cartItem->qty * $cartItem->vat);
@@ -316,7 +316,7 @@ class Cart
      * @param  string|null  $thousandSeparator
      * @return float
      */
-    public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
+    public function subtotal(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): float
     {
         return $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
             $cartItemSubTotal = $cartItem->name !== 'discountCartItem'
@@ -333,7 +333,7 @@ class Cart
      * @param  string|null  $thousandSeparator
      * @return mixed
      */
-    public function originalTotalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
+    public function originalTotalPrice(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null)
     {
         return $this->getContent()->reduce(function ($originalTotalPrice, CartItem $cartItem) {
             return $originalTotalPrice + $cartItem->originalTotalPrice;
@@ -561,9 +561,7 @@ class Cart
             return false;
         }
 
-        $firstItem = Arr::first($item);
-
-        return is_array($firstItem) || $firstItem instanceof Buyable;
+        return is_array(head($item)) || head($item) instanceof Buyable;
     }
 
     /**

@@ -47,4 +47,3 @@ class CartServiceProviderTest extends TestCase
         event(new Logout('', Mockery::mock(Authenticatable::class)));
     }
 }
-
