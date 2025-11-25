@@ -368,7 +368,7 @@ class CartItem implements Arrayable, Jsonable
      * @param  string  $thousandSeparator
      * @return string
      */
-    private function numberFormat(float $value, int $decimals, string $decimalPoint, string $thousandSeparator): string
+    public function numberFormat(float $value, int $decimals, string $decimalPoint, string $thousandSeparator): string
     {
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
@@ -478,7 +478,7 @@ class CartItem implements Arrayable, Jsonable
      * @param  float  $value
      * @return float
      */
-    private function formatFloat(float $value): float
+    public function formatFloat(float $value): float
     {
         return (float) number_format(
             $value, // the number to format

@@ -333,7 +333,7 @@ class Cart
      * @param  string|null  $thousandSeparator
      * @return mixed
      */
-    public function originalTotalPrice(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null)
+    public function originalTotalPrice(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): mixed
     {
         return $this->getContent()->reduce(function ($originalTotalPrice, CartItem $cartItem) {
             return $originalTotalPrice + $cartItem->originalTotalPrice;
@@ -821,7 +821,7 @@ class Cart
      * @param  $couponType
      * @param  $couponValue
      */
-    private function applyGlobalCoupon(
+    public function applyGlobalCoupon(
         $couponCode,
         $couponType,
         $couponValue

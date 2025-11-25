@@ -1875,4 +1875,89 @@ class CartTest extends TestCase
         $this->app['config']->set('cart.format.decimal_point', $decimalPoint);
         $this->app['config']->set('cart.format.thousand_separator', $thousandSeparator);
     }
+
+    /** @test */
+    /** @test */
+    public function it_can_calculate_original_total_price_with_decimals()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'Test Item 1',
+            'This is a simple description',
+            2,
+            50.00,
+            100.00,
+            20.00
+        );
+        $cart->add(
+            2,
+            'Test Item 2',
+            'Another item',
+            1,
+            30.00,
+            30.00,
+            6.00
+        );
+
+        $totalPrice = $cart->originalTotalPrice(2);
+
+        $this->assertEquals('130.00', $totalPrice);
+    }
+
+    /** @test */
+    public function it_formats_numbers_correctly()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Item 1', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formattedPrice = $cartItem->numberFormat(1000.00, 2, '.', ',');
+        $this->assertEquals('1,000.00', $formattedPrice);
+    }
+
+    /** @test */
+    public function it_can_detach_a_coupon_from_cart_item()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $cart->applyCoupon(
+            '027c91341fd5cf4d2579b49c4b6a90da',
+            'BLACK_FRIDAY_FIXED_2021',
+            'fixed',
+            10
+        );
+
+        $cart->detachCoupon(
+            '027c91341fd5cf4d2579b49c4b6a90da',
+            'BLACK_FRIDAY_FIXED_2021'
+        );
+
+        $this->assertEquals(1000.00, $cartItem->price);
+
+    }
+
+    /** @test */
+    public function it_can_check_if_cart_has_coupons()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $this->assertFalse($cart->hasCoupons());
+
+        $cart->applyCoupon('027c91341fd5cf4d2579b49c4b6a90da', 'BLACK_FRIDAY', 'percentage', 50);
+
+        $this->assertTrue($cart->hasCoupons());
+    }
+
+    /** @test */
+    public function it_can_format_float_values()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formattedValue = $cartItem->formatFloat(1200.00);
+        $this->assertEquals(1200.00, $formattedValue);
+    }
 }

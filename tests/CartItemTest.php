@@ -14,7 +14,7 @@ class CartItemTest extends TestCase
     /**
      * Set the package service provider.
      *
-     * @param  Application  $app
+     * @param Application $app
      * @return array
      */
     protected function getPackageProviders($app): array
@@ -406,4 +406,60 @@ class CartItemTest extends TestCase
 
         $this->assertInstanceOf(ProductModel::class, $cartItem->model);
     }
+
+    /** @test */
+    public function it_can_access_dynamic_properties()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            1000.00,
+            1200.00,
+            '0',
+            '123',
+            22.00,
+            'https://example.com/image.png',
+            ['size' => 'L', 'color' => 'red']
+        );
+
+        $this->assertEquals(1200.00, $cartItem->totalPrice);
+        $this->assertEquals(1000.00, $cartItem->price);
+        $this->assertEquals(22.00, $cartItem->vat);
+        $this->assertEquals('Iva Inclusa', $cartItem->vatLabel);
+
+        $this->assertEquals(1000.00, $cartItem->subtotal);
+    }
+    /** @test */
+    /** @test */
+    public function it_can_apply_a_coupon_to_cart_item()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            1000.00,
+            1200.00,
+            '0',
+            '123',
+            22.00,
+            'https://example.com/image.png',
+            ['size' => 'L', 'color' => 'red']
+        );
+
+        $cartItem->applyCoupon('BLACK_FRIDAY_FIXED_2021', 'fixed', 100);
+
+        $this->assertEquals(1100.00, $cartItem->totalPrice);
+        $this->assertEquals(100, $cartItem->discountValue);
+
+        $coupon = $cartItem->getCoupon('BLACK_FRIDAY_FIXED_2021');
+        $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $coupon->couponCode);
+        $this->assertEquals('fixed', $coupon->couponType);
+        $this->assertTrue($cartItem->hasCoupons());
+
+        $this->assertCount(1, $cartItem->appliedCoupons);
+    }
+
 }
