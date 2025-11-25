@@ -31,6 +31,8 @@ class CartItem implements Arrayable, Jsonable
     public $associatedModel;
     public $model;
     public $appliedCoupons;
+    public $tax = 0.0;
+    public $taxRate = 0.0;
 
     /**
      * CartItem constructor.
