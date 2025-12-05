@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
 use Mockery;
+use OfflineAgency\LaravelCart\CanBeBought;
 use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\CartServiceProvider;
@@ -23,7 +24,7 @@ use TypeError;
 
 class CartTest extends TestCase
 {
-    use CartAssertions;
+    use CartAssertions, CanBeBought;
 
     /**
      * Set the package service provider.
@@ -1957,5 +1958,160 @@ class CartTest extends TestCase
 
         $formattedValue = $cartItem->formatFloat(1200.00);
         $this->assertEquals(1200.00, $formattedValue);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_identifier_using_get_key()
+    {
+        $product = new Fixtures\ProductWithTrait(123);
+
+        $identifier = $product->getBuyableIdentifier();
+
+        $this->assertEquals(123, $identifier);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_identifier_using_id_property()
+    {
+        $product = new class {
+            public $id = 456;
+        };
+
+        $identifier = $product->getBuyableIdentifier();
+
+        $this->assertEquals(456, $identifier);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_description_from_name_property()
+    {
+        $product = new Fixtures\ProductWithTrait(1, 'Product Name');
+
+        $description = $product->getBuyableDescription();
+
+        $this->assertEquals('Product Name', $description);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_description_from_title_property()
+    {
+        $product = new class {
+            public $id = 1;
+            public $title = 'Product Title';
+        };
+
+        $description = $product->getBuyableDescription();
+
+        $this->assertEquals('Product Title', $description);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_description_from_description_property()
+    {
+        $product = new class {
+            public $id = 1;
+            public $description = 'Product Description';
+        };
+
+        $description = $product->getBuyableDescription();
+
+        $this->assertEquals('Product Description', $description);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_null_when_no_description_property_exists()
+    {
+        $product = new class {
+            public $id = 1;
+        };
+
+        $description = $product->getBuyableDescription();
+
+        $this->assertNull($description);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_price_from_price_property()
+    {
+        $product = new Fixtures\ProductWithTrait(1, null, null, null, 99.99);
+
+        $price = $product->getBuyablePrice();
+
+        $this->assertEquals(99.99, $price);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_null_when_no_price_property_exists()
+    {
+        $product = new class {
+            public $id = 1;
+        };
+
+        $price = $product->getBuyablePrice();
+
+        $this->assertNull($price);
+    }
+
+    /** @test */
+    public function cart_item_number_format_formats_value_correctly()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formatted = $cartItem->numberFormat(1234.56, 2, '.', ',');
+
+        $this->assertEquals('1,234.56', $formatted);
+    }
+
+    /** @test */
+    public function cart_item_number_format_handles_different_decimal_separators()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formatted = $cartItem->numberFormat(1234.56, 2, ',', '.');
+
+        $this->assertEquals('1.234,56', $formatted);
+    }
+
+    /** @test */
+    public function cart_item_number_format_handles_different_decimal_places()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formatted = $cartItem->numberFormat(1234.5678, 3, '.', ',');
+
+        $this->assertEquals('1,234.568', $formatted);
+    }
+
+    /** @test */
+    public function cart_item_number_format_handles_zero_decimal_places()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formatted = $cartItem->numberFormat(1234.56, 0, '.', ',');
+
+        $this->assertEquals('1,235', $formatted);
+    }
+    /** @test */
+    public function it_can_format_number_using_cart_helper()
+    {
+        $cart = $this->getCart();
+
+        $formatted = $cart->numberFormat(1234.5678, 2, '.', ',');
+
+        $this->assertEquals('1,234.57', $formatted);
+    }
+
+    /** @test */
+    public function it_can_format_number_using_config_defaults()
+    {
+        $cart = $this->getCart();
+
+        $formatted = $cart->numberFormat(1234.5678, null, null, null);
+
+        $this->assertEquals('1,234.57', $formatted);
     }
 }

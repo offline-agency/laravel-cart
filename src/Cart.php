@@ -21,10 +21,7 @@ class Cart
     const DEFAULT_INSTANCE = 'default';
     const CART_OPTIONS_KEY = 'options';
 
-    /**
-     * @var
-     */
-    private $options = [];
+
 
     /**
      * Instance of the session manager.
@@ -90,7 +87,7 @@ class Cart
      * Add an item to the cart.
      *
      * @param  mixed  $id
-     * @param  mixed  $name
+     * @param  string|null  $name
      * @param  string|null  $subtitle
      * @param  int|null  $qty
      * @param  float|null  $price
@@ -104,15 +101,15 @@ class Cart
      */
     public function add(
         $id,
-        string $name,
-        string $subtitle,
-        int $qty,
-        float $price,
-        float $totalPrice,
-        float $vat,
-        string $vatFcCode = '',
-        string $productFcCode = '',
-        string $urlImg = '',
+        ?string $name = null,
+        ?string $subtitle = null,
+        ?int $qty = null,
+        ?float $price = null,
+        ?float $totalPrice = null,
+        ?float $vat = null,
+        ?string $vatFcCode = '',
+        ?string $productFcCode = '',
+        ?string $urlImg = '',
         array $options = []
     ) {
         if ($this->isMulti($id)) {
@@ -496,16 +493,16 @@ class Cart
      * * Create a new CartItem from the supplied attributes.
      *
      *
-     * @param  $id
-     * @param  $name
-     * @param  $subtitle
-     * @param  $qty
-     * @param  $price
-     * @param  $totalPrice
-     * @param  $vatFcCode
-     * @param  $productFcCode
-     * @param  $vat
-     * @param  $urlImg
+     * @param  mixed  $id
+     * @param  string|null  $name
+     * @param  string|null  $subtitle
+     * @param  int|null  $qty
+     * @param  float|null  $price
+     * @param  float|null  $totalPrice
+     * @param  float|null  $vat
+     * @param  string|null  $vatFcCode
+     * @param  string|null  $productFcCode
+     * @param  string|null  $urlImg
      * @param  array  $options
      * @return CartItem
      */
@@ -645,7 +642,7 @@ class Cart
      * @param  $thousandSeparator
      * @return string
      */
-    private function numberFormat($value, $decimals, $decimalPoint, $thousandSeparator): string
+    public function numberFormat($value, $decimals, $decimalPoint, $thousandSeparator): string
     {
         if (is_null($decimals)) {
             $decimals = is_null(config('cart.format.decimals')) ? 2 : config('cart.format.decimals');

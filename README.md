@@ -30,6 +30,22 @@ Run the tests with:
 composer test
 ```
 
+## Static Analysis
+
+This package uses [Larastan](https://github.com/larastan/larastan) (PHPStan for Laravel) for static code analysis.
+
+Run static analysis with:
+
+```bash
+composer phpstan
+```
+
+To regenerate the baseline (after fixing errors):
+
+```bash
+composer phpstan:baseline
+```
+
 ## Contributing
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
