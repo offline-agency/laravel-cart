@@ -2100,7 +2100,7 @@ class CartTest extends TestCase
 
         $this->assertEquals('1,235', $formatted);
     }
-    
+
     /** @test */
     public function it_can_format_number_using_cart_helper()
     {
