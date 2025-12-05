@@ -361,7 +361,9 @@ class CartTest extends TestCase
      */
     public function it_will_validate_the_quantity()
     {
-        $this->expectException(TypeError::class);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Please supply a valid quantity.');
+
         $cart = $this->getCart();
 
         $cartItem = $cart->add(
@@ -380,7 +382,8 @@ class CartTest extends TestCase
      */
     public function it_will_validate_the_price()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(TypeError::class);
+
         $cart = $this->getCart();
 
         $cart->add(
