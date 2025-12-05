@@ -2128,4 +2128,3 @@ class CartTest extends TestCase
         $this->assertEquals('1,234.57', $formatted);
     }
 }
-
