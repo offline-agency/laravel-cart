@@ -9,9 +9,13 @@ class ProductWithTrait
     use CanBeBought;
 
     public $id;
+
     public $name;
+
     public $title;
+
     public $description;
+
     public $price;
 
     public function __construct($id = null, $name = null, $title = null, $description = null, $price = null)

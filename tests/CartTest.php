@@ -29,7 +29,6 @@ class CartTest extends TestCase
      * Set the package service provider.
      *
      * @param  Application  $app
-     * @return array
      */
     protected function getPackageProviders($app): array
     {
@@ -58,8 +57,6 @@ class CartTest extends TestCase
 
     /**
      * Setup the test environment.
-     *
-     * @return void
      */
     protected function setUp(): void
     {
@@ -400,7 +397,7 @@ class CartTest extends TestCase
     {
         $cart = $this->getCart();
 
-        $item = new BuyableProduct();
+        $item = new BuyableProduct;
 
         $cartItem = $cart->add(
             1,
@@ -430,7 +427,7 @@ class CartTest extends TestCase
     {
         $cart = $this->getCart();
 
-        $item = new BuyableProduct();
+        $item = new BuyableProduct;
 
         $cartItem = $cart->add(
             1,
@@ -1039,7 +1036,7 @@ class CartTest extends TestCase
             200.00
         );
 
-        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel());
+        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel);
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
@@ -1083,7 +1080,7 @@ class CartTest extends TestCase
             200.00
         );
 
-        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel());
+        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel);
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
@@ -1275,7 +1272,7 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    public function it_can_return_cartItem_formatted_numbers_by_config_values()
+    public function it_can_return_cart_item_formatted_numbers_by_config_values()
     {
         $this->markTestIncomplete();
         $this->setConfigFormat(2, ',', '');
@@ -1854,8 +1851,6 @@ class CartTest extends TestCase
 
     /**
      * Get an instance of the cart.
-     *
-     * @return Cart
      */
     private function getCart(): Cart
     {
@@ -1867,10 +1862,6 @@ class CartTest extends TestCase
 
     /**
      * Set the config number format.
-     *
-     * @param  int  $decimals
-     * @param  string  $decimalPoint
-     * @param  string  $thousandSeparator
      */
     private function setConfigFormat(int $decimals, string $decimalPoint, string $thousandSeparator)
     {
@@ -1978,6 +1969,7 @@ class CartTest extends TestCase
         $product = new class
         {
             use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 456;
         };
 
@@ -2002,7 +1994,9 @@ class CartTest extends TestCase
         $product = new class
         {
             use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 1;
+
             public $title = 'Product Title';
         };
 
@@ -2017,7 +2011,9 @@ class CartTest extends TestCase
         $product = new class
         {
             use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 1;
+
             public $description = 'Product Description';
         };
 
@@ -2032,6 +2028,7 @@ class CartTest extends TestCase
         $product = new class
         {
             use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 1;
         };
 
@@ -2056,6 +2053,7 @@ class CartTest extends TestCase
         $product = new class
         {
             use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 1;
         };
 
