@@ -63,7 +63,7 @@ class CartTest extends TestCase
         parent::setUp();
 
         $this->app->afterResolving('migrator', function ($migrator) {
-            $migrator->path(realpath(__DIR__ . '/../database/migrations'));
+            $migrator->path(realpath(__DIR__.'/../database/migrations'));
         });
     }
 
@@ -1966,7 +1966,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_identifier_using_id_property()
     {
-        $product = new class {
+        $product = new class
+        {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 456;
@@ -1990,7 +1991,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_title_property()
     {
-        $product = new class {
+        $product = new class
+        {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2006,7 +2008,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_description_property()
     {
-        $product = new class {
+        $product = new class
+        {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2022,7 +2025,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_description_property_exists()
     {
-        $product = new class {
+        $product = new class
+        {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2046,7 +2050,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_price_property_exists()
     {
-        $product = new class {
+        $product = new class
+        {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
