@@ -21,8 +21,6 @@ class Cart
     const DEFAULT_INSTANCE = 'default';
     const CART_OPTIONS_KEY = 'options';
 
-
-
     /**
      * Instance of the session manager.
      *

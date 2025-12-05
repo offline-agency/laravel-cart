@@ -1973,7 +1973,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_identifier_using_id_property()
     {
-        $product = new class {
+        $product = new class
+        {
             public $id = 456;
         };
 
@@ -1995,7 +1996,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_title_property()
     {
-        $product = new class {
+        $product = new class
+        {
             public $id = 1;
             public $title = 'Product Title';
         };
@@ -2008,7 +2010,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_description_property()
     {
-        $product = new class {
+        $product = new class
+        {
             public $id = 1;
             public $description = 'Product Description';
         };
@@ -2021,7 +2024,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_description_property_exists()
     {
-        $product = new class {
+        $product = new class
+        {
             public $id = 1;
         };
 
@@ -2043,7 +2047,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_price_property_exists()
     {
-        $product = new class {
+        $product = new class
+        {
             public $id = 1;
         };
 
