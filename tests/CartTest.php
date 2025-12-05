@@ -10,7 +10,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
 use Mockery;
-use OfflineAgency\LaravelCart\CanBeBought;
 use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\CartServiceProvider;
@@ -24,7 +23,7 @@ use TypeError;
 
 class CartTest extends TestCase
 {
-    use CartAssertions, CanBeBought;
+    use CartAssertions;
 
     /**
      * Set the package service provider.
@@ -67,7 +66,7 @@ class CartTest extends TestCase
         parent::setUp();
 
         $this->app->afterResolving('migrator', function ($migrator) {
-            $migrator->path(realpath(__DIR__.'/../database/migrations'));
+            $migrator->path(realpath(__DIR__ . '/../database/migrations'));
         });
     }
 
@@ -1973,8 +1972,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_identifier_using_id_property()
     {
-        $product = new class
-        {
+        $product = new class {
+            use \OfflineAgency\LaravelCart\CanBeBought;
             public $id = 456;
         };
 
@@ -1996,8 +1995,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_title_property()
     {
-        $product = new class
-        {
+        $product = new class {
+            use \OfflineAgency\LaravelCart\CanBeBought;
             public $id = 1;
             public $title = 'Product Title';
         };
@@ -2010,8 +2009,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_description_property()
     {
-        $product = new class
-        {
+        $product = new class {
+            use \OfflineAgency\LaravelCart\CanBeBought;
             public $id = 1;
             public $description = 'Product Description';
         };
@@ -2024,8 +2023,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_description_property_exists()
     {
-        $product = new class
-        {
+        $product = new class {
+            use \OfflineAgency\LaravelCart\CanBeBought;
             public $id = 1;
         };
 
@@ -2047,8 +2046,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_price_property_exists()
     {
-        $product = new class
-        {
+        $product = new class {
+            use \OfflineAgency\LaravelCart\CanBeBought;
             public $id = 1;
         };
 
@@ -2121,3 +2120,4 @@ class CartTest extends TestCase
         $this->assertEquals('1,234.57', $formatted);
     }
 }
+
