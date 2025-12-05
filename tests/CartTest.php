@@ -63,7 +63,7 @@ class CartTest extends TestCase
         parent::setUp();
 
         $this->app->afterResolving('migrator', function ($migrator) {
-            $migrator->path(realpath(__DIR__.'/../database/migrations'));
+            $migrator->path(realpath(__DIR__ . '/../database/migrations'));
         });
     }
 
@@ -1966,8 +1966,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_identifier_using_id_property()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 456;
@@ -1991,8 +1990,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_title_property()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2008,8 +2006,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_description_property()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2025,8 +2022,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_description_property_exists()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2050,8 +2046,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_price_property_exists()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2124,5 +2119,98 @@ class CartTest extends TestCase
         $formatted = $cart->numberFormat(1234.5678, null, null, null);
 
         $this->assertEquals('1,234.57', $formatted);
+    }
+
+    /** @test */
+    public function it_can_apply_a_global_fixed_coupon()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            2,
+            100.00,
+            120.00,
+            20.00
+        );
+
+        $cart->add(
+            2,
+            'Second Cart item',
+            'This is a simple description',
+            1,
+            50.00,
+            60.00,
+            10.00
+        );
+
+        $initialTotal = $cart->total();
+        $this->assertEquals(300.00, $initialTotal);
+
+        $cart->applyCoupon(
+            null,
+            'GLOBAL_FIXED_2024',
+            'fixed',
+            50.00
+        );
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertTrue($cart->hasGlobalCoupon());
+
+        $coupons = $cart->coupons();
+        $this->assertCount(1, $coupons);
+
+        $finalTotal = $cart->total();
+        $this->assertEquals(250.00, $finalTotal);
+    }
+
+    /** @test */
+    public function it_can_apply_a_global_percentage_coupon()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            2,
+            100.00,
+            120.00,
+            20.00
+        );
+
+        $cart->add(
+            2,
+            'Second Cart item',
+            'This is a simple description',
+            1,
+            50.00,
+            60.00,
+            10.00
+        );
+
+        $initialTotal = $cart->total();
+        $this->assertEquals(300.00, $initialTotal);
+
+
+        $cart->applyCoupon(
+            null,
+            'GLOBAL_PERCENTAGE_2024',
+            'percentage',
+            15  // 15% discount
+        );
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertTrue($cart->hasGlobalCoupon());
+
+        $coupons = $cart->coupons();
+        $this->assertCount(1, $coupons);
+
+        $finalTotal = $cart->total();
+
+        $this->assertLessThan($initialTotal, $finalTotal);
+        $this->assertGreaterThan(0, $finalTotal);
     }
 }
