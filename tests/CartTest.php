@@ -2199,7 +2199,6 @@ class CartTest extends TestCase
         $initialTotal = $cart->total();
         $this->assertEquals(300.00, $initialTotal);
 
-
         $cart->applyCoupon(
             null,
             'GLOBAL_PERCENTAGE_2024',
