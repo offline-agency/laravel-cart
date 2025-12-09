@@ -382,8 +382,6 @@ class CartItemTest extends TestCase
         $this->assertEquals('fake_id', $cartItem->model);
     }
 
-
-
     /** @test */
     public function it_can_resolve_the_associated_model_through_magic_accessor(): void
     {
