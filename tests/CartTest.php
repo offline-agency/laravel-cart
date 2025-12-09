@@ -10,7 +10,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
 use Mockery;
-use OfflineAgency\LaravelCart\CanBeBought;
 use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\CartServiceProvider;
@@ -24,13 +23,12 @@ use TypeError;
 
 class CartTest extends TestCase
 {
-    use CartAssertions, CanBeBought;
+    use CartAssertions;
 
     /**
      * Set the package service provider.
      *
      * @param  Application  $app
-     * @return array
      */
     protected function getPackageProviders($app): array
     {
@@ -59,8 +57,6 @@ class CartTest extends TestCase
 
     /**
      * Setup the test environment.
-     *
-     * @return void
      */
     protected function setUp(): void
     {
@@ -368,7 +364,9 @@ class CartTest extends TestCase
      */
     public function it_will_validate_the_quantity()
     {
-        $this->expectException(TypeError::class);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Please supply a valid quantity.');
+
         $cart = $this->getCart();
 
         $cartItem = $cart->add(
@@ -388,6 +386,7 @@ class CartTest extends TestCase
     public function it_will_validate_the_price()
     {
         $this->expectException(TypeError::class);
+
         $cart = $this->getCart();
 
         $cart->add(
@@ -404,7 +403,7 @@ class CartTest extends TestCase
     {
         $cart = $this->getCart();
 
-        $item = new BuyableProduct();
+        $item = new BuyableProduct;
 
         $cartItem = $cart->add(
             1,
@@ -434,7 +433,7 @@ class CartTest extends TestCase
     {
         $cart = $this->getCart();
 
-        $item = new BuyableProduct();
+        $item = new BuyableProduct;
 
         $cartItem = $cart->add(
             1,
@@ -1045,7 +1044,7 @@ class CartTest extends TestCase
             200.00
         );
 
-        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel());
+        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel);
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
@@ -1089,7 +1088,7 @@ class CartTest extends TestCase
             200.00
         );
 
-        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel());
+        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel);
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
@@ -1281,7 +1280,7 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    public function it_can_return_cartItem_formatted_numbers_by_config_values()
+    public function it_can_return_cart_item_formatted_numbers_by_config_values()
     {
         $this->markTestIncomplete();
         $this->setConfigFormat(2, ',', '');
@@ -1863,8 +1862,6 @@ class CartTest extends TestCase
 
     /**
      * Get an instance of the cart.
-     *
-     * @return Cart
      */
     private function getCart(): Cart
     {
@@ -1876,10 +1873,6 @@ class CartTest extends TestCase
 
     /**
      * Set the config number format.
-     *
-     * @param  int  $decimals
-     * @param  string  $decimalPoint
-     * @param  string  $thousandSeparator
      */
     private function setConfigFormat(int $decimals, string $decimalPoint, string $thousandSeparator)
     {
@@ -1986,6 +1979,8 @@ class CartTest extends TestCase
     {
         $product = new class
         {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 456;
         };
 
@@ -2009,7 +2004,10 @@ class CartTest extends TestCase
     {
         $product = new class
         {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 1;
+
             public $title = 'Product Title';
         };
 
@@ -2023,7 +2021,10 @@ class CartTest extends TestCase
     {
         $product = new class
         {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 1;
+
             public $description = 'Product Description';
         };
 
@@ -2037,6 +2038,8 @@ class CartTest extends TestCase
     {
         $product = new class
         {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 1;
         };
 
@@ -2060,6 +2063,8 @@ class CartTest extends TestCase
     {
         $product = new class
         {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
             public $id = 1;
         };
 
@@ -2130,5 +2135,97 @@ class CartTest extends TestCase
         $formatted = $cart->numberFormat(1234.5678, null, null, null);
 
         $this->assertEquals('1,234.57', $formatted);
+    }
+
+    /** @test */
+    public function it_can_apply_a_global_fixed_coupon()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            2,
+            100.00,
+            120.00,
+            20.00
+        );
+
+        $cart->add(
+            2,
+            'Second Cart item',
+            'This is a simple description',
+            1,
+            50.00,
+            60.00,
+            10.00
+        );
+
+        $initialTotal = $cart->total();
+        $this->assertEquals(300.00, $initialTotal);
+
+        $cart->applyCoupon(
+            null,
+            'GLOBAL_FIXED_2024',
+            'fixed',
+            50.00
+        );
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertTrue($cart->hasGlobalCoupon());
+
+        $coupons = $cart->coupons();
+        $this->assertCount(1, $coupons);
+
+        $finalTotal = $cart->total();
+        $this->assertEquals(250.00, $finalTotal);
+    }
+
+    /** @test */
+    public function it_can_apply_a_global_percentage_coupon()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            2,
+            100.00,
+            120.00,
+            20.00
+        );
+
+        $cart->add(
+            2,
+            'Second Cart item',
+            'This is a simple description',
+            1,
+            50.00,
+            60.00,
+            10.00
+        );
+
+        $initialTotal = $cart->total();
+        $this->assertEquals(300.00, $initialTotal);
+
+        $cart->applyCoupon(
+            null,
+            'GLOBAL_PERCENTAGE_2024',
+            'percentage',
+            15  // 15% discount
+        );
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertTrue($cart->hasGlobalCoupon());
+
+        $coupons = $cart->coupons();
+        $this->assertCount(1, $coupons);
+
+        $finalTotal = $cart->total();
+
+        $this->assertLessThan($initialTotal, $finalTotal);
+        $this->assertGreaterThan(0, $finalTotal);
     }
 }
