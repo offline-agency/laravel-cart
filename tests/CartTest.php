@@ -283,7 +283,7 @@ class CartTest extends TestCase
                 'vat' => 2.22,
                 'urlImg' => 'https://ecommerce.test/images/item-name.png',
                 'vatFcCode' => '0',
-                'productFcCode' => '0'
+                'productFcCode' => '0',
             ],
             [
                 'id' => 2,
@@ -295,7 +295,7 @@ class CartTest extends TestCase
                 'vat' => 2.22,
                 'urlImg' => 'https://ecommerce.test/images/item-name.png',
                 'vatFcCode' => '0',
-                'productFcCode' => '0'
+                'productFcCode' => '0',
             ],
         ]);
 
@@ -845,7 +845,6 @@ class CartTest extends TestCase
             ],
         ], $content->toArray());
         $this->assertEquals('Iva Inclusa', $cart->totalVatLabel());
-
     }
 
     /** @test */

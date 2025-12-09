@@ -382,6 +382,8 @@ class CartItemTest extends TestCase
         $this->assertEquals('fake_id', $cartItem->model);
     }
 
+
+
     /** @test */
     public function it_can_resolve_the_associated_model_through_magic_accessor(): void
     {
@@ -404,6 +406,33 @@ class CartItemTest extends TestCase
         unset($cartItem->model);
 
         $this->assertInstanceOf(ProductModel::class, $cartItem->model);
+    }
+
+    /** @test */
+    public function it_can_resolve_dynamic_values_through_magic_accessor(): void
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            3,
+            100.00,
+            120.00,
+            '0',
+            '0',
+            20.00,
+            'https://example.com/image.png',
+            []
+        );
+
+        $this->assertEquals(1, $cartItem->id);
+        $this->assertEquals('Test Item', $cartItem->name);
+
+        $this->assertEquals(0.0, $cartItem->tax);
+        $this->assertEquals(100.00, $cartItem->priceTax);
+        $this->assertEquals(300.00, $cartItem->subtotal);
+        $this->assertEquals(300.00, $cartItem->total);
+        $this->assertEquals(0.0, $cartItem->taxTotal);
     }
 
     /** @test */
