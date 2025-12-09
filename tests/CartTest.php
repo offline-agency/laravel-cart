@@ -276,32 +276,38 @@ class CartTest extends TestCase
 
         $cart = $this->getCart();
 
-        $cart->addBatch(
+        $result = $cart->add([
             [
-                [
-                    'id' => 1,
-                    'name' => '1st Cart item',
-                    'subtitle' => 'This is a simple description',
-                    'qty' => 1,
-                    'price' => 10.00,
-                    'totalPrice' => 12.22,
-                    'vat' => 2.22,
-                ],
-                [
-                    'id' => 2,
-                    'name' => '2nd Cart item',
-                    'subtitle' => 'This is a simple description',
-                    'qty' => 1,
-                    'price' => 10.00,
-                    'totalPrice' => 12.22,
-                    'vat' => 2.22,
-                ],
-            ]
-        );
+                'id' => 1,
+                'name' => '1st Cart item',
+                'subtitle' => 'This is a simple description',
+                'qty' => 1,
+                'price' => 10.00,
+                'totalPrice' => 12.22,
+                'vat' => 2.22,
+                'urlImg' => 'https://ecommerce.test/images/item-name.png',
+                'vatFcCode' => '0',
+                'productFcCode' => '0'
+            ],
+            [
+                'id' => 2,
+                'name' => '2nd Cart item',
+                'subtitle' => 'This is a simple description',
+                'qty' => 1,
+                'price' => 10.00,
+                'totalPrice' => 12.22,
+                'vat' => 2.22,
+                'urlImg' => 'https://ecommerce.test/images/item-name.png',
+                'vatFcCode' => '0',
+                'productFcCode' => '0'
+            ],
+        ]);
 
-        $this->assertEquals(2, $cart->count());
+        $this->assertIsArray($result);
+        $this->assertCount(2, $result);
+        $this->assertContainsOnlyInstancesOf(CartItem::class, $result);
 
-        Event::assertDispatched('cart.added');
+        Event::assertDispatched('cart.added', 2);
     }
 
     /** @test */
@@ -839,6 +845,8 @@ class CartTest extends TestCase
                 'appliedCoupons' => [],
             ],
         ], $content->toArray());
+        $this->assertEquals('Iva Inclusa', $cart->totalVatLabel());
+
     }
 
     /** @test */
@@ -1441,6 +1449,9 @@ class CartTest extends TestCase
         $this->assertEquals(3000, $cart->subtotal());
         $this->assertEquals(3600.00, $cart->total());
         $this->assertEquals(600.00, $cart->vat());
+
+        $cartItem->applyCoupon('BLACK_FRIDAY_PERCENTAGE_2021', 'fixed', 500000);
+        $this->assertEquals(0.0, $cart->total());
     }
 
     /** @test */
