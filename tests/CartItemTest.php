@@ -127,6 +127,27 @@ class CartItemTest extends TestCase
     }
 
     /** @test */
+    public function it_throws_an_exception_if_name_is_empty()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Please supply a valid name.');
+
+        new CartItem(
+            1,
+            '',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.00,
+            '0',
+            '0',
+            200.00,
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+    }
+
+    /** @test */
     public function it_can_apply_a_coupon_fixed()
     {
         $cartItem = new CartItem(
