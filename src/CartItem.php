@@ -237,7 +237,7 @@ class CartItem implements Arrayable, Jsonable
             $item->getVatFcCode(),
             $item->getProductFcCode(),
             $item->getVat(),
-            $item->getSubtitle(),
+            $item->getUrlImg(),
             $item->getOptions()
         );
     }

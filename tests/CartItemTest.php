@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\CartServiceProvider;
+use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
 use OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel;
 use Orchestra\Testbench\TestCase;
 
@@ -507,5 +508,37 @@ class CartItemTest extends TestCase
         $this->assertTrue($cartItem->hasCoupons());
 
         $this->assertCount(1, $cartItem->appliedCoupons);
+    }
+
+    /** @test */
+    public function it_can_be_created_from_a_buyable()
+    {
+        $buyable = new BuyableProduct(
+            1,
+            'Item name',
+            'Item description',
+            1,
+            10.00,
+            12.22,
+            2.22,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cartItem = CartItem::fromBuyable($buyable);
+
+        $this->assertEquals(1, $cartItem->id);
+        $this->assertEquals('Item name', $cartItem->name);
+        $this->assertEquals('Item description', $cartItem->subtitle);
+        $this->assertEquals(1, $cartItem->qty);
+        $this->assertEquals(10.00, $cartItem->price);
+        $this->assertEquals(12.22, $cartItem->totalPrice);
+        $this->assertEquals(2.22, $cartItem->vat);
+        $this->assertEquals('0', $cartItem->vatFcCode);
+        $this->assertEquals('0', $cartItem->productFcCode);
+        $this->assertEquals('https://ecommerce.test/images/item-name.png', $cartItem->urlImg);
+        $this->assertEquals(['size' => 'XL', 'color' => 'red'], $cartItem->options->all());
     }
 }
