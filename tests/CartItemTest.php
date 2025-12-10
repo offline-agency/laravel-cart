@@ -541,4 +541,72 @@ class CartItemTest extends TestCase
         $this->assertEquals('https://ecommerce.test/images/item-name.png', $cartItem->urlImg);
         $this->assertEquals(['size' => 'XL', 'color' => 'red'], $cartItem->options->all());
     }
+
+    /** @test */
+    public function it_returns_null_if_associated_model_does_not_exist()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            100.00,
+            120.00,
+            '0',
+            '0',
+            20.00,
+            'https://example.com/image.png',
+            []
+        );
+
+        $cartItem->associate('NonExistent\\Model\\Class');
+
+        unset($cartItem->model);
+
+        $this->assertNull($cartItem->model);
+    }
+
+    /** @test */
+    public function it_can_access_public_properties_through_magic_get()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            100.00,
+            120.00,
+            '0',
+            '0',
+            20.00,
+            'https://example.com/image.png',
+            []
+        );
+
+        $this->assertEquals('Test Item', $cartItem->__get('name'));
+        $this->assertEquals(1, $cartItem->__get('qty'));
+    }
+
+    /** @test */
+    public function it_calculates_tax_via_magic_get()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            100.00,
+            120.00,
+            '0',
+            '0',
+            20.00,
+            'https://example.com/image.png',
+            []
+        );
+
+        $cartItem->taxRate = 10;
+        unset($cartItem->tax);
+
+        $this->assertEquals(10.00, $cartItem->tax);
+    }
 }
