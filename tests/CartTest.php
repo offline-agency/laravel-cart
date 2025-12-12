@@ -2298,4 +2298,59 @@ class CartTest extends TestCase
 
         $this->assertNull($cart->nonExistentProperty);
     }
+
+    /** @test */
+    public function it_can_add_a_buyable_item_with_quantity()
+    {
+        $cart = $this->getCart();
+        $buyable = new BuyableProduct(1, 'Test Product', 'Subtitle', 1, 10.00);
+
+        $cartItem = $cart->add($buyable, 5);
+
+        $this->assertEquals(5, $cartItem->qty);
+
+        $this->assertEquals('Test Product', $cartItem->name);
+        $this->assertEquals(10.00, $cartItem->price);
+
+        $this->assertEquals(BuyableProduct::class, $cartItem->associatedModel);
+        $this->assertSame($buyable, $cartItem->model);
+    }
+
+    /** @test */
+    public function it_removes_discount_cart_item_when_detaching_global_coupon()
+    {
+        $cart = $this->getCart();
+        $cart->add(1, 'Item', 'Desc', 1, 100.00, 100.00, 20.00);
+
+        $cart->applyCoupon(null, 'GLOBAL_COUPON', 'fixed', 10.00);
+
+        $discountItem = $cart->search(function ($item) {
+            return $item->name === 'discountCartItem';
+        })->first();
+
+        $this->assertNotNull($discountItem);
+        $this->assertArrayHasKey('GLOBAL_COUPON', $discountItem->appliedCoupons);
+
+        $cart->detachCoupon($discountItem->rowId, 'GLOBAL_COUPON');
+
+        $discountItemAfter = $cart->search(function ($item) {
+            return $item->name === 'discountCartItem';
+        })->first();
+
+        $this->assertNull($discountItemAfter);
+    }
+
+    /** @test */
+    public function it_returns_false_for_has_global_coupon_when_no_global_coupon_is_applied()
+    {
+        $cart = $this->getCart();
+
+        $this->assertFalse($cart->hasGlobalCoupon());
+
+        $cartItem = $cart->add(1, 'Item', 'Desc', 1, 100.00, 100.00, 20.00);
+        $cart->applyCoupon($cartItem->rowId, 'ITEM_COUPON', 'fixed', 10.00);
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertFalse($cart->hasGlobalCoupon());
+    }
 }
