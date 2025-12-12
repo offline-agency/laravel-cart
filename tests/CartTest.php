@@ -964,11 +964,11 @@ class CartTest extends TestCase
         );
 
         $this->assertEquals(100.00, $cart->subtotal());
-        
+
         $discountItem = $cart->search(function ($cartItem) {
             return $cartItem->name === 'discountCartItem';
         })->first();
-        
+
         $this->assertNotNull($discountItem);
     }
 
@@ -2257,7 +2257,7 @@ class CartTest extends TestCase
             null,
             'GLOBAL_PERCENTAGE_2024',
             'percentage',
-            15  // 15% discount
+            15
         );
 
         $this->assertTrue($cart->hasCoupons());
@@ -2270,5 +2270,32 @@ class CartTest extends TestCase
 
         $this->assertLessThan($initialTotal, $finalTotal);
         $this->assertGreaterThan(0, $finalTotal);
+    }
+
+    /** @test */
+    public function it_can_access_totals_via_magic_properties()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'Test Item',
+            'Description',
+            2,
+            50.00,
+            60.00,
+            10.00
+        );
+
+        $this->assertEquals($cart->total(), $cart->total);
+        $this->assertEquals(120.00, $cart->total);
+
+        $this->assertEquals($cart->vat(), $cart->tax);
+        $this->assertEquals(20.00, $cart->tax);
+
+        $this->assertEquals($cart->subtotal(), $cart->subtotal);
+        $this->assertEquals(100.00, $cart->subtotal);
+
+        $this->assertNull($cart->nonExistentProperty);
     }
 }
