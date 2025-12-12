@@ -63,7 +63,7 @@ class CartTest extends TestCase
         parent::setUp();
 
         $this->app->afterResolving('migrator', function ($migrator) {
-            $migrator->path(realpath(__DIR__.'/../database/migrations'));
+            $migrator->path(realpath(__DIR__ . '/../database/migrations'));
         });
     }
 
@@ -1258,93 +1258,11 @@ class CartTest extends TestCase
         $this->assertEquals(5000.00, $cart->subtotal);
     }
 
-    /** @test */
-    public function it_can_return_formatted_subtotal()
-    {
-        $this->markTestIncomplete();
-        $cart = $this->getCart();
 
-        $cartItem = $cart->add(
-            1,
-            'First Cart item',
-            'This is a simple description',
-            3,
-            1000.00,
-            1200.00,
-            200.00
-        );
-        $cartItem = $cart->add(
-            2,
-            'Second Cart item',
-            'This is a simple description',
-            2,
-            1000.00,
-            1200.00,
-            200.00
-        );
 
-        $this->assertEquals('5000,00', $cart->subtotal(2, ',', ''));
-    }
 
-    /** @test */
-    public function it_can_return_cart_formatted_numbers_by_config_values()
-    {
-        $this->markTestIncomplete();
-        $this->setConfigFormat(2, ',', '');
 
-        $cart = $this->getCart();
 
-        $cart->add(new BuyableProduct(
-            1,
-            'Some title',
-            'This is a simple description',
-            1,
-            1000,
-            1220,
-            220
-        ), 1);
-        $cart->add(new BuyableProduct(
-            1,
-            'Some title',
-            'This is a simple description',
-            1,
-            1000,
-            1220,
-            220
-        ), 2);
-
-        $this->assertEquals('2000,00', $cart->subtotal());
-        $this->assertEquals('1050,00', $cart->vat());
-        $this->assertEquals('6050,00', $cart->total());
-
-        $this->assertEquals('5000,00', $cart->subtotal);
-        $this->assertEquals('1050,00', $cart->vat);
-        $this->assertEquals('6050,00', $cart->total);
-    }
-
-    /** @test */
-    public function it_can_return_cart_item_formatted_numbers_by_config_values()
-    {
-        $this->markTestIncomplete();
-        $this->setConfigFormat(2, ',', '');
-
-        $cart = $this->getCart();
-
-        $cart->add(new BuyableProduct(
-            1,
-            'Some title',
-            'my description'
-        ), 2);
-
-        $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
-
-        $this->assertEquals('10,00', $cartItem->price());
-        $this->assertEquals('0,00', $cartItem->priceTax());
-        $this->assertEquals('0,00', $cartItem->subtotal());
-        $this->assertEquals('0,00', $cartItem->total());
-        $this->assertEquals('0,00', $cartItem->vat());
-        $this->assertEquals('840,00', $cartItem->taxTotal());
-    }
 
     /** @test */
     public function it_can_store_the_cart_in_a_database()
@@ -1914,15 +1832,7 @@ class CartTest extends TestCase
         return new Cart($session, $events);
     }
 
-    /**
-     * Set the config number format.
-     */
-    private function setConfigFormat(int $decimals, string $decimalPoint, string $thousandSeparator)
-    {
-        $this->app['config']->set('cart.format.decimals', $decimals);
-        $this->app['config']->set('cart.format.decimal_point', $decimalPoint);
-        $this->app['config']->set('cart.format.thousand_separator', $thousandSeparator);
-    }
+
 
     /** @test */
     public function it_can_calculate_original_total_price_with_decimals()
@@ -2020,8 +1930,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_identifier_using_id_property()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 456;
@@ -2045,8 +1954,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_title_property()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2062,8 +1970,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_description_from_description_property()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2079,8 +1986,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_description_property_exists()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
@@ -2104,8 +2010,7 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_price_property_exists()
     {
-        $product = new class
-        {
+        $product = new class {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
