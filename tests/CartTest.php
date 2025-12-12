@@ -2104,7 +2104,8 @@ class CartTest extends TestCase
     /** @test */
     public function can_be_bought_trait_returns_null_when_no_price_property_exists()
     {
-        $product = new class {
+        $product = new class
+        {
             use \OfflineAgency\LaravelCart\CanBeBought;
 
             public $id = 1;
