@@ -940,6 +940,39 @@ class CartTest extends TestCase
     }
 
     /** @test */
+    public function it_excludes_discount_cart_items_from_subtotal()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            100.00,
+            122.00,
+            22.00
+        );
+
+        $this->assertEquals(100.00, $cart->subtotal());
+
+        $cart->applyCoupon(
+            null,
+            'GLOBAL_DISCOUNT',
+            'fixed',
+            10.00
+        );
+
+        $this->assertEquals(100.00, $cart->subtotal());
+        
+        $discountItem = $cart->search(function ($cartItem) {
+            return $cartItem->name === 'discountCartItem';
+        })->first();
+        
+        $this->assertNotNull($discountItem);
+    }
+
+    /** @test */
     public function it_can_search_the_cart_for_a_specific_item()
     {
         $cart = $this->getCart();
