@@ -453,6 +453,8 @@ class CartItemTest extends TestCase
         $this->assertEquals(300.00, $cartItem->subtotal);
         $this->assertEquals(300.00, $cartItem->total);
         $this->assertEquals(0.0, $cartItem->taxTotal);
+
+        $this->assertNull($cartItem->nonExistentProperty);
     }
 
     /** @test */
