@@ -568,7 +568,6 @@ class CartTest extends TestCase
     /** @test */
     public function it_will_regenerate_the_row_id_if_the_options_changed()
     {
-        $this->markTestIncomplete();
         $cart = $this->getCart();
 
         $cartItem = $cart->add(
@@ -581,29 +580,25 @@ class CartTest extends TestCase
             2.22
         );
 
-        $cart->update('027c91341fd5cf4d2579b49c4b6a90da', 1);
+        $initialRowId = $cartItem->rowId;
+
+        $cart->update($initialRowId, ['options' => ['color' => 'blue']]);
 
         $this->assertItemsInCart(1, $cart);
-        $this->assertEquals('7e70a1e9aaadd18c72921a07aae5d011', $cart->content()->first()->rowId);
-        $this->assertEquals('blue', $cart->get('7e70a1e9aaadd18c72921a07aae5d011')->options->color);
+        $this->assertRowsInCart(1, $cart);
+
+        $newItem = $cart->content()->first();
+
+        $this->assertNotEquals($initialRowId, $newItem->rowId);
+        $this->assertEquals('blue', $newItem->options->color);
     }
 
     /** @test */
     public function it_will_add_the_item_to_an_existing_row_if_the_options_changed_to_an_existing_row_id()
     {
-        $this->markTestIncomplete();
         $cart = $this->getCart();
 
-        $cartItem = $cart->add(
-            1,
-            'Cart item',
-            'This is a simple description',
-            1,
-            10.00,
-            12.22,
-            2.22
-        );
-        $cartItem = $cart->add(
+        $cartItem1 = $cart->add(
             1,
             'Cart item',
             'This is a simple description',
@@ -613,7 +608,23 @@ class CartTest extends TestCase
             2.22
         );
 
-        $cart->update('7e70a1e9aaadd18c72921a07aae5d011', ['options' => ['color' => 'red']]);
+        $cartItem2 = $cart->add(
+            1,
+            'Cart item',
+            'This is a simple description',
+            1,
+            10.00,
+            12.22,
+            2.22,
+            '',
+            '',
+            '',
+            ['color' => 'red']
+        );
+
+        $this->assertRowsInCart(2, $cart);
+
+        $cart->update($cartItem1->rowId, ['options' => ['color' => 'red']]);
 
         $this->assertItemsInCart(2, $cart);
         $this->assertRowsInCart(1, $cart);
