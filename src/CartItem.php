@@ -1,51 +1,82 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart;
 
+use Carbon\Carbon;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
 
+/**
+ * @property-read mixed $model
+ * @property-read float $priceTax
+ * @property-read float $subtotal
+ * @property-read float $total
+ * @property-read float $tax
+ * @property-read float $taxTotal
+ */
 class CartItem implements Arrayable, Jsonable
 {
     public $rowId;
+
     public $id;
+
     public $qty;
+
     public $name;
+
     public $subtitle;
+
     public $originalPrice;
+
     public $originalTotalPrice;
+
     public $originalVat;
+
     public $price;
+
     public $totalPrice;
+
     public $vat;
+
     public $vatLabel;
+
     public $vatRate;
+
     public $vatFcCode;
+
     public $discountValue;
+
     public $productFcCode;
+
     public $urlImg;
+
+    public Carbon $createdAt;
+
+    public Carbon $updatedAt;
+
     public $options;
+
     public $associatedModel;
+
     public $model;
+
     public $appliedCoupons;
+
+    public $tax = 0.0;
+
+    public $taxRate = 0.0;
 
     /**
      * CartItem constructor.
      *
      * @param  int|string  $id
-     * @param  string  $name
-     * @param  string  $subtitle
-     * @param  $qty
-     * @param  float  $price
-     * @param  $totalPrice
-     * @param  $vatFcCode
-     * @param  $productFcCode
-     * @param  $vat
-     * @param  $urlImg
-     * @param  array  $options
+     * @param  Carbon|null  $createdAt
+     * @param  Carbon|null  $updatedAt
      */
     public function __construct(
         $id,
@@ -58,6 +89,8 @@ class CartItem implements Arrayable, Jsonable
         $productFcCode,
         $vat,
         $urlImg,
+        ?Carbon $createdAt = null,
+        ?Carbon $updatedAt = null,
         array $options = []
     ) {
         if (empty($id)) {
@@ -66,11 +99,8 @@ class CartItem implements Arrayable, Jsonable
         if (empty($name)) {
             throw new InvalidArgumentException('Please supply a valid name.');
         }
-        if (strlen($price) < 0 || ! is_numeric($price)) {
-            throw new InvalidArgumentException('Please supply a valid price.');
-        }
 
-        $this->rowId = $this->generateRowId($id, $options);
+        $this->rowId = $this->generateRowId((string) $id, $options);
         $this->id = $id;
         $this->qty = $qty;
         $this->name = $name;
@@ -86,6 +116,8 @@ class CartItem implements Arrayable, Jsonable
         $this->vatFcCode = $vatFcCode;
         $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
+        $this->createdAt = $createdAt ?? Carbon::now();
+        $this->updatedAt = $updatedAt ?? Carbon::now();
         $this->options = new CartItemOptions($options);
         // default values
         $this->discountValue = 0.0;
@@ -101,7 +133,7 @@ class CartItem implements Arrayable, Jsonable
      */
     public function setQuantity($qty)
     {
-        if (empty($qty) || ! is_numeric($qty)) {
+        if (empty($qty)) {
             throw new InvalidArgumentException('Please supply a valid quantity. Provided: '.$qty);
         }
 
@@ -111,7 +143,6 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Update the cart item from a Buyable.
      *
-     * @param  Buyable  $item
      * @return void
      */
     public function updateFromBuyable(Buyable $item)
@@ -125,7 +156,6 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Update the cart item from an array.
      *
-     * @param  array  $attributes
      * @return void
      */
     public function updateFromArray(array $attributes)
@@ -136,14 +166,12 @@ class CartItem implements Arrayable, Jsonable
         $this->price = Arr::get($attributes, 'price', $this->price);
         $this->options = new CartItemOptions(Arr::get($attributes, 'options', $this->options));
 
-        $this->rowId = $this->generateRowId($this->id, $this->options->all());
+        $this->rowId = $this->generateRowId((string) $this->id, $this->options->all());
     }
 
     /**
      * Associate the cart item with a given model or something else.
      *
-     * @param  $item
-     * @param  bool  $is_model
      * @return $this
      */
     public function associate($item, bool $is_model = true): CartItem
@@ -164,12 +192,23 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Get an attribute from the cart item or get the associated model.
      *
-     * @param  string  $attribute
      * @return mixed
      */
     public function __get(string $attribute)
     {
-        if (property_exists($this, $attribute)) {
+        $properties = get_object_vars($this);
+
+        if ($attribute === 'model' && isset($this->associatedModel)) {
+            $associatedModel = $this->associatedModel;
+
+            if (! class_exists($associatedModel)) {
+                return null;
+            }
+
+            return (new $associatedModel)->find($this->id);
+        }
+
+        if (array_key_exists($attribute, $properties)) {
             return $this->{$attribute};
         }
 
@@ -193,18 +232,11 @@ class CartItem implements Arrayable, Jsonable
             return $this->tax * $this->qty;
         }
 
-        if ($attribute === 'model' && isset($this->associatedModel)) {
-            return with(new $this->associatedModel())->find($this->id);
-        }
-
         return null;
     }
 
     /**
      * Create a new instance from a Buyable.
-     *
-     * @param  Buyable  $item
-     * @return CartItem
      */
     public static function fromBuyable(Buyable $item): CartItem
     {
@@ -218,20 +250,27 @@ class CartItem implements Arrayable, Jsonable
             $item->getVatFcCode(),
             $item->getProductFcCode(),
             $item->getVat(),
-            $item->getSubtitle(),
+            $item->getUrlImg(),
+            Carbon::now(),
+            Carbon::now(),
             $item->getOptions()
         );
     }
 
     /**
      * Create a new instance from the given array.
-     *
-     * @param  array  $attributes
-     * @return CartItem
      */
     public static function fromArray(array $attributes): CartItem
     {
         $options = Arr::get($attributes, 'options', []);
+
+        $createdAt = isset($attributes['createdAt']) && $attributes['createdAt'] instanceof Carbon
+            ? $attributes['createdAt']
+            : Carbon::now();
+
+        $updatedAt = isset($attributes['updatedAt']) && $attributes['updatedAt'] instanceof Carbon
+            ? $attributes['updatedAt']
+            : Carbon::now();
 
         return new self(
             $attributes['id'],
@@ -244,25 +283,17 @@ class CartItem implements Arrayable, Jsonable
             $attributes['productFcCode'],
             $attributes['vat'],
             $attributes['urlImg'],
+            $createdAt,
+            $updatedAt,
             $options
         );
     }
 
     /**
-     *  * Create a new instance from the given attributes.
+     * Create a new instance from the given attributes.
      *
-     * @param  $id
-     * @param  $name
-     * @param  $subtitle
-     * @param  $qty
-     * @param  $price
-     * @param  $totalPrice
-     * @param  $vatFcCode
-     * @param  $productFcCode
-     * @param  $vat
-     * @param  $urlImg
-     * @param  array  $options
-     * @return CartItem
+     * @param  Carbon|null  $createdAt
+     * @param  Carbon|null  $updatedAt
      */
     public static function fromAttributes(
         $id,
@@ -275,6 +306,8 @@ class CartItem implements Arrayable, Jsonable
         $productFcCode,
         $vat,
         $urlImg,
+        ?Carbon $createdAt = null,
+        ?Carbon $updatedAt = null,
         array $options = []
     ): CartItem {
         return new self(
@@ -288,16 +321,14 @@ class CartItem implements Arrayable, Jsonable
             $productFcCode,
             $vat,
             $urlImg,
+            $createdAt,
+            $updatedAt,
             $options
         );
     }
 
     /**
      * Generate a unique id for the cart item.
-     *
-     * @param  string  $id
-     * @param  array  $options
-     * @return string
      */
     protected function generateRowId(string $id, array $options): string
     {
@@ -308,8 +339,6 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Get the instance as an array.
-     *
-     * @return array
      */
     public function toArray(): array
     {
@@ -331,6 +360,8 @@ class CartItem implements Arrayable, Jsonable
             'discountValue' => $this->discountValue,
             'productFcCode' => $this->productFcCode,
             'urlImg' => $this->urlImg,
+            'createdAt' => $this->createdAt,
+            'updatedAt' => $this->updatedAt,
             'options' => $this->options->toArray(),
             'associatedModel' => $this->associatedModel,
             'model' => $this->model,
@@ -342,7 +373,6 @@ class CartItem implements Arrayable, Jsonable
      * Convert the object to its JSON representation.
      *
      * @param  int  $options
-     * @return string
      */
     public function toJson($options = 0): string
     {
@@ -351,20 +381,13 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Get the formatted number.
-     *
-     * @param  float  $value
-     * @param  int  $decimals
-     * @param  string  $decimalPoint
-     * @param  string  $thousandSeparator
-     * @return string
      */
-    private function numberFormat(float $value, int $decimals, string $decimalPoint, string $thousandSeparator): string
+    public function numberFormat(float $value, int $decimals, string $decimalPoint, string $thousandSeparator): string
     {
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
     /**
-     * @param  string  $couponCode
      * @return array|\ArrayAccess|mixed|null
      */
     public function getCoupon(
@@ -377,12 +400,6 @@ class CartItem implements Arrayable, Jsonable
             : null;
     }
 
-    /**
-     * @param  string  $couponCode
-     * @param  string  $couponType
-     * @param  float  $couponValue
-     * @return CartItem
-     */
     public function applyCoupon(
         string $couponCode,
         string $couponType,
@@ -436,7 +453,6 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
-     * @param  string  $couponCode
      * @return $this
      */
     public function detachCoupon(
@@ -456,19 +472,12 @@ class CartItem implements Arrayable, Jsonable
         return $this;
     }
 
-    /**
-     * @return bool
-     */
     public function hasCoupons(): bool
     {
         return count($this->appliedCoupons) > 0;
     }
 
-    /**
-     * @param  float  $value
-     * @return float
-     */
-    private function formatFloat(float $value): float
+    public function formatFloat(float $value): float
     {
         return (float) number_format(
             $value, // the number to format

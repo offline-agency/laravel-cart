@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src
+    level: 5
+    ignoreErrors:
+        - identifier: trait.unused
+          path: src/CanBeBought.php
+        - identifier: trait.unused
+          path: src/Traits/HasDiscount.php
+        - identifier: argument.type
+          path: src/Cart.php
+          message: '#round expects 1\|2\|3\|4#'
