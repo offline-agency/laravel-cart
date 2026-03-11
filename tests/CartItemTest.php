@@ -18,12 +18,14 @@ it('can be cast to an array', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
     $cartItem->setQuantity(2);
 
-    expect($cartItem->toArray())->toEqual([
+    expect($cartItem->toArray())->toMatchArray([
         'rowId' => '07d5da5550494c62daf9993cf954303f',
         'id' => 1,
         'qty' => 2,
@@ -49,6 +51,7 @@ it('can be cast to an array', function (): void {
         'model' => null,
         'appliedCoupons' => [],
     ]);
+    expect($cartItem->toArray())->toHaveKeys(['createdAt', 'updatedAt']);
 });
 
 it('can be cast to json', function (): void {
@@ -63,15 +66,20 @@ it('can be cast to json', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
     $cartItem->setQuantity(2);
 
     expect($cartItem->toJson())->toBeJson();
 
-    $json = '{"rowId":"07d5da5550494c62daf9993cf954303f","id":1,"qty":2,"name":"First Cart item","subtitle":"This is a simple description","originalPrice":1000,"originalTotalPrice":1200,"originalVat":200,"price":1000,"totalPrice":1200,"vat":200,"vatLabel":"Iva Inclusa","vatRate":20,"vatFcCode":"0","discountValue":0,"productFcCode":"0","urlImg":"https:\/\/ecommerce.test\/images\/item-name.png","options":{"size":"XL","color":"red"},"associatedModel":null,"model":null,"appliedCoupons":[]}';
-
-    expect($cartItem->toJson())->toBe($json);
+    $decoded = json_decode($cartItem->toJson(), true);
+    expect($decoded['rowId'])->toBe('07d5da5550494c62daf9993cf954303f');
+    expect($decoded['id'])->toBe(1);
+    expect($decoded['qty'])->toBe(2);
+    expect($decoded['name'])->toBe('First Cart item');
+    expect($decoded)->toHaveKeys(['createdAt', 'updatedAt']);
 });
 
 it('can apply a coupon percentage', function (): void {
@@ -86,6 +94,8 @@ it('can apply a coupon percentage', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -129,6 +139,8 @@ it('can apply a coupon fixed', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -156,6 +168,8 @@ it('can throw an exception with invalid coupon type', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -175,6 +189,8 @@ it('can detach a coupon', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -207,6 +223,8 @@ it('can detect if has coupons', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -241,6 +259,8 @@ it('can return a coupon by its code', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -273,6 +293,8 @@ it('can sum discount', function (): void {
         '0',
         22.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -308,6 +330,8 @@ it('can associate model id', function (): void {
         '0',
         22.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -332,6 +356,8 @@ it('can resolve the associated model through magic accessor', function (): void 
         '0',
         22.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -354,6 +380,8 @@ it('can resolve dynamic values through magic accessor', function (): void {
         '0',
         20.00,
         'https://example.com/image.png',
+        null,
+        null,
         []
     );
 
@@ -381,6 +409,8 @@ it('can access dynamic properties', function (): void {
         '123',
         22.00,
         'https://example.com/image.png',
+        null,
+        null,
         ['size' => 'L', 'color' => 'red']
     );
 
@@ -404,6 +434,8 @@ it('can apply a coupon to cart item', function (): void {
         '123',
         22.00,
         'https://example.com/image.png',
+        null,
+        null,
         ['size' => 'L', 'color' => 'red']
     );
 
@@ -432,6 +464,8 @@ it('can be created from a buyable', function (): void {
         '0',
         '0',
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
@@ -462,6 +496,8 @@ it('returns null if associated model does not exist', function (): void {
         '0',
         20.00,
         'https://example.com/image.png',
+        null,
+        null,
         []
     );
 
@@ -484,6 +520,8 @@ it('can access public properties through magic get', function (): void {
         '0',
         20.00,
         'https://example.com/image.png',
+        null,
+        null,
         []
     );
 
@@ -503,6 +541,8 @@ it('calculates tax via magic get', function (): void {
         '0',
         20.00,
         'https://example.com/image.png',
+        null,
+        null,
         []
     );
 

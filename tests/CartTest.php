@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\Carbon;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Session\SessionManager;
@@ -199,7 +200,7 @@ it('can add an item with options', function (): void {
 
     $options = ['size' => 'XL', 'color' => 'red'];
 
-    $cart->add(1, 'Cart item', 'This is a simple description', 1, 10.00, 12.22, 2.22, '', '', '', $options);
+    $cart->add(1, 'Cart item', 'This is a simple description', 1, 10.00, 12.22, 2.22, '', '', '', null, null, $options);
 
     $cartItem = $cart->get('07d5da5550494c62daf9993cf954303f');
 
@@ -328,7 +329,7 @@ it('will add the item to an existing row if the options changed to an existing r
     $cart = getCart();
 
     $cartItem1 = $cart->add(1, 'Cart item', 'This is a simple description', 1, 10.00, 12.22, 2.22);
-    $cartItem2 = $cart->add(1, 'Cart item', 'This is a simple description', 1, 10.00, 12.22, 2.22, '', '', '', ['color' => 'red']);
+    $cartItem2 = $cart->add(1, 'Cart item', 'This is a simple description', 1, 10.00, 12.22, 2.22, '', '', '', null, null, ['color' => 'red']);
 
     $this->assertRowsInCart(2, $cart);
 
@@ -417,13 +418,13 @@ it('will return an empty collection if the cart is empty', function (): void {
 it('will include the tax and subtotal when converted to an array', function (): void {
     $cart = getCart();
 
-    $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
-    $cart->add(2, 'Second Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
+    $cart->add(2, 'Second Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $content = $cart->content();
 
     expect($content)->toBeInstanceOf(Collection::class);
-    expect($content->toArray())->toEqual([
+    expect($content->toArray())->toMatchArray([
         '07d5da5550494c62daf9993cf954303f' => [
             'rowId' => '07d5da5550494c62daf9993cf954303f',
             'id' => 1,
@@ -547,8 +548,8 @@ it('can search the cart for a specific item', function (): void {
 it('can search the cart for a specific item with options', function (): void {
     $cart = getCart();
 
-    $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '', '', '', ['color' => 'blue']);
-    $cart->add(2, 'Second Cart item', 'This is a simple description', 2, 1000.00, 1200.00, 200.00, '', '', '', ['color' => 'red']);
+    $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '', '', '', null, null, ['color' => 'blue']);
+    $cart->add(2, 'Second Cart item', 'This is a simple description', 2, 1000.00, 1200.00, 200.00, '', '', '', null, null, ['color' => 'red']);
 
     $cartItem = $cart->search(function ($cartItem, $rowId): bool {
         return $cartItem->options->color == 'red';
@@ -820,7 +821,7 @@ it('will destroy the cart when the user logs out and the config setting was set 
 
 it('will add a fixed coupon to a cart item', function (): void {
     $cart = getCart();
-    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_FIXED_2021', 'fixed', 100);
 
@@ -845,7 +846,7 @@ it('will add a fixed coupon to a cart item', function (): void {
 
 it('will add a percentage coupon to a cart item', function (): void {
     $cart = getCart();
-    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_PERCENTAGE_2021', 'percentage', 50);
 
@@ -870,7 +871,7 @@ it('will add a percentage coupon to a cart item', function (): void {
 
 it('can remove a coupon after product was removed from cart', function (): void {
     $cart = getCart();
-    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_PERCENTAGE_2021', 'percentage', 50);
 
@@ -883,7 +884,7 @@ it('can remove a coupon after product was removed from cart', function (): void 
 
 it('can detach a coupon of a cart item', function (): void {
     $cart = getCart();
-    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_PERCENTAGE_2021', 'percentage', 50);
 
@@ -918,7 +919,7 @@ it('can detach a coupon of a cart item', function (): void {
 
 it('can detect if has coupons', function (): void {
     $cart = getCart();
-    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_PERCENTAGE_2021', 'percentage', 50);
 
@@ -958,7 +959,7 @@ it('can detect if has coupons', function (): void {
 
 it('can return all applied coupons', function (): void {
     $cart = getCart();
-    $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_PERCENTAGE_2021', 'percentage', 50);
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_FIXED_2021', 'fixed', 10);
@@ -983,7 +984,7 @@ it('can return all applied coupons', function (): void {
 
 it('can return a coupon by its code', function (): void {
     $cart = getCart();
-    $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_PERCENTAGE_2021', 'percentage', 50);
     $cart->applyCoupon('07d5da5550494c62daf9993cf954303f', 'BLACK_FRIDAY_FIXED_2021', 'fixed', 10);
@@ -1014,8 +1015,8 @@ it('can return a coupon by its code', function (): void {
 it('can calculate cart totals after applied item coupon', function (): void {
     $cart = getCart();
 
-    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
-    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', ['size' => 'XL', 'color' => 'red']);
+    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
+    $cartItem = $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00, '0', '0', 'https://ecommerce.test/images/item-name.png', null, null, ['size' => 'XL', 'color' => 'red']);
 
     $this->assertItemsInCart(2, $cart);
     $this->assertRowsInCart(1, $cart);
@@ -1357,4 +1358,67 @@ it('returns false for has global coupon when no global coupon is applied', funct
 
     expect($cart->hasCoupons())->toBeTrue();
     expect($cart->hasGlobalCoupon())->toBeFalse();
+});
+
+it('stores createdAt and updatedAt on a cart item', function (): void {
+    $before = Carbon::now()->subSecond();
+    $cart = getCart();
+    $cart->add('1', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $item = $cart->content()->first();
+
+    expect($item->createdAt)->toBeInstanceOf(Carbon::class);
+    expect($item->updatedAt)->toBeInstanceOf(Carbon::class);
+    expect($item->createdAt->greaterThanOrEqualTo($before))->toBeTrue();
+});
+
+it('accepts explicit createdAt and updatedAt on add', function (): void {
+    $createdAt = Carbon::parse('2024-01-01 12:00:00');
+    $updatedAt = Carbon::parse('2024-06-01 12:00:00');
+    $cart = getCart();
+    $cart->add('1', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg', $createdAt, $updatedAt);
+    $item = $cart->content()->first();
+
+    expect($item->createdAt->eq($createdAt))->toBeTrue();
+    expect($item->updatedAt->eq($updatedAt))->toBeTrue();
+});
+
+it('isAlreadyAdded returns true when item with matching id and model is in cart', function (): void {
+    $cart = getCart();
+    $cart->add('42', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $rowId = $cart->content()->keys()->first();
+    $cart->associate($rowId, ProductModel::class);
+
+    expect($cart->isAlreadyAdded('42', ProductModel::class))->toBeTrue();
+    expect($cart->isAlreadyAdded('99', ProductModel::class))->toBeFalse();
+});
+
+it('isAlreadyAdded returns false for empty cart', function (): void {
+    $cart = getCart();
+
+    expect($cart->isAlreadyAdded('1', ProductModel::class))->toBeFalse();
+});
+
+it('searchById returns the CartItem when found', function (): void {
+    $cart = getCart();
+    $cart->add('10', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $rowId = $cart->content()->keys()->first();
+    $cart->associate($rowId, ProductModel::class);
+
+    $found = $cart->searchById('10', ProductModel::class);
+
+    expect($found)->toBeInstanceOf(CartItem::class);
+    expect($found->id)->toEqual('10');
+});
+
+it('searchById returns null when model does not match', function (): void {
+    $cart = getCart();
+    $cart->add('10', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+
+    expect($cart->searchById('10', 'NonExistentModel'))->toBeNull();
+});
+
+it('searchById returns null for empty cart', function (): void {
+    $cart = getCart();
+
+    expect($cart->searchById('999', ProductModel::class))->toBeNull();
 });
