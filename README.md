@@ -101,6 +101,8 @@ Publish the config file with `php artisan vendor:publish --tag=cart-config` befo
 | `format.thousand_separator` | `string` | `','` | Thousand separator character. |
 | `global_coupons_enabled` | `bool` | `true` | Enable the cart-wide coupon system (`addGlobalCoupon` / `globalCouponDiscount`). |
 | `coupon_class` | `string` | `CartCoupon::class` | Class used to represent coupon objects. |
+| `use_legacy_events` | `bool` | `true` | When `true`, string events (`cart.added`, etc.) are dispatched alongside typed event objects. Set to `false` to dispatch only typed events. |
+| `rounding_mode` | `int` | `PHP_ROUND_HALF_UP` | Rounding mode used by `vatBreakdown()`. Any `PHP_ROUND_*` constant is accepted. |
 
 ---
 
@@ -388,6 +390,31 @@ $shirts = Cart::search(fn (CartItem $item) => str_contains(strtolower($item->nam
 
 ---
 
+### Utility Methods
+
+```php
+Cart::isEmpty(): bool
+Cart::isNotEmpty(): bool
+Cart::uniqueCount(): int                          // number of distinct rows (not sum of qty)
+Cart::first(?Closure $callback = null): ?CartItem // first item, or first matching a closure
+Cart::where(string $key, mixed $value): Collection<string, CartItem>
+```
+
+```php
+if (Cart::isEmpty()) {
+    return redirect()->route('shop');
+}
+
+$itemCount = Cart::uniqueCount(); // 2 rows even if total qty is 5
+
+$first = Cart::first();
+$shirt = Cart::first(fn (CartItem $item) => $item->id === 42);
+
+$redItems = Cart::where('options.color', 'red');
+```
+
+---
+
 ### Cart::addBatch()
 
 ```php
@@ -626,12 +653,16 @@ The package supports two distinct coupon systems: **item-level coupons** that re
 ### Item-Level Coupons
 
 ```php
-Cart::applyCoupon(
+// Preferred non-deprecated alias (v4.1+)
+Cart::addItemCoupon(
     mixed $rowId,
     string $couponCode,
     string $couponType,  // 'fixed' or 'percentage'
     float $couponValue
 ): void
+
+// Kept for backward compatibility — deprecated since 4.1
+Cart::applyCoupon(mixed $rowId, string $couponCode, string $couponType, float $couponValue): void
 ```
 
 Apply a coupon to a specific item. The `rowId` must be a valid cart item row.
@@ -641,10 +672,10 @@ Apply a coupon to a specific item. The `rowId` must be a valid cart item row.
 $item = Cart::add(1, 'Shirt', '', 2, 19.67, 24.00, 4.33);
 
 // Apply a fixed €5 discount
-Cart::applyCoupon($item->rowId, 'SAVE5', 'fixed', 5.00);
+Cart::addItemCoupon($item->rowId, 'SAVE5', 'fixed', 5.00);
 
 // Or apply a 10% discount
-Cart::applyCoupon($item->rowId, 'PROMO10', 'percentage', 10.0);
+Cart::addItemCoupon($item->rowId, 'PROMO10', 'percentage', 10.0);
 ```
 
 **Discount calculation:**
@@ -689,7 +720,57 @@ $coupons = Cart::getCoupons(); // Collection<string, CartCoupon>
 
 ### Cart-Level (Global) Coupons
 
-Global coupons apply a discount to the cart total and are calculated separately from item prices.
+Global coupons apply a discount to the cart total and are calculated separately from item prices. Two APIs exist: the **new `addCoupon()` API** (v4.1+, recommended) and the **legacy `addGlobalCoupon()` API** (still supported).
+
+#### New API (v4.1+)
+
+```php
+// Add a CartCoupon object (full validation: expiry, minCartAmount)
+Cart::addCoupon(string|CartCoupon|Couponable $coupon): static
+
+// Remove by hash or coupon code
+Cart::removeCartCoupon(string $hashOrCode): static
+
+// Query
+Cart::listCoupons(): Collection          // all cart-level coupons
+Cart::hasCartCoupon(string $hashOrCode): bool
+Cart::discount(): float                  // total discount amount from all coupons
+Cart::syncCoupons(): array               // re-validate; returns removed coupon codes
+```
+
+```php
+use Carbon\Carbon;
+use OfflineAgency\LaravelCart\CartCoupon;
+use OfflineAgency\LaravelCart\Exceptions\CouponAlreadyAppliedException;
+use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
+
+$coupon = new CartCoupon(
+    hash: 'promo-2025',
+    code: 'SUMMER25',
+    type: 'percentage',
+    value: 25.0,
+    isGlobal: true,
+    expiresAt: Carbon::parse('2025-08-31'),
+    minCartAmount: 50.0,
+);
+
+try {
+    Cart::addCoupon($coupon);   // validates expiry and minCartAmount
+} catch (InvalidCouponException $e) {
+    // coupon expired or cart total is below minCartAmount
+} catch (CouponAlreadyAppliedException $e) {
+    // same hash already in the cart
+}
+
+Cart::discount();                   // e.g. 25.00 (25% of 100.00)
+Cart::total();                      // deducted automatically: 75.00
+
+Cart::removeCartCoupon('SUMMER25'); // remove by code or hash
+```
+
+`Cart::total()` automatically deducts cart-level coupon discounts. You do not need to subtract manually.
+
+#### Legacy API
 
 ```php
 Cart::addGlobalCoupon(
@@ -710,7 +791,7 @@ Cart::addGlobalCoupon('hash-xyz', 'FLAT20', 'fixed', 20.0);
 
 Global coupons persist in the session alongside cart items. Use `$couponHash` (any unique string) as the key to remove a specific coupon later.
 
-**Managing global coupons:**
+**Managing legacy global coupons:**
 
 ```php
 // Remove one global coupon by hash
@@ -762,22 +843,51 @@ final total = 100.00 - 30.00 = 70.00
 Both item-level and global coupons are represented as `CartCoupon` objects:
 
 ```php
-final readonly class CartCoupon
+final readonly class CartCoupon implements Couponable, JsonSerializable
 {
     public function __construct(
-        public string $hash,
-        public string $code,
-        public string $type,      // 'fixed' | 'percentage'
-        public float  $value,
-        public bool   $isGlobal = false,
+        public string   $hash,
+        public string   $code,
+        public string   $type,             // 'fixed' | 'percentage'
+        public float    $value,
+        public bool     $isGlobal = false,
+        public ?Carbon  $expiresAt = null, // null = never expires
+        public ?int     $usageLimit = null,
+        public ?float   $minCartAmount = null,
     ) {}
 
     public function isPercentage(): bool;
     public function isFixed(): bool;
+    public function couponType(): CouponType;   // bridge to CouponType enum
+    public function isExpired(): bool;          // true when expiresAt is in the past
+    public function isApplicableTo(float $cartTotal): bool; // checks minCartAmount
+    public function toArray(): array;
+    public function jsonSerialize(): array;
 }
 ```
 
 Because `CartCoupon` is `final readonly`, all properties are immutable after construction.
+
+**Creating a coupon with constraints:**
+
+```php
+use Carbon\Carbon;
+use OfflineAgency\LaravelCart\CartCoupon;
+
+$coupon = new CartCoupon(
+    hash: 'promo-2025',
+    code: 'SUMMER25',
+    type: 'percentage',
+    value: 25.0,
+    isGlobal: true,
+    expiresAt: Carbon::parse('2025-08-31'),
+    minCartAmount: 50.0,
+);
+
+$coupon->isExpired();            // false (before expiry)
+$coupon->isApplicableTo(49.99); // false (below minCartAmount)
+$coupon->isApplicableTo(50.00); // true
+```
 
 ---
 
