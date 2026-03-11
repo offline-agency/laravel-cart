@@ -924,10 +924,53 @@ Cart::add(
 **Cart-level totals:**
 
 ```php
-Cart::total();         // sum of all item totalPrice × qty
+Cart::total();         // sum of all item totalPrice × qty, minus cart-level coupon discounts
 Cart::subtotal();      // sum of all item price × qty (ex-VAT)
 Cart::vat();           // sum of all item vat × qty
 Cart::totalVatLabel(); // 'Iva Inclusa' or 'Esente Iva'
+```
+
+**VAT breakdown for fiscal receipts:**
+
+```php
+Cart::vatBreakdown(): Collection<int, array{rate: float, net: string, vat: string, gross: string}>
+```
+
+Groups all cart items by their effective VAT rate and returns formatted totals per rate, suitable for printing on fiscal receipts.
+
+```php
+$breakdown = Cart::vatBreakdown();
+
+// Example output for a cart with 22% and 10% VAT items:
+// [
+//   ['rate' => 22.0, 'net' => '100.00', 'vat' => '22.00', 'gross' => '122.00'],
+//   ['rate' => 10.0, 'net' =>  '50.00', 'vat' =>  '5.00', 'gross' =>  '55.00'],
+// ]
+
+foreach ($breakdown as $row) {
+    echo "VAT {$row['rate']}%: net {$row['net']}, vat {$row['vat']}, gross {$row['gross']}";
+}
+```
+
+Phantom discount items (added via `applyGlobalCoupon`) are excluded from the breakdown. Rounding is controlled by `config('cart.rounding_mode')`.
+
+**Per-item tax rate override:**
+
+Pass `tax_rate` in the `options` array to override the calculated VAT rate for a specific item. Useful when different products carry different VAT rates within the same cart.
+
+```php
+// Item where price is net (ex-VAT) and tax_rate applies
+Cart::add(
+    id: 2,
+    name: 'Reduced-rate Item',
+    subtitle: '',
+    qty: 1,
+    price: 100.0,
+    totalPrice: 100.0,  // will be recalculated from tax_rate
+    vat: 0.0,
+    options: ['tax_rate' => 10.0],  // overrides VAT rate to 10%
+);
+// resulting item: vatRate=10.0, vat=10.0, totalPrice=110.0
 ```
 
 ---
@@ -951,13 +994,22 @@ Cart::store(auth()->id());
 ### Restoring the Cart
 
 ```php
-Cart::restore(mixed $identifier): void
+Cart::restore(mixed $identifier, bool $mergeOnRestore = false): void
 ```
 
-Loads a stored cart from the database, merges it into the current session, and deletes the database row. Returns silently if the identifier does not exist.
+Loads a stored cart from the database and deletes the database row. Returns silently if the identifier does not exist.
+
+- **`$mergeOnRestore = false` (default):** Replaces the current session cart with the stored cart.
+- **`$mergeOnRestore = true`:** Merges the stored cart into the current session cart. Items already present (same `rowId`) are kept as-is; only new rows are added.
+
+Cart-level coupons stored with the cart are automatically restored.
 
 ```php
+// Replace current cart with stored cart
 Cart::restore(auth()->id());
+
+// Merge stored cart into current session cart
+Cart::restore(auth()->id(), mergeOnRestore: true);
 ```
 
 ### Migrations
@@ -975,47 +1027,62 @@ The migration creates the table specified in `config('cart.database.table')` (de
 
 ## Events
 
-All events are dispatched as string event names.
+The package dispatches both **typed event objects** and **legacy string events**. By default both are dispatched (`use_legacy_events = true`). Set `use_legacy_events = false` in config to dispatch only typed events.
+
+### Typed Events
+
+| Class | Fired when | Properties |
+|---|---|---|
+| `CartItemAdded` | An item is added | `CartItem $cartItem` |
+| `CartItemUpdated` | An item is updated | `CartItem $cartItem` |
+| `CartItemRemoved` | An item is removed | `CartItem $cartItem` |
+| `CartStored` | The cart is stored to the database | `mixed $identifier`, `string $instance` |
+| `CartRestored` | The cart is restored from the database | `mixed $identifier`, `string $instance` |
+| `CouponApplied` | A coupon is added via `addCoupon()` | `CartCoupon $coupon`, `string $cartInstance` |
+| `CouponRemoved` | A coupon is removed via `removeCartCoupon()` | `CartCoupon $coupon`, `string $cartInstance` |
+
+All typed events are `final readonly` classes in `OfflineAgency\LaravelCart\Events\`.
+
+### Legacy String Events
 
 | Event string | Fired when | Listener receives |
 |---|---|---|
-| `cart.added` | An item is added to the cart | `CartItem $item` |
+| `cart.added` | An item is added | `CartItem $item` |
 | `cart.updated` | An item is updated | `CartItem $item` |
 | `cart.removed` | An item is removed | `CartItem $item` |
-| `cart.stored` | The cart is stored to the database | _(nothing)_ |
-| `cart.restored` | The cart is restored from the database | _(nothing)_ |
+| `cart.stored` | The cart is stored | _(nothing)_ |
+| `cart.restored` | The cart is restored | _(nothing)_ |
 | `cart.coupon_removed` | A per-item coupon is removed via `removeCoupon()` | `string $couponCode` |
-| `cart.coupons_cleared` | All per-item coupons are removed via `removeAllCoupons()` | _(nothing)_ |
-| `cart.global_coupon_added` | A global coupon is added | `CartCoupon $coupon` |
-| `cart.global_coupon_removed` | A global coupon is removed | `CartCoupon $coupon` |
+| `cart.coupons_cleared` | All per-item coupons removed via `removeAllCoupons()` | _(nothing)_ |
+| `cart.global_coupon_added` | A global coupon is added via `addGlobalCoupon()` | `CartCoupon $coupon` |
+| `cart.global_coupon_removed` | A global coupon is removed via `removeGlobalCoupon()` | `CartCoupon $coupon` |
 
-**Registering a listener in `EventServiceProvider`:**
+**Listening to typed events:**
 
 ```php
+use OfflineAgency\LaravelCart\Events\CartItemAdded;
+use OfflineAgency\LaravelCart\Events\CouponApplied;
+
+// In EventServiceProvider or using #[AsEventListener]
 protected $listen = [
-    'cart.added' => [
+    CartItemAdded::class => [
         \App\Listeners\UpdateCartCountCache::class,
     ],
-    'cart.global_coupon_added' => [
+    CouponApplied::class => [
         \App\Listeners\LogCouponUsage::class,
+    ],
+    // legacy string events still work when use_legacy_events = true
+    'cart.added' => [
+        \App\Listeners\LegacyListener::class,
     ],
 ];
 ```
 
-**Minimal listener example:**
+**Disabling legacy string events:**
 
 ```php
-namespace App\Listeners;
-
-use OfflineAgency\LaravelCart\CartItem;
-
-class UpdateCartCountCache
-{
-    public function handle(CartItem $item): void
-    {
-        cache()->put('cart_count_' . auth()->id(), Cart::count());
-    }
-}
+// config/cart.php
+'use_legacy_events' => false,  // only typed events are dispatched
 ```
 
 **Logout handling:** When `destroy_on_logout = true` in config, the service provider listens to `Illuminate\Auth\Events\Logout` and calls `Cart::instance()->destroy()` automatically.
@@ -1104,9 +1171,59 @@ try {
 
 ---
 
+## Artisan Commands
+
+### `cart:clear`
+
+```bash
+php artisan cart:clear [--force] [--instance=<name>]
+```
+
+Clears stored carts from the database table. Without `--force` the command prompts for confirmation. Use `--instance` to limit deletion to a specific cart instance.
+
+```bash
+# Clear all stored carts (with confirmation prompt)
+php artisan cart:clear
+
+# Skip confirmation
+php artisan cart:clear --force
+
+# Clear only stored carts for the 'wishlist' instance
+php artisan cart:clear --instance=wishlist --force
+```
+
+---
+
 ## Testing Your Application
 
-The package does not provide a `Cart::fake()` helper. Tests use [Orchestra Testbench](https://github.com/orchestral/testbench) with an in-memory SQLite database and an array session driver.
+### `Cart::fake()` Test Helper
+
+`Cart::fake()` creates an in-memory `Cart` instance and swaps the container binding so the Facade resolves the same fake object. No database or real session is needed.
+
+```php
+use OfflineAgency\LaravelCart\Facades\Cart;
+
+it('totals are correct', function () {
+    Cart::fake();
+
+    Cart::add('1', 'Alpha', '', 2, 10.0, 12.2, 2.2);
+    Cart::add('2', 'Beta',  '', 1,  5.0,  6.1, 1.1);
+
+    expect(Cart::count())->toBe(3)
+        ->and(Cart::uniqueCount())->toBe(2)
+        ->and(Cart::isEmpty())->toBeFalse();
+});
+```
+
+`Cart::fake()` returns the `Cart` instance so you can keep a reference:
+
+```php
+$fake = Cart::fake();
+
+Cart::add('1', 'Item', '', 1, 9.99, 12.19, 2.20);
+
+expect($fake->count())->toBe(1);
+```
 
 ### Using FeatureTestCase
 
@@ -1159,22 +1276,86 @@ it('keeps wishlist and shopping cart separate', function () {
 
 ```php
 use Illuminate\Support\Facades\Event;
+use OfflineAgency\LaravelCart\Events\CartItemAdded;
+use OfflineAgency\LaravelCart\Events\CouponApplied;
+use OfflineAgency\LaravelCart\CartCoupon;
 
-it('dispatches cart.added when an item is added', function () {
-    Event::fake(['cart.added']);
+it('dispatches CartItemAdded typed event', function () {
+    Event::fake();
+    $this->app->forgetInstance('cart');
+    $cart = $this->app->make('cart');
 
-    Cart::add(1, 'Shirt', '', 1, 19.67, 24.00, 4.33);
+    $cart->add(1, 'Shirt', '', 1, 19.67, 24.00, 4.33);
 
-    Event::assertDispatched('cart.added');
+    Event::assertDispatched(CartItemAdded::class);
+    Event::assertDispatched('cart.added'); // legacy string also dispatched when use_legacy_events=true
 });
 
-it('dispatches cart.global_coupon_added', function () {
-    Event::fake(['cart.global_coupon_added']);
+it('dispatches CouponApplied when addCoupon is called', function () {
+    Event::fake();
+    $this->app->forgetInstance('cart');
+    $cart = $this->app->make('cart');
 
-    Cart::addGlobalCoupon('hash1', 'PROMO10', 'percentage', 10.0);
+    $coupon = new CartCoupon(hash: 'h1', code: 'SAVE10', type: 'fixed', value: 10.0, isGlobal: true);
+    $cart->addCoupon($coupon);
 
-    Event::assertDispatched('cart.global_coupon_added');
+    Event::assertDispatched(CouponApplied::class, fn (CouponApplied $e) => $e->coupon->code === 'SAVE10');
 });
+```
+
+---
+
+### `CouponAlreadyAppliedException`
+
+**Class:** `OfflineAgency\LaravelCart\Exceptions\CouponAlreadyAppliedException`
+
+Thrown by `Cart::addCoupon()` when a coupon with the same hash is already in the cart.
+
+```php
+use OfflineAgency\LaravelCart\Exceptions\CouponAlreadyAppliedException;
+
+try {
+    Cart::addCoupon($coupon);
+    Cart::addCoupon($coupon); // duplicate hash
+} catch (CouponAlreadyAppliedException $e) {
+    echo $e->couponCode; // the duplicate coupon code
+}
+```
+
+---
+
+### `CouponNotFoundException`
+
+**Class:** `OfflineAgency\LaravelCart\Exceptions\CouponNotFoundException`
+
+Thrown by `Cart::removeCartCoupon()` when the hash or code is not found.
+
+```php
+use OfflineAgency\LaravelCart\Exceptions\CouponNotFoundException;
+
+try {
+    Cart::removeCartCoupon('NONEXISTENT');
+} catch (CouponNotFoundException $e) {
+    // $e->couponCode contains the searched value
+}
+```
+
+---
+
+### `InvalidCouponException`
+
+**Class:** `OfflineAgency\LaravelCart\Exceptions\InvalidCouponException`
+
+Thrown by `Cart::addCoupon()` when a coupon fails validation: the coupon is expired (`isExpired()` returns `true`) or the cart total is below the required `minCartAmount`.
+
+```php
+use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
+
+try {
+    Cart::addCoupon($expiredCoupon);
+} catch (InvalidCouponException $e) {
+    // $e->couponCode contains the rejected coupon code
+}
 ```
 
 ---
@@ -1187,17 +1368,31 @@ it('dispatches cart.global_coupon_added', function () {
 
 **`CartCoupon` is now `final readonly`:** Any code that mutates `CartCoupon` properties directly after construction will throw an `Error`. Use `addGlobalCoupon()` to create new coupons instead.
 
-**`applyGlobalCoupon()` is deprecated:** Replace calls to `Cart::applyCoupon($rowId = null, ...)` with `Cart::addGlobalCoupon()`:
+**`applyGlobalCoupon()` is deprecated:** Replace calls to `Cart::applyCoupon($rowId = null, ...)` with `Cart::addGlobalCoupon()` or the new `Cart::addCoupon()`:
 
 ```php
 // Before (deprecated)
 Cart::applyCoupon(null, 'PROMO10', 'percentage', 10.0);
 
-// After
+// After (legacy API)
 Cart::addGlobalCoupon('unique-hash', 'PROMO10', 'percentage', 10.0);
+
+// After (new API — supports expiry, minCartAmount, typed events)
+Cart::addCoupon(new CartCoupon(hash: 'unique-hash', code: 'PROMO10', type: 'percentage', value: 10.0, isGlobal: true));
 ```
 
-**Migrations:** Run `php artisan migrate` after upgrading. Check `database/migrations/` for any new migration files shipped with the package.
+**`Cart::applyCoupon($rowId, ...)` is deprecated** for item-level use. Replace with `Cart::addItemCoupon($rowId, ...)`.
+
+**New config keys:** Publish the updated config and add the two new keys, or set defaults in your `config/cart.php`:
+
+```php
+'use_legacy_events' => true,
+'rounding_mode'     => PHP_ROUND_HALF_UP,
+```
+
+**Typed events:** The package now dispatches typed event objects (`CartItemAdded`, `CouponApplied`, etc.) alongside legacy string events. Legacy string events remain active when `use_legacy_events = true` (the default). No immediate action required.
+
+**Migrations:** Run `php artisan vendor:publish --tag=cart-migrations && php artisan migrate` after upgrading. A new `coupons` column (nullable JSON) is added to the cart table to persist cart-level coupons across store/restore cycles.
 
 **Global coupon session key:** Global coupons are now stored under a separate session key (`cart.{instance}_global_coupons`). Existing sessions from v3.x that relied on the legacy `applyCoupon(null, ...)` discountCartItem approach will not carry forward global coupons automatically.
 
@@ -1272,7 +1467,7 @@ If you discover any security-related issues, please email <support@offlineagency
 
 ## Changelog
 
-A `CHANGELOG.md` file does not currently exist in this repository. See the [GitHub Releases](https://github.com/offline-agency/laravel-cart/releases) page for version history and release notes.
+Please see [CHANGELOG](CHANGELOG.md) for recent changes, or the [GitHub Releases](https://github.com/offline-agency/laravel-cart/releases) page for full version history.
 
 ---
 
