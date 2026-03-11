@@ -166,7 +166,7 @@ class CartItem implements Arrayable, Jsonable
         $this->price = Arr::get($attributes, 'price', $this->price);
         $this->options = new CartItemOptions(Arr::get($attributes, 'options', $this->options));
 
-        $this->rowId = $this->generateRowId($this->id, $this->options->all());
+        $this->rowId = $this->generateRowId((string) $this->id, $this->options->all());
     }
 
     /**
@@ -237,9 +237,6 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Create a new instance from a Buyable.
-     *
-     * @param  Carbon|null  $createdAt
-     * @param  Carbon|null  $updatedAt
      */
     public static function fromBuyable(Buyable $item): CartItem
     {
@@ -262,9 +259,6 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Create a new instance from the given array.
-     *
-     * @param  Carbon|null  $createdAt
-     * @param  Carbon|null  $updatedAt
      */
     public static function fromArray(array $attributes): CartItem
     {

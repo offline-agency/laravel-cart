@@ -1008,6 +1008,8 @@ class Cart
                     $item['vatFcCode'] ?? '',
                     $item['productFcCode'] ?? '',
                     $item['urlImg'] ?? '',
+                    null,
+                    null,
                     $item['options'] ?? []
                 );
             }

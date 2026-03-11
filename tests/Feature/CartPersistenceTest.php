@@ -23,7 +23,7 @@ it('stores and restores cart items correctly', function (): void {
 });
 
 it('does not lose variant options on restore', function (): void {
-    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2, '', '', '', ['color' => 'red', 'size' => 'L']);
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2, '', '', '', null, null, ['color' => 'red', 'size' => 'L']);
 
     $this->cart->store('user-opts');
     $this->cart->destroy();

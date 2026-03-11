@@ -123,6 +123,8 @@ it('throws an exception if name is empty', function (): void {
         '0',
         200.00,
         'https://ecommerce.test/images/item-name.png',
+        null,
+        null,
         ['size' => 'XL', 'color' => 'red']
     ))->toThrow(InvalidArgumentException::class, 'Please supply a valid name.');
 });
@@ -464,8 +466,6 @@ it('can be created from a buyable', function (): void {
         '0',
         '0',
         'https://ecommerce.test/images/item-name.png',
-        null,
-        null,
         ['size' => 'XL', 'color' => 'red']
     );
 
