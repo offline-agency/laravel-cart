@@ -505,8 +505,10 @@ it('can return a formatted total', function (): void {
     $cart->add(2, 'Second Cart item', 'This is a simple description', 2, 1000.00, 1200.00, 200.00);
 
     $this->assertItemsInCart(3, $cart);
-    expect($cart->total(2, ',', '.'))->toEqual('3.600,00');
-})->skip('Incomplete');
+    // total() returns a float; use numberFormat() to get a locale-formatted string
+    expect($cart->total())->toBe(3600.00);
+    expect($cart->numberFormat($cart->total(), 2, ',', '.'))->toEqual('3.600,00');
+});
 
 it('excludes discount cart items from subtotal', function (): void {
     $cart = getCart();
@@ -662,42 +664,53 @@ it('can return formatted subtotal', function (): void {
     $cart->add(1, 'First Cart item', 'This is a simple description', 3, 1000.00, 1200.00, 200.00);
     $cart->add(2, 'Second Cart item', 'This is a simple description', 2, 1000.00, 1200.00, 200.00);
 
-    expect($cart->subtotal(2, ',', ''))->toEqual('5000,00');
-})->skip('Incomplete');
+    // subtotal() returns a float; format with numberFormat()
+    expect($cart->subtotal())->toBe(5000.00);
+    expect($cart->numberFormat($cart->subtotal(), 2, ',', ''))->toEqual('5000,00');
+});
 
 it('can return cart formatted numbers by config values', function (): void {
     setConfigFormat(2, ',', '');
 
     $cart = getCart();
 
+    // Add 1 + 2 = 3 units of the same product (qty is merged)
     $cart->add(new BuyableProduct(1, 'Some title', 'This is a simple description', 1, 1000, 1220, 220), 1);
     $cart->add(new BuyableProduct(1, 'Some title', 'This is a simple description', 1, 1000, 1220, 220), 2);
 
-    expect($cart->subtotal())->toEqual('2000,00');
-    expect($cart->vat())->toEqual('1050,00');
-    expect($cart->total())->toEqual('6050,00');
+    // subtotal(), vat(), total() always return floats; magic getters do the same
+    expect($cart->subtotal())->toBe(3000.0);
+    expect($cart->vat())->toBe(660.0);
+    expect($cart->total())->toBe(3660.0);
 
-    expect($cart->subtotal)->toEqual('5000,00');
-    expect($cart->vat)->toEqual('1050,00');
-    expect($cart->total)->toEqual('6050,00');
-})->skip('Incomplete');
+    // Magic getter aliases
+    expect($cart->subtotal)->toBe(3000.0);
+    expect($cart->tax)->toBe(660.0);
+    expect($cart->total)->toBe(3660.0);
+
+    // numberFormat() respects the config decimal_point and thousand_separator
+    expect($cart->numberFormat($cart->subtotal(), null, null, null))->toBe('3000,00');
+    expect($cart->numberFormat($cart->total(), null, null, null))->toBe('3660,00');
+});
 
 it('can return cart item formatted numbers by config values', function (): void {
     setConfigFormat(2, ',', '');
 
     $cart = getCart();
 
-    $cart->add(new BuyableProduct(1, 'Some title', 'my description'), 2);
+    $cart->add(new BuyableProduct(1, 'Some title', 'This is a simple description', 2, 10.00, 12.22, 2.22), 2);
 
-    $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
+    $cartItem = $cart->content()->first();
 
-    expect($cartItem->price())->toEqual('10,00');
-    expect($cartItem->priceTax())->toEqual('0,00');
-    expect($cartItem->subtotal())->toEqual('0,00');
-    expect($cartItem->total())->toEqual('0,00');
-    expect($cartItem->vat())->toEqual('0,00');
-    expect($cartItem->taxTotal())->toEqual('840,00');
-})->skip('Incomplete');
+    // CartItem exposes properties, not methods; format them with numberFormat()
+    expect($cartItem->numberFormat($cartItem->price, 2, ',', ''))->toEqual('10,00');
+    expect($cartItem->numberFormat($cartItem->vat, 2, ',', ''))->toEqual('2,22');
+    expect($cartItem->numberFormat($cartItem->totalPrice, 2, ',', ''))->toEqual('12,22');
+
+    // Computed magic getters
+    expect($cartItem->numberFormat($cartItem->subtotal, 2, ',', ''))->toEqual('20,00');
+    expect($cartItem->numberFormat($cartItem->total, 2, ',', ''))->toEqual('20,00');
+});
 
 it('can store the cart in a database', function (): void {
     $this->artisan('migrate', ['--database' => 'testing']);
