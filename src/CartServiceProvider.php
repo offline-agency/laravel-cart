@@ -5,6 +5,7 @@ namespace OfflineAgency\LaravelCart;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\ServiceProvider;
+use OfflineAgency\LaravelCart\Console\CartClearCommand;
 
 class CartServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,7 @@ class CartServiceProvider extends ServiceProvider
     {
         $this->registerPublishables();
         $this->registerLogoutListener();
+        $this->commands([CartClearCommand::class]);
     }
 
     private function registerPublishables(): void
