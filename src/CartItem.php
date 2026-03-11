@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart;
 
+use Carbon\Carbon;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
@@ -52,6 +55,10 @@ class CartItem implements Arrayable, Jsonable
 
     public $urlImg;
 
+    public Carbon $createdAt;
+
+    public Carbon $updatedAt;
+
     public $options;
 
     public $associatedModel;
@@ -68,6 +75,8 @@ class CartItem implements Arrayable, Jsonable
      * CartItem constructor.
      *
      * @param  int|string  $id
+     * @param  Carbon|null  $createdAt
+     * @param  Carbon|null  $updatedAt
      */
     public function __construct(
         $id,
@@ -80,6 +89,8 @@ class CartItem implements Arrayable, Jsonable
         $productFcCode,
         $vat,
         $urlImg,
+        ?Carbon $createdAt = null,
+        ?Carbon $updatedAt = null,
         array $options = []
     ) {
         if (empty($id)) {
