@@ -83,6 +83,8 @@ class Cart
         ?string $vatFcCode = '',
         ?string $productFcCode = '',
         ?string $urlImg = '',
+        ?Carbon $createdAt = null,
+        ?Carbon $updatedAt = null,
         array $options = []
     ): array|CartItem {
         if ($this->isMulti($id)) {
@@ -91,9 +93,12 @@ class Cart
             }, $id);
         }
 
+        $createdAt ??= Carbon::now();
+        $updatedAt ??= Carbon::now();
+
         $cartItem = $this->createCartItem(
             $id, $name, $subtitle, $qty, $price, $totalPrice,
-            $vatFcCode, $productFcCode, $vat, $urlImg, $options
+            $vatFcCode, $productFcCode, $vat, $urlImg, $createdAt, $updatedAt, $options
         );
 
         $content = $this->getContent();
@@ -247,6 +252,37 @@ class Cart
     public function where(string $key, mixed $value): Collection
     {
         return $this->getContent()->where($key, $value);
+    }
+
+    /**
+     * Determine whether an item with the given id and model class is already in the cart.
+     *
+     * @param  string|int  $id
+     * @param  string  $model  Fully-qualified class name of the associated model
+     * @return bool
+     */
+    public function isAlreadyAdded(string|int $id, string $model): bool
+    {
+        return $this->getContent()->contains(function (CartItem $cartItem) use ($id, $model) {
+            return (int) $cartItem->id === (int) $id
+                && $cartItem->associatedModel === $model;
+        });
+    }
+
+    /**
+     * Find the first CartItem in the cart matching the given id and model class.
+     *
+     * @param  string|int  $id
+     * @param  string  $model  Fully-qualified class name of the associated model
+     * @return ?CartItem
+     */
+    public function searchById(string|int $id, string $model): ?CartItem
+    {
+        return $this->getContent()
+            ->first(function (CartItem $cartItem) use ($id, $model) {
+                return (int) $cartItem->id === (int) $id
+                    && $cartItem->associatedModel === $model;
+            });
     }
 
     /**
@@ -529,6 +565,8 @@ class Cart
         mixed $productFcCode,
         mixed $vat,
         mixed $urlImg,
+        Carbon $createdAt,
+        Carbon $updatedAt,
         array $options
     ): CartItem {
         if ($id instanceof Buyable) {
@@ -544,7 +582,7 @@ class Cart
             }
             $cartItem = CartItem::fromAttributes(
                 $id, $name, $subtitle, $qty, $price, $totalPrice,
-                $vatFcCode, $productFcCode, $vat, $urlImg, $options
+                $vatFcCode, $productFcCode, $vat, $urlImg, $createdAt, $updatedAt, $options
             );
             $cartItem->setQuantity($qty);
         }

@@ -100,7 +100,7 @@ class CartItem implements Arrayable, Jsonable
             throw new InvalidArgumentException('Please supply a valid name.');
         }
 
-        $this->rowId = $this->generateRowId($id, $options);
+        $this->rowId = $this->generateRowId((string) $id, $options);
         $this->id = $id;
         $this->qty = $qty;
         $this->name = $name;
@@ -116,6 +116,8 @@ class CartItem implements Arrayable, Jsonable
         $this->vatFcCode = $vatFcCode;
         $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
+        $this->createdAt = $createdAt ?? Carbon::now();
+        $this->updatedAt = $updatedAt ?? Carbon::now();
         $this->options = new CartItemOptions($options);
         // default values
         $this->discountValue = 0.0;
@@ -235,6 +237,9 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Create a new instance from a Buyable.
+     *
+     * @param  Carbon|null  $createdAt
+     * @param  Carbon|null  $updatedAt
      */
     public static function fromBuyable(Buyable $item): CartItem
     {
@@ -249,16 +254,29 @@ class CartItem implements Arrayable, Jsonable
             $item->getProductFcCode(),
             $item->getVat(),
             $item->getUrlImg(),
+            Carbon::now(),
+            Carbon::now(),
             $item->getOptions()
         );
     }
 
     /**
      * Create a new instance from the given array.
+     *
+     * @param  Carbon|null  $createdAt
+     * @param  Carbon|null  $updatedAt
      */
     public static function fromArray(array $attributes): CartItem
     {
         $options = Arr::get($attributes, 'options', []);
+
+        $createdAt = isset($attributes['createdAt']) && $attributes['createdAt'] instanceof Carbon
+            ? $attributes['createdAt']
+            : Carbon::now();
+
+        $updatedAt = isset($attributes['updatedAt']) && $attributes['updatedAt'] instanceof Carbon
+            ? $attributes['updatedAt']
+            : Carbon::now();
 
         return new self(
             $attributes['id'],
@@ -271,12 +289,17 @@ class CartItem implements Arrayable, Jsonable
             $attributes['productFcCode'],
             $attributes['vat'],
             $attributes['urlImg'],
+            $createdAt,
+            $updatedAt,
             $options
         );
     }
 
     /**
-     *  * Create a new instance from the given attributes.
+     * Create a new instance from the given attributes.
+     *
+     * @param  Carbon|null  $createdAt
+     * @param  Carbon|null  $updatedAt
      */
     public static function fromAttributes(
         $id,
@@ -289,6 +312,8 @@ class CartItem implements Arrayable, Jsonable
         $productFcCode,
         $vat,
         $urlImg,
+        ?Carbon $createdAt = null,
+        ?Carbon $updatedAt = null,
         array $options = []
     ): CartItem {
         return new self(
@@ -302,6 +327,8 @@ class CartItem implements Arrayable, Jsonable
             $productFcCode,
             $vat,
             $urlImg,
+            $createdAt,
+            $updatedAt,
             $options
         );
     }
@@ -339,6 +366,8 @@ class CartItem implements Arrayable, Jsonable
             'discountValue' => $this->discountValue,
             'productFcCode' => $this->productFcCode,
             'urlImg' => $this->urlImg,
+            'createdAt' => $this->createdAt,
+            'updatedAt' => $this->updatedAt,
             'options' => $this->options->toArray(),
             'associatedModel' => $this->associatedModel,
             'model' => $this->model,
