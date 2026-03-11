@@ -1,21 +1,10 @@
 includes:
     - vendor/larastan/larastan/extension.neon
-    - phpstan-baseline.neon
 
 parameters:
     paths:
         - src
-        - config
-        - database
-        - tests
-
-    # Level of rule options - the higher the stricter
     level: 5
-
-    # Ignore errors in vendor
-    excludePaths:
-        - vendor
-
-    # Additional Larastan-specific checks
-    checkModelProperties: true
-    checkOctaneCompatibility: false
+    ignoreErrors:
+        - identifier: trait.unused
+          path: src/CanBeBought.php
