@@ -3,6 +3,7 @@
 namespace OfflineAgency\LaravelCart;
 
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\ServiceProvider;
 
@@ -12,6 +13,8 @@ class CartServiceProvider extends ServiceProvider
      * Register the service provider.
      *
      * @return void
+     *
+     * @throws BindingResolutionException
      */
     public function register()
     {
@@ -28,7 +31,7 @@ class CartServiceProvider extends ServiceProvider
             }
         });
 
-        if (!class_exists('CreateCartTable')) {
+        if (! class_exists('CreateCartTable')) {
             // Publish the migration
             $timestamp = date('Y_m_d_His', time());
 

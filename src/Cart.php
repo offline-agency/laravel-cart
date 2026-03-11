@@ -2,6 +2,8 @@
 
 namespace OfflineAgency\LaravelCart;
 
+use ArrayAccess;
+use Carbon\Carbon;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Connection;
@@ -17,6 +19,12 @@ use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
 class Cart
 {
     const DEFAULT_INSTANCE = 'default';
+    const CART_OPTIONS_KEY = 'options';
+
+    /**
+     * @var
+     */
+    private $options = [];
 
     /**
      * Instance of the session manager.
@@ -38,13 +46,12 @@ class Cart
      * @var string
      */
     private $instance;
-    public $coupons = [];
 
     /**
      * Cart constructor.
      *
-     * @param SessionManager $session
-     * @param Dispatcher     $events
+     * @param  SessionManager  $session
+     * @param  Dispatcher  $events
      */
     public function __construct(SessionManager $session, Dispatcher $events)
     {
@@ -57,8 +64,7 @@ class Cart
     /**
      * Set the current cart instance.
      *
-     * @param string|null $instance
-     *
+     * @param  string|null  $instance
      * @return Cart
      */
     public function instance(string $instance = null): Cart
@@ -83,18 +89,17 @@ class Cart
     /**
      * Add an item to the cart.
      *
-     * @param mixed       $id
-     * @param mixed       $name
-     * @param string|null $subtitle
-     * @param int|null    $qty
-     * @param float|null  $price
-     * @param float|null  $totalPrice
-     * @param float|null  $vat
-     * @param string|null $vatFcCode
-     * @param string|null $productFcCode
-     * @param string|null $urlImg
-     * @param array       $options
-     *
+     * @param  mixed  $id
+     * @param  mixed  $name
+     * @param  string|null  $subtitle
+     * @param  int|null  $qty
+     * @param  float|null  $price
+     * @param  float|null  $totalPrice
+     * @param  float|null  $vat
+     * @param  string|null  $vatFcCode
+     * @param  string|null  $productFcCode
+     * @param  string|null  $urlImg
+     * @param  array  $options
      * @return array|CartItem|CartItem[]
      */
     public function add(
@@ -148,9 +153,8 @@ class Cart
     /**
      * Update the cart item with the given rowId.
      *
-     * @param string $rowId
-     * @param mixed  $qty
-     *
+     * @param  string  $rowId
+     * @param  mixed  $qty
      * @return CartItem|void
      */
     public function update(string $rowId, $qty)
@@ -194,13 +198,18 @@ class Cart
     /**
      * Remove the cart item with the given rowId from the cart.
      *
-     * @param string $rowId
-     *
+     * @param  string  $rowId
      * @return void
      */
     public function remove(string $rowId)
     {
         $cartItem = $this->get($rowId);
+
+        if (isset($cartItem->appliedCoupons)) {
+            foreach ($cartItem->appliedCoupons as $coupon) {
+                $this->removeCoupon($coupon->couponCode);
+            }
+        }
 
         $content = $this->getContent();
 
@@ -214,15 +223,14 @@ class Cart
     /**
      * Get a cart item from the cart by its rowId.
      *
-     * @param string $rowId
-     *
+     * @param  string  $rowId
      * @return CartItem
      */
     public function get(string $rowId)
     {
         $content = $this->getContent();
 
-        if (!$content->has($rowId)) {
+        if (! $content->has($rowId)) {
             throw new InvalidRowIDException("The cart does not contain rowId {$rowId}.");
         }
 
@@ -236,6 +244,7 @@ class Cart
      */
     public function destroy()
     {
+        $this->setOptions([]);
         $this->session->remove($this->instance);
     }
 
@@ -268,56 +277,81 @@ class Cart
     /**
      * Get the total price of the items in the cart.
      *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
+     * @param  int|null  $decimals
+     * @param  string|null  $decimalPoint
+     * @param  string|null  $thousandSeparator
      * @return float
      */
     public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
-        return $this->getContent()->reduce(function ($total, CartItem $cartItem) {
-            return $total + ($cartItem->qty * $cartItem->totalPrice);
+        $total = $this->getContent()->reduce(function ($total, CartItem $cartItem) {
+            return $total + $cartItem->totalPrice + (float) (($cartItem->qty - 1) * $cartItem->originalTotalPrice);
         }, 0);
+
+        return $total < 0
+            ? 0
+            : $this->formatFloat($total);
     }
 
     /**
-     * Get the total tax of the items in the cart.
+     * Get the total vat of the items in the cart.
      *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
+     * @param  int|null  $decimals
+     * @param  string|null  $decimalPoint
+     * @param  string|null  $thousandSeparator
      * @return float
      */
-    public function tax(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
+    public function vat(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
-        return $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
-            return $tax + ($cartItem->qty * $cartItem->vat);
+        $vat = $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
+            return $tax + $cartItem->vat + (float) (($cartItem->qty - 1) * $cartItem->originalVat);
         }, 0);
+
+        return $vat < 0
+            ? 0
+            : $this->formatFloat($vat);
     }
 
     /**
-     * Get the subtotal (total - tax) of the items in the cart.
+     * Get the subtotal (total - vat) of the items in the cart.
      *
-     * @param int|null    $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     *
+     * @param  int|null  $decimals
+     * @param  string|null  $decimalPoint
+     * @param  string|null  $thousandSeparator
      * @return float
      */
     public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
     {
-        return $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
-            return $subTotal + ($cartItem->qty * $cartItem->price);
+        $subtotal = $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
+            $cartItemSubTotal = $cartItem->name !== 'discountCartItem'
+                ? $cartItem->price + (float) (($cartItem->qty - 1) * $cartItem->originalPrice)
+                : 0;
+
+            return $subTotal + $cartItemSubTotal;
+        }, 0);
+
+        return $subtotal < 0
+            ? 0
+            : $this->formatFloat($subtotal);
+    }
+
+    /**
+     * @param  int|null  $decimals
+     * @param  string|null  $decimalPoint
+     * @param  string|null  $thousandSeparator
+     * @return mixed
+     */
+    public function originalTotalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
+    {
+        return $this->getContent()->reduce(function ($originalTotalPrice, CartItem $cartItem) {
+            return $originalTotalPrice + ($cartItem->originalTotalPrice * $cartItem->qty);
         }, 0);
     }
 
     /**
      * Search the cart content for a cart item matching the given search closure.
      *
-     * @param Closure $search
-     *
+     * @param  Closure  $search
      * @return Collection
      */
     public function search(Closure $search): Collection
@@ -330,14 +364,13 @@ class Cart
     /**
      * Associate the cart item with the given rowId with the given model.
      *
-     * @param string $rowId
-     * @param mixed  $model
-     *
+     * @param  string  $rowId
+     * @param  mixed  $model
      * @return void
      */
     public function associate(string $rowId, $model)
     {
-        if (is_string($model) && !class_exists($model)) {
+        if (is_string($model) && ! class_exists($model)) {
             throw new UnknownModelException("The supplied model {$model} does not exist.");
         }
 
@@ -355,8 +388,7 @@ class Cart
     /**
      * Store the current instance of the cart.
      *
-     * @param mixed $identifier
-     *
+     * @param  mixed  $identifier
      * @return void
      */
     public function store($identifier)
@@ -369,8 +401,8 @@ class Cart
 
         $this->getConnection()->table($this->getTableName())->insert([
             'identifier' => $identifier,
-            'instance'   => $this->currentInstance(),
-            'content'    => serialize($content),
+            'instance' => $this->currentInstance(),
+            'content' => serialize($content),
         ]);
 
         $this->events->dispatch('cart.stored');
@@ -379,13 +411,12 @@ class Cart
     /**
      * Restore the cart with the given identifier.
      *
-     * @param mixed $identifier
-     *
+     * @param  mixed  $identifier
      * @return void
      */
     public function restore($identifier)
     {
-        if (!$this->storedCartWithIdentifierExists($identifier)) {
+        if (! $this->storedCartWithIdentifierExists($identifier)) {
             return;
         }
 
@@ -417,8 +448,7 @@ class Cart
     /**
      * Magic method to make accessing the total, tax and subtotal properties possible.
      *
-     * @param string $attribute
-     *
+     * @param  string  $attribute
      * @return float|null
      */
     public function __get(string $attribute)
@@ -428,7 +458,7 @@ class Cart
         }
 
         if ($attribute === 'tax') {
-            return $this->tax();
+            return $this->vat();
         }
 
         if ($attribute === 'subtotal') {
@@ -443,7 +473,7 @@ class Cart
      */
     public function totalVatLabel(): string
     {
-        return $this->tax() > 0 ? 'Iva Inclusa' : 'Esente Iva';
+        return $this->vat() > 0 ? 'Iva Inclusa' : 'Esente Iva';
     }
 
     /**
@@ -454,26 +484,37 @@ class Cart
     protected function getContent(): Collection
     {
         return $this->session->has($this->instance)
-          ? $this->session->get($this->instance)
-          : new Collection();
+            ? $this->session->get($this->instance)
+            : new Collection();
+    }
+
+    /**
+     * Get the cart generic info, if there is no cart set yet, return a new empty Collection.
+     *
+     * @return Collection
+     */
+    protected function getCartInfo(): Collection
+    {
+        return $this->session->has($this->getCartInstance())
+            ? $this->session->get($this->getCartInstance())
+            : new Collection();
     }
 
     /**
      * * Create a new CartItem from the supplied attributes.
      *
      *
-     * @param $id
-     * @param $name
-     * @param $subtitle
-     * @param $qty
-     * @param $price
-     * @param $totalPrice
-     * @param $vatFcCode
-     * @param $productFcCode
-     * @param $vat
-     * @param $urlImg
-     * @param array $options
-     *
+     * @param  $id
+     * @param  $name
+     * @param  $subtitle
+     * @param  $qty
+     * @param  $price
+     * @param  $totalPrice
+     * @param  $vatFcCode
+     * @param  $productFcCode
+     * @param  $vat
+     * @param  $urlImg
+     * @param  array  $options
      * @return CartItem
      */
     private function createCartItem(
@@ -519,13 +560,12 @@ class Cart
     /**
      * Check if the item is a multidimensional array or an array of Buyable.
      *
-     * @param mixed $item
-     *
+     * @param  mixed  $item
      * @return bool
      */
     private function isMulti($item): bool
     {
-        if (!is_array($item)) {
+        if (! is_array($item)) {
             return false;
         }
 
@@ -533,13 +573,13 @@ class Cart
     }
 
     /**
-     * @param $identifier
-     *
+     * @param  $identifier
      * @return bool
      */
     private function storedCartWithIdentifierExists($identifier): bool
     {
-        return $this->getConnection()->table($this->getTableName())->where('identifier', $identifier)->exists();
+        return $this->getConnection()
+            ->table($this->getTableName())->where('identifier', $identifier)->exists();
     }
 
     /**
@@ -577,8 +617,7 @@ class Cart
     }
 
     /**
-     * @param array $items
-     *
+     * @param  array  $items
      * @return Collection
      */
     public function addBatch(array $items): Collection
@@ -609,11 +648,10 @@ class Cart
     /**
      * Get the Formatted number.
      *
-     * @param $value
-     * @param $decimals
-     * @param $decimalPoint
-     * @param $thousandSeparator
-     *
+     * @param  $value
+     * @param  $decimals
+     * @param  $decimalPoint
+     * @param  $thousandSeparator
      * @return string
      */
     private function numberFormat($value, $decimals, $decimalPoint, $thousandSeparator): string
@@ -627,42 +665,243 @@ class Cart
         if (is_null($thousandSeparator)) {
             $thousandSeparator = is_null(config('cart.format.thousand_separator')) ? ',' : config('cart.format.thousand_separator');
         }
+
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
-  /**
-   * @param $rowId
-   * @param string $couponCode
-   * @param string $couponType
-   * @param float $couponValue
-   */
-  public function applyCoupon(
-      $rowId,
-      string $couponCode,
-      string $couponType,
-      float $couponValue
-    )
+    /**
+     * @return array
+     */
+    public function coupons(): array
     {
+        return $this->getContent()->reduce(function ($coupons, CartItem $cartItem) {
+            foreach ($cartItem->appliedCoupons as $coupon) {
+                Arr::set(
+                    $coupons,
+                    $coupon->couponCode,
+                    (object) [
+                        'rowId' => $cartItem->rowId,
+                        'couponCode' => $coupon->couponCode,
+                        'couponType' => $coupon->couponType,
+                        'couponValue' => $coupon->couponValue,
+                    ]
+                );
+            }
 
-      $cartItem = $this->get($rowId);
+            return $coupons;
+        }, []);
+    }
 
-      $cartItem->applyCoupon(
+    /**
+     * @param  $rowId
+     * @param  string  $couponCode
+     * @param  string  $couponType
+     * @param  float  $couponValue
+     */
+    public function applyCoupon(
+        $rowId,
+        string $couponCode,
+        string $couponType,
+        float $couponValue
+    ) {
+        if (! is_null($rowId)) {
+            $cartItem = $this->get($rowId);
+
+            $cartItem->applyCoupon(
+                $couponCode,
+                $couponType,
+                $couponValue
+            );
+
+            $content = $this->getContent();
+
+            $content->put($cartItem->rowId, $cartItem);
+
+            $this->session->put($this->instance, $content);
+
+            $this->coupons()[$couponCode] = (object) [
+                'rowId' => $rowId,
+                'couponCode' => $couponCode,
+                'couponType' => $couponType,
+                'couponValue' => $couponValue,
+            ];
+        } else {
+            $this->applyGlobalCoupon(
+                $couponCode,
+                $couponType,
+                $couponValue
+            );
+        }
+    }
+
+    /**
+     * @param  $rowId
+     * @param  string  $couponCode
+     */
+    public function detachCoupon(
+        $rowId,
+        string $couponCode
+    ) {
+        $cartItem = $this->get($rowId);
+
+        $cartItem->detachCoupon(
+            $couponCode
+        );
+
+        $content = $this->getContent();
+
+        $content->put($cartItem->rowId, $cartItem);
+
+        $this->session->put($this->instance, $content);
+
+        unset($this->coupons()[$couponCode]);
+
+        if ($cartItem->name === 'discountCartItem') {
+            $this->remove($rowId);
+        }
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasCoupons(): bool
+    {
+        return count($this->coupons()) > 0;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasGlobalCoupon()
+    {
+        $coupons = $this->coupons();
+
+        if (count($coupons) > 0) {
+            foreach ($coupons as $coupon) {
+                if ($coupon->couponType === 'global') {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  string  $couponCode
+     * @return array|ArrayAccess|mixed|null
+     */
+    public function getCoupon(
+        string $couponCode
+    ) {
+        $coupons = $this->coupons();
+
+        return Arr::has($coupons, $couponCode)
+            ? Arr::get($coupons, $couponCode)
+            : null;
+    }
+
+    /**
+     * @param  string|null  $couponCode
+     */
+    public function removeCoupon(?string $couponCode)
+    {
+        if (! is_null($couponCode)) {
+            unset($this->coupons()[$couponCode]);
+        }
+    }
+
+    /**
+     * @param  float  $value
+     * @return float
+     */
+    private function formatFloat(float $value): float
+    {
+        return (float) number_format(
+            $value, // the number to format
+            2, // how many decimal points
+            '.', // decimal separator
+            '' // thousands separator, set it to blank
+        );
+    }
+
+    /**
+     * @param  $couponCode
+     * @param  $couponType
+     * @param  $couponValue
+     */
+    private function applyGlobalCoupon(
         $couponCode,
         $couponType,
         $couponValue
-      );
+    ) {
+        $discount_value = 0;
+        $originalTotalPrice = $this->originalTotalPrice();
+        switch ($couponType) {
+            case 'fixed':
+                $discount_value = $couponValue;
+                break;
+            case 'percentage':
+                $discount_value = $this->formatFloat($originalTotalPrice * $couponValue / 100);
+                break;
+        }
 
-      $content = $this->getContent();
+        $cartItem = $this->add(
+            md5(Carbon::now()),
+            'discountCartItem',
+            '',
+            1,
+            0,
+            0,
+            0
+        );
 
-      $content->put($cartItem->rowId, $cartItem);
+        $cartItem->applyCoupon(
+            $couponCode,
+            'global',
+            $discount_value
+        );
+    }
 
-      $this->session->put($this->instance, $content);
+    /**
+     * @return array
+     */
+    public function getOptions(): array
+    {
+        $cart_info = $this->getCartInfo();
 
-      array_push($this->coupons, (object)[
-        'rowId' => $rowId,
-        'couponCode' => $couponCode,
-        'couponType' => $couponType,
-        'couponValue' => $couponValue
-      ]);
+        return Arr::has($cart_info, self::CART_OPTIONS_KEY) ? Arr::get($cart_info, self::CART_OPTIONS_KEY) : [];
+    }
+
+    /**
+     * @param  array  $options
+     */
+    public function setOptions(array $options): void
+    {
+        $content = $this->getCartInfo();
+
+        $content->put(self::CART_OPTIONS_KEY, $options);
+
+        $this->session->put($this->getCartInstance(), $content);
+    }
+
+    /**
+     * @return string
+     */
+    private function getCartInstance(): string
+    {
+        return $this->instance.'_cart_info';
+    }
+
+    /**
+     * @param  $key
+     * @param  $default_value
+     * @return array|ArrayAccess|mixed|null
+     */
+    public function getOptionsByKey($key, $default_value = null)
+    {
+        $options = $this->getOptions();
+
+        return Arr::has($options, $key) ? Arr::get($options, $key) : $default_value;
     }
 }

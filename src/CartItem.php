@@ -15,46 +15,37 @@ class CartItem implements Arrayable, Jsonable
     public $qty;
     public $name;
     public $subtitle;
-
+    public $originalPrice;
+    public $originalTotalPrice;
+    public $originalVat;
     public $price;
     public $totalPrice;
-
     public $vat;
     public $vatLabel;
     public $vatRate;
     public $vatFcCode;
-
+    public $discountValue;
+    public $productFcCode;
     public $urlImg;
-
     public $options;
-
     public $associatedModel;
     public $model;
-    public $productFcCode;
-
-    public $discountValue;
-    public $discountCode;
-    public $discountDescription;
-    public $discountRate;
-
-    public $couponCode;
-    public $couponType;
-    public $couponValue;
+    public $appliedCoupons;
 
     /**
      * CartItem constructor.
      *
-     * @param int|string $id
-     * @param string     $name
-     * @param string     $subtitle
-     * @param $qty
-     * @param float $price
-     * @param $totalPrice
-     * @param $vatFcCode
-     * @param $productFcCode
-     * @param $vat
-     * @param $urlImg
-     * @param array $options
+     * @param  int|string  $id
+     * @param  string  $name
+     * @param  string  $subtitle
+     * @param  $qty
+     * @param  float  $price
+     * @param  $totalPrice
+     * @param  $vatFcCode
+     * @param  $productFcCode
+     * @param  $vat
+     * @param  $urlImg
+     * @param  array  $options
      */
     public function __construct(
         $id,
@@ -75,34 +66,42 @@ class CartItem implements Arrayable, Jsonable
         if (empty($name)) {
             throw new InvalidArgumentException('Please supply a valid name.');
         }
-        if (strlen($price) < 0 || !is_numeric($price)) {
+        if (strlen($price) < 0 || ! is_numeric($price)) {
             throw new InvalidArgumentException('Please supply a valid price.');
         }
 
+        $this->rowId = $this->generateRowId($id, $options);
         $this->id = $id;
+        $this->qty = $qty;
         $this->name = $name;
         $this->subtitle = $subtitle;
-        $this->qty = $qty;
+        $this->originalPrice = floatval($price);
+        $this->originalTotalPrice = floatval($totalPrice);
+        $this->originalVat = floatval($vat);
         $this->price = floatval($price);
         $this->totalPrice = floatval($totalPrice);
-        $this->vatFcCode = $vatFcCode;
-        $this->productFcCode = $productFcCode;
         $this->vat = floatval($vat);
         $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
-        $this->vatRate = $this->formatFloat( 100 * $this->vat / $this->totalPrice);
+        $this->vatRate = $this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0;
+        $this->vatFcCode = $vatFcCode;
+        $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
         $this->options = new CartItemOptions($options);
-        $this->rowId = $this->generateRowId($id, $options);
+        // default values
+        $this->discountValue = 0.0;
+        $this->associatedModel = null;
+        $this->model = null;
+        $this->appliedCoupons = [];
     }
 
     /**
      * Set the quantity for this cart item.
      *
-     * @param int|float $qty
+     * @param  int|float  $qty
      */
     public function setQuantity($qty)
     {
-        if (empty($qty) || !is_numeric($qty)) {
+        if (empty($qty) || ! is_numeric($qty)) {
             throw new InvalidArgumentException('Please supply a valid quantity. Provided: '.$qty);
         }
 
@@ -112,8 +111,7 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Update the cart item from a Buyable.
      *
-     * @param Buyable $item
-     *
+     * @param  Buyable  $item
      * @return void
      */
     public function updateFromBuyable(Buyable $item)
@@ -127,8 +125,7 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Update the cart item from an array.
      *
-     * @param array $attributes
-     *
+     * @param  array  $attributes
      * @return void
      */
     public function updateFromArray(array $attributes)
@@ -143,16 +140,23 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
-     * Associate the cart item with the given model.
+     * Associate the cart item with a given model or something else.
      *
-     * @param mixed $model
-     *
-     * @return CartItem
+     * @param  $item
+     * @param  bool  $is_model
+     * @return $this
      */
-    public function associate($model): CartItem
+    public function associate($item, bool $is_model = true): CartItem
     {
-        $this->associatedModel = is_string($model) ? $model : get_class($model);
-        $this->model = $model;
+        if ($is_model) {
+            $this->associatedModel = is_string($item) ? $item : get_class($item);
+            $this->model = $item;
+
+            return $this;
+        }
+
+        $this->associatedModel = Arr::has($item, 'associatedModel') ? Arr::get($item, 'associatedModel') : null;
+        $this->model = Arr::has($item, 'modelId') ? Arr::get($item, 'modelId') : null;
 
         return $this;
     }
@@ -160,8 +164,7 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Get an attribute from the cart item or get the associated model.
      *
-     * @param string $attribute
-     *
+     * @param  string  $attribute
      * @return mixed
      */
     public function __get(string $attribute)
@@ -179,7 +182,7 @@ class CartItem implements Arrayable, Jsonable
         }
 
         if ($attribute === 'total') {
-            return $this->qty * ($this->priceTax);
+            return $this->qty * $this->priceTax;
         }
 
         if ($attribute === 'tax') {
@@ -200,8 +203,7 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Create a new instance from a Buyable.
      *
-     * @param Buyable $item
-     *
+     * @param  Buyable  $item
      * @return CartItem
      */
     public static function fromBuyable(Buyable $item): CartItem
@@ -224,8 +226,7 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Create a new instance from the given array.
      *
-     * @param array $attributes
-     *
+     * @param  array  $attributes
      * @return CartItem
      */
     public static function fromArray(array $attributes): CartItem
@@ -250,18 +251,17 @@ class CartItem implements Arrayable, Jsonable
     /**
      *  * Create a new instance from the given attributes.
      *
-     * @param $id
-     * @param $name
-     * @param $subtitle
-     * @param $qty
-     * @param $price
-     * @param $totalPrice
-     * @param $vatFcCode
-     * @param $productFcCode
-     * @param $vat
-     * @param $urlImg
-     * @param array $options
-     *
+     * @param  $id
+     * @param  $name
+     * @param  $subtitle
+     * @param  $qty
+     * @param  $price
+     * @param  $totalPrice
+     * @param  $vatFcCode
+     * @param  $productFcCode
+     * @param  $vat
+     * @param  $urlImg
+     * @param  array  $options
      * @return CartItem
      */
     public static function fromAttributes(
@@ -295,9 +295,8 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Generate a unique id for the cart item.
      *
-     * @param string $id
-     * @param array  $options
-     *
+     * @param  string  $id
+     * @param  array  $options
      * @return string
      */
     protected function generateRowId(string $id, array $options): string
@@ -315,25 +314,34 @@ class CartItem implements Arrayable, Jsonable
     public function toArray(): array
     {
         return [
-            'rowId'         => $this->rowId,
-            'id'            => $this->id,
-            'name'          => $this->name,
-            'subtitle'      => $this->subtitle,
-            'qty'           => $this->qty,
-            'price'         => $this->price,
-            'vatFcCode'     => $this->vatFcCode,
+            'rowId' => $this->rowId,
+            'id' => $this->id,
+            'qty' => $this->qty,
+            'name' => $this->name,
+            'subtitle' => $this->subtitle,
+            'originalPrice' => $this->originalPrice,
+            'originalTotalPrice' => $this->originalTotalPrice,
+            'originalVat' => $this->originalVat,
+            'price' => $this->price,
+            'totalPrice' => $this->totalPrice,
+            'vat' => $this->vat,
+            'vatLabel' => $this->vatLabel,
+            'vatRate' => $this->vatRate,
+            'vatFcCode' => $this->vatFcCode,
+            'discountValue' => $this->discountValue,
             'productFcCode' => $this->productFcCode,
-            'vat'           => $this->vat,
-            'urlImg'        => $this->urlImg,
-            'options'       => $this->options->toArray(),
+            'urlImg' => $this->urlImg,
+            'options' => $this->options->toArray(),
+            'associatedModel' => $this->associatedModel,
+            'model' => $this->model,
+            'appliedCoupons' => $this->appliedCoupons,
         ];
     }
 
     /**
      * Convert the object to its JSON representation.
      *
-     * @param int $options
-     *
+     * @param  int  $options
      * @return string
      */
     public function toJson($options = 0): string
@@ -344,11 +352,10 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Get the formatted number.
      *
-     * @param float  $value
-     * @param int    $decimals
-     * @param string $decimalPoint
-     * @param string $thousandSeparator
-     *
+     * @param  float  $value
+     * @param  int  $decimals
+     * @param  string  $decimalPoint
+     * @param  string  $thousandSeparator
      * @return string
      */
     private function numberFormat(float $value, int $decimals, string $decimalPoint, string $thousandSeparator): string
@@ -356,54 +363,118 @@ class CartItem implements Arrayable, Jsonable
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
-  /**
-   * @param string $couponCode
-   * @param string $couponType
-   * @param float $couponValue
-   * @return CartItem
-   */
+    /**
+     * @param  string  $couponCode
+     * @return array|\ArrayAccess|mixed|null
+     */
+    public function getCoupon(
+        string $couponCode
+    ) {
+        $coupons = $this->appliedCoupons;
+
+        return Arr::has($coupons, $couponCode)
+            ? Arr::get($coupons, $couponCode)
+            : null;
+    }
+
+    /**
+     * @param  string  $couponCode
+     * @param  string  $couponType
+     * @param  float  $couponValue
+     * @return CartItem
+     */
     public function applyCoupon(
         string $couponCode,
         string $couponType,
         float $couponValue
-    ): CartItem
-    {
-        $this->couponCode = $couponCode;
-        $this->couponType = $couponType;
-        $this->couponValue = $couponValue;
+    ): CartItem {
+        $this->appliedCoupons[$couponCode] = (object) [
+            'couponCode' => $couponCode,
+            'couponType' => $couponType,
+            'couponValue' => $couponValue,
+        ];
 
-        if($couponType === 'fixed'){
-          $this->discountValue = $couponValue;
-          $this->discountRate = $this->formatFloat(100 * $couponValue / $this->totalPrice);
+        switch ($couponType) {
+            case 'fixed':
+                $this->totalPrice = $this->formatFloat($this->totalPrice - $couponValue);
+                $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+                $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
 
-          $this->totalPrice = $this->totalPrice - $couponValue;
-          $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-          $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-        }else if($couponType === 'percentage'){
-          $discountValue = $this->formatFloat($this->totalPrice * $couponValue / 100);
-          $this->discountValue = $discountValue;
-          $this->discountRate = $couponValue;
+                $this->discountValue = $this->formatFloat($this->discountValue + $couponValue);
 
-          $this->totalPrice =  $this->formatFloat($this->totalPrice - $discountValue);
-          $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-          $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-        }else{
-          throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
+                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
+                break;
+            case 'percentage':
+                $discountValue = $this->formatFloat($this->originalTotalPrice * $couponValue / 100);
+
+                $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
+                $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+                $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+
+                $this->discountValue = $this->formatFloat($this->discountValue + $discountValue);
+
+                $this->appliedCoupons[$couponCode]->discountValue = $discountValue;
+                break;
+            case 'global':
+                $totalPrice = $couponValue;
+                $price = $this->formatFloat($totalPrice * 100 / (100 + $this->vatRate));
+                $vat = $this->formatFloat($price * $this->vatRate / 100);
+
+                $this->totalPrice = $this->formatFloat($totalPrice * -1);
+                $this->price = $this->formatFloat($price * -1);
+                $this->vat = $this->formatFloat($vat * -1);
+
+                $this->discountValue = $this->formatFloat($this->discountValue + $couponValue);
+
+                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
+                break;
+            default:
+                throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
         }
+
         return $this;
     }
 
-  /**
-   * @param float $value
-   * @return float
-   */
-  private function formatFloat(float $value): float
-  {
-    return (float) number_format(
-      $value, // the number to format
-      2, // how many decimal points
-      ".", // decimal separator
-      "" // thousands separator, set it to blank
-    );
-  }
+    /**
+     * @param  string  $couponCode
+     * @return $this
+     */
+    public function detachCoupon(
+        string $couponCode
+    ): CartItem {
+        $coupon = $this->appliedCoupons[$couponCode];
+        $discountValue = $coupon->discountValue;
+
+        unset($this->appliedCoupons[$couponCode]);
+
+        $this->totalPrice = $this->formatFloat($this->totalPrice + $discountValue);
+        $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
+        $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+
+        $this->discountValue = $this->formatFloat($this->discountValue - $discountValue);
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasCoupons(): bool
+    {
+        return count($this->appliedCoupons) > 0;
+    }
+
+    /**
+     * @param  float  $value
+     * @return float
+     */
+    private function formatFloat(float $value): float
+    {
+        return (float) number_format(
+            $value, // the number to format
+            2, // how many decimal points
+            '.', // decimal separator
+            '' // thousands separator, set it to blank
+        );
+    }
 }
