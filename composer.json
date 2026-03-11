@@ -43,9 +43,11 @@
 
     "scripts": {
         "test": "pest",
+        "test:parallel": "pest --parallel",
         "lint": "pint",
         "lint:check": "pint --test",
-        "analyse": "phpstan analyse --memory-limit=256M"
+        "analyse": "phpstan analyse --memory-limit=256M",
+        "stan": "phpstan analyse --memory-limit=256M"
     },
 
     "config": {
