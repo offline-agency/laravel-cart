@@ -1,6 +1,6 @@
 <?php
 
-namespace OfflineAgency\Shoppingcart;
+namespace OfflineAgency\LaravelCart;
 
 trait CanBeBought
 {

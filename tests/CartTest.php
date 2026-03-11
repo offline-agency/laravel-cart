@@ -29,7 +29,6 @@ class CartTest extends TestCase
      * Set the package service provider.
      *
      * @param  Application  $app
-     * @return array
      */
     protected function getPackageProviders($app): array
     {
@@ -58,8 +57,6 @@ class CartTest extends TestCase
 
     /**
      * Setup the test environment.
-     *
-     * @return void
      */
     protected function setUp(): void
     {
@@ -275,32 +272,38 @@ class CartTest extends TestCase
 
         $cart = $this->getCart();
 
-        $cart->addBatch(
+        $result = $cart->add([
             [
-                [
-                    'id' => 1,
-                    'name' => '1st Cart item',
-                    'subtitle' => 'This is a simple description',
-                    'qty' => 1,
-                    'price' => 10.00,
-                    'totalPrice' => 12.22,
-                    'vat' => 2.22,
-                ],
-                [
-                    'id' => 2,
-                    'name' => '2nd Cart item',
-                    'subtitle' => 'This is a simple description',
-                    'qty' => 1,
-                    'price' => 10.00,
-                    'totalPrice' => 12.22,
-                    'vat' => 2.22,
-                ],
-            ]
-        );
+                'id' => 1,
+                'name' => '1st Cart item',
+                'subtitle' => 'This is a simple description',
+                'qty' => 1,
+                'price' => 10.00,
+                'totalPrice' => 12.22,
+                'vat' => 2.22,
+                'urlImg' => 'https://ecommerce.test/images/item-name.png',
+                'vatFcCode' => '0',
+                'productFcCode' => '0',
+            ],
+            [
+                'id' => 2,
+                'name' => '2nd Cart item',
+                'subtitle' => 'This is a simple description',
+                'qty' => 1,
+                'price' => 10.00,
+                'totalPrice' => 12.22,
+                'vat' => 2.22,
+                'urlImg' => 'https://ecommerce.test/images/item-name.png',
+                'vatFcCode' => '0',
+                'productFcCode' => '0',
+            ],
+        ]);
 
-        $this->assertEquals(2, $cart->count());
+        $this->assertIsArray($result);
+        $this->assertCount(2, $result);
+        $this->assertContainsOnlyInstancesOf(CartItem::class, $result);
 
-        Event::assertDispatched('cart.added');
+        Event::assertDispatched('cart.added', 2);
     }
 
     /** @test */
@@ -361,7 +364,9 @@ class CartTest extends TestCase
      */
     public function it_will_validate_the_quantity()
     {
-        $this->expectException(TypeError::class);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Please supply a valid quantity.');
+
         $cart = $this->getCart();
 
         $cartItem = $cart->add(
@@ -381,6 +386,7 @@ class CartTest extends TestCase
     public function it_will_validate_the_price()
     {
         $this->expectException(TypeError::class);
+
         $cart = $this->getCart();
 
         $cart->add(
@@ -397,7 +403,7 @@ class CartTest extends TestCase
     {
         $cart = $this->getCart();
 
-        $item = new BuyableProduct();
+        $item = new BuyableProduct;
 
         $cartItem = $cart->add(
             1,
@@ -427,7 +433,7 @@ class CartTest extends TestCase
     {
         $cart = $this->getCart();
 
-        $item = new BuyableProduct();
+        $item = new BuyableProduct;
 
         $cartItem = $cart->add(
             1,
@@ -562,7 +568,6 @@ class CartTest extends TestCase
     /** @test */
     public function it_will_regenerate_the_row_id_if_the_options_changed()
     {
-        $this->markTestIncomplete();
         $cart = $this->getCart();
 
         $cartItem = $cart->add(
@@ -575,29 +580,25 @@ class CartTest extends TestCase
             2.22
         );
 
-        $cart->update('027c91341fd5cf4d2579b49c4b6a90da', 1);
+        $initialRowId = $cartItem->rowId;
+
+        $cart->update($initialRowId, ['options' => ['color' => 'blue']]);
 
         $this->assertItemsInCart(1, $cart);
-        $this->assertEquals('7e70a1e9aaadd18c72921a07aae5d011', $cart->content()->first()->rowId);
-        $this->assertEquals('blue', $cart->get('7e70a1e9aaadd18c72921a07aae5d011')->options->color);
+        $this->assertRowsInCart(1, $cart);
+
+        $newItem = $cart->content()->first();
+
+        $this->assertNotEquals($initialRowId, $newItem->rowId);
+        $this->assertEquals('blue', $newItem->options->color);
     }
 
     /** @test */
     public function it_will_add_the_item_to_an_existing_row_if_the_options_changed_to_an_existing_row_id()
     {
-        $this->markTestIncomplete();
         $cart = $this->getCart();
 
-        $cartItem = $cart->add(
-            1,
-            'Cart item',
-            'This is a simple description',
-            1,
-            10.00,
-            12.22,
-            2.22
-        );
-        $cartItem = $cart->add(
+        $cartItem1 = $cart->add(
             1,
             'Cart item',
             'This is a simple description',
@@ -607,7 +608,23 @@ class CartTest extends TestCase
             2.22
         );
 
-        $cart->update('7e70a1e9aaadd18c72921a07aae5d011', ['options' => ['color' => 'red']]);
+        $cartItem2 = $cart->add(
+            1,
+            'Cart item',
+            'This is a simple description',
+            1,
+            10.00,
+            12.22,
+            2.22,
+            '',
+            '',
+            '',
+            ['color' => 'red']
+        );
+
+        $this->assertRowsInCart(2, $cart);
+
+        $cart->update($cartItem1->rowId, ['options' => ['color' => 'red']]);
 
         $this->assertItemsInCart(2, $cart);
         $this->assertRowsInCart(1, $cart);
@@ -838,6 +855,7 @@ class CartTest extends TestCase
                 'appliedCoupons' => [],
             ],
         ], $content->toArray());
+        $this->assertEquals('Iva Inclusa', $cart->totalVatLabel());
     }
 
     /** @test */
@@ -887,9 +905,9 @@ class CartTest extends TestCase
         );
 
         $this->assertItemsInCart(3, $cart);
-        $this->assertEquals(36.66, $cart->total());
+        $this->assertEqualsWithDelta(36.66, $cart->total(), 0.0001);
         $this->assertEquals(30.00, $cart->subtotal());
-        $this->assertEquals(6.66, $cart->vat());
+        $this->assertEqualsWithDelta(6.66, $cart->vat(), 0.0001);
     }
 
     /** @test */
@@ -919,6 +937,39 @@ class CartTest extends TestCase
 
         $this->assertItemsInCart(3, $cart);
         $this->assertEquals('3.600,00', $cart->total(2, ',', '.'));
+    }
+
+    /** @test */
+    public function it_excludes_discount_cart_items_from_subtotal()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            100.00,
+            122.00,
+            22.00
+        );
+
+        $this->assertEquals(100.00, $cart->subtotal());
+
+        $cart->applyCoupon(
+            null,
+            'GLOBAL_DISCOUNT',
+            'fixed',
+            10.00
+        );
+
+        $this->assertEquals(100.00, $cart->subtotal());
+
+        $discountItem = $cart->search(function ($cartItem) {
+            return $cartItem->name === 'discountCartItem';
+        })->first();
+
+        $this->assertNotNull($discountItem);
     }
 
     /** @test */
@@ -1036,7 +1087,7 @@ class CartTest extends TestCase
             200.00
         );
 
-        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel());
+        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel);
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
@@ -1080,7 +1131,7 @@ class CartTest extends TestCase
             200.00
         );
 
-        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel());
+        $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', new ProductModel);
 
         $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
@@ -1272,7 +1323,7 @@ class CartTest extends TestCase
     }
 
     /** @test */
-    public function it_can_return_cartItem_formatted_numbers_by_config_values()
+    public function it_can_return_cart_item_formatted_numbers_by_config_values()
     {
         $this->markTestIncomplete();
         $this->setConfigFormat(2, ',', '');
@@ -1440,6 +1491,9 @@ class CartTest extends TestCase
         $this->assertEquals(3000, $cart->subtotal());
         $this->assertEquals(3600.00, $cart->total());
         $this->assertEquals(600.00, $cart->vat());
+
+        $cartItem->applyCoupon('BLACK_FRIDAY_PERCENTAGE_2021', 'fixed', 500000);
+        $this->assertEquals(0.0, $cart->total());
     }
 
     /** @test */
@@ -1900,8 +1954,6 @@ class CartTest extends TestCase
 
     /**
      * Get an instance of the cart.
-     *
-     * @return Cart
      */
     private function getCart(): Cart
     {
@@ -1913,15 +1965,441 @@ class CartTest extends TestCase
 
     /**
      * Set the config number format.
-     *
-     * @param  int  $decimals
-     * @param  string  $decimalPoint
-     * @param  string  $thousandSeparator
      */
     private function setConfigFormat(int $decimals, string $decimalPoint, string $thousandSeparator)
     {
         $this->app['config']->set('cart.format.decimals', $decimals);
         $this->app['config']->set('cart.format.decimal_point', $decimalPoint);
         $this->app['config']->set('cart.format.thousand_separator', $thousandSeparator);
+    }
+
+    /** @test */
+    public function it_can_calculate_original_total_price_with_decimals()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'Test Item 1',
+            'This is a simple description',
+            2,
+            50.00,
+            100.00,
+            20.00
+        );
+        $cart->add(
+            2,
+            'Test Item 2',
+            'Another item',
+            1,
+            30.00,
+            30.00,
+            6.00
+        );
+
+        $totalPrice = $cart->originalTotalPrice(2);
+
+        $this->assertEquals('130.00', $totalPrice);
+    }
+
+    /** @test */
+    public function it_formats_numbers_correctly()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Item 1', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formattedPrice = $cartItem->numberFormat(1000.00, 2, '.', ',');
+        $this->assertEquals('1,000.00', $formattedPrice);
+    }
+
+    /** @test */
+    public function it_can_detach_a_coupon_from_cart_item()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $cart->applyCoupon(
+            '027c91341fd5cf4d2579b49c4b6a90da',
+            'BLACK_FRIDAY_FIXED_2021',
+            'fixed',
+            10
+        );
+
+        $cart->detachCoupon(
+            '027c91341fd5cf4d2579b49c4b6a90da',
+            'BLACK_FRIDAY_FIXED_2021'
+        );
+
+        $this->assertEquals(1000.00, $cartItem->price);
+    }
+
+    /** @test */
+    public function it_can_check_if_cart_has_coupons()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $this->assertFalse($cart->hasCoupons());
+
+        $cart->applyCoupon('027c91341fd5cf4d2579b49c4b6a90da', 'BLACK_FRIDAY', 'percentage', 50);
+
+        $this->assertTrue($cart->hasCoupons());
+    }
+
+    /** @test */
+    public function it_can_format_float_values()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formattedValue = $cartItem->formatFloat(1200.00);
+        $this->assertEquals(1200.00, $formattedValue);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_identifier_using_get_key()
+    {
+        $product = new Fixtures\ProductWithTrait(123);
+
+        $identifier = $product->getBuyableIdentifier();
+
+        $this->assertEquals(123, $identifier);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_identifier_using_id_property()
+    {
+        $product = new class
+        {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
+            public $id = 456;
+        };
+
+        $identifier = $product->getBuyableIdentifier();
+
+        $this->assertEquals(456, $identifier);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_description_from_name_property()
+    {
+        $product = new Fixtures\ProductWithTrait(1, 'Product Name');
+
+        $description = $product->getBuyableDescription();
+
+        $this->assertEquals('Product Name', $description);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_description_from_title_property()
+    {
+        $product = new class
+        {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
+            public $id = 1;
+
+            public $title = 'Product Title';
+        };
+
+        $description = $product->getBuyableDescription();
+
+        $this->assertEquals('Product Title', $description);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_description_from_description_property()
+    {
+        $product = new class
+        {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
+            public $id = 1;
+
+            public $description = 'Product Description';
+        };
+
+        $description = $product->getBuyableDescription();
+
+        $this->assertEquals('Product Description', $description);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_null_when_no_description_property_exists()
+    {
+        $product = new class
+        {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
+            public $id = 1;
+        };
+
+        $description = $product->getBuyableDescription();
+
+        $this->assertNull($description);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_price_from_price_property()
+    {
+        $product = new Fixtures\ProductWithTrait(1, null, null, null, 99.99);
+
+        $price = $product->getBuyablePrice();
+
+        $this->assertEquals(99.99, $price);
+    }
+
+    /** @test */
+    public function can_be_bought_trait_returns_null_when_no_price_property_exists()
+    {
+        $product = new class
+        {
+            use \OfflineAgency\LaravelCart\CanBeBought;
+
+            public $id = 1;
+        };
+
+        $price = $product->getBuyablePrice();
+
+        $this->assertNull($price);
+    }
+
+    /** @test */
+    public function cart_item_number_format_formats_value_correctly()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formatted = $cartItem->numberFormat(1234.56, 2, '.', ',');
+
+        $this->assertEquals('1,234.56', $formatted);
+    }
+
+    /** @test */
+    public function cart_item_number_format_handles_different_decimal_separators()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formatted = $cartItem->numberFormat(1234.56, 2, ',', '.');
+
+        $this->assertEquals('1.234,56', $formatted);
+    }
+
+    /** @test */
+    public function cart_item_number_format_handles_different_decimal_places()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formatted = $cartItem->numberFormat(1234.5678, 3, '.', ',');
+
+        $this->assertEquals('1,234.568', $formatted);
+    }
+
+    /** @test */
+    public function cart_item_number_format_handles_zero_decimal_places()
+    {
+        $cart = $this->getCart();
+        $cartItem = $cart->add(1, 'Test Item', 'Description', 1, 1000.00, 1200.00, 200.00);
+
+        $formatted = $cartItem->numberFormat(1234.56, 0, '.', ',');
+
+        $this->assertEquals('1,235', $formatted);
+    }
+
+    /** @test */
+    public function it_can_format_number_using_cart_helper()
+    {
+        $cart = $this->getCart();
+
+        $formatted = $cart->numberFormat(1234.5678, 2, '.', ',');
+
+        $this->assertEquals('1,234.57', $formatted);
+    }
+
+    /** @test */
+    public function it_can_format_number_using_config_defaults()
+    {
+        $cart = $this->getCart();
+
+        $formatted = $cart->numberFormat(1234.5678, null, null, null);
+
+        $this->assertEquals('1,234.57', $formatted);
+    }
+
+    /** @test */
+    public function it_can_apply_a_global_fixed_coupon()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            2,
+            100.00,
+            120.00,
+            20.00
+        );
+
+        $cart->add(
+            2,
+            'Second Cart item',
+            'This is a simple description',
+            1,
+            50.00,
+            60.00,
+            10.00
+        );
+
+        $initialTotal = $cart->total();
+        $this->assertEquals(300.00, $initialTotal);
+
+        $cart->applyCoupon(
+            null,
+            'GLOBAL_FIXED_2024',
+            'fixed',
+            50.00
+        );
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertTrue($cart->hasGlobalCoupon());
+
+        $coupons = $cart->coupons();
+        $this->assertCount(1, $coupons);
+
+        $finalTotal = $cart->total();
+        $this->assertEquals(250.00, $finalTotal);
+    }
+
+    /** @test */
+    public function it_can_apply_a_global_percentage_coupon()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            2,
+            100.00,
+            120.00,
+            20.00
+        );
+
+        $cart->add(
+            2,
+            'Second Cart item',
+            'This is a simple description',
+            1,
+            50.00,
+            60.00,
+            10.00
+        );
+
+        $initialTotal = $cart->total();
+        $this->assertEquals(300.00, $initialTotal);
+
+        $cart->applyCoupon(
+            null,
+            'GLOBAL_PERCENTAGE_2024',
+            'percentage',
+            15
+        );
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertTrue($cart->hasGlobalCoupon());
+
+        $coupons = $cart->coupons();
+        $this->assertCount(1, $coupons);
+
+        $finalTotal = $cart->total();
+
+        $this->assertLessThan($initialTotal, $finalTotal);
+        $this->assertGreaterThan(0, $finalTotal);
+    }
+
+    /** @test */
+    public function it_can_access_totals_via_magic_properties()
+    {
+        $cart = $this->getCart();
+
+        $cart->add(
+            1,
+            'Test Item',
+            'Description',
+            2,
+            50.00,
+            60.00,
+            10.00
+        );
+
+        $this->assertEquals($cart->total(), $cart->total);
+        $this->assertEquals(120.00, $cart->total);
+
+        $this->assertEquals($cart->vat(), $cart->tax);
+        $this->assertEquals(20.00, $cart->tax);
+
+        $this->assertEquals($cart->subtotal(), $cart->subtotal);
+        $this->assertEquals(100.00, $cart->subtotal);
+
+        $this->assertNull($cart->nonExistentProperty);
+    }
+
+    /** @test */
+    public function it_can_add_a_buyable_item_with_quantity()
+    {
+        $cart = $this->getCart();
+        $buyable = new BuyableProduct(1, 'Test Product', 'Subtitle', 1, 10.00);
+
+        $cartItem = $cart->add($buyable, 5);
+
+        $this->assertEquals(5, $cartItem->qty);
+
+        $this->assertEquals('Test Product', $cartItem->name);
+        $this->assertEquals(10.00, $cartItem->price);
+
+        $this->assertEquals(BuyableProduct::class, $cartItem->associatedModel);
+        $this->assertSame($buyable, $cartItem->model);
+    }
+
+    /** @test */
+    public function it_removes_discount_cart_item_when_detaching_global_coupon()
+    {
+        $cart = $this->getCart();
+        $cart->add(1, 'Item', 'Desc', 1, 100.00, 100.00, 20.00);
+
+        $cart->applyCoupon(null, 'GLOBAL_COUPON', 'fixed', 10.00);
+
+        $discountItem = $cart->search(function ($item) {
+            return $item->name === 'discountCartItem';
+        })->first();
+
+        $this->assertNotNull($discountItem);
+        $this->assertArrayHasKey('GLOBAL_COUPON', $discountItem->appliedCoupons);
+
+        $cart->detachCoupon($discountItem->rowId, 'GLOBAL_COUPON');
+
+        $discountItemAfter = $cart->search(function ($item) {
+            return $item->name === 'discountCartItem';
+        })->first();
+
+        $this->assertNull($discountItemAfter);
+    }
+
+    /** @test */
+    public function it_returns_false_for_has_global_coupon_when_no_global_coupon_is_applied()
+    {
+        $cart = $this->getCart();
+
+        $this->assertFalse($cart->hasGlobalCoupon());
+
+        $cartItem = $cart->add(1, 'Item', 'Desc', 1, 100.00, 100.00, 20.00);
+        $cart->applyCoupon($cartItem->rowId, 'ITEM_COUPON', 'fixed', 10.00);
+
+        $this->assertTrue($cart->hasCoupons());
+        $this->assertFalse($cart->hasGlobalCoupon());
     }
 }

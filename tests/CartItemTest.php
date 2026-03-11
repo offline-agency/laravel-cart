@@ -6,6 +6,8 @@ use Illuminate\Foundation\Application;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\CartServiceProvider;
+use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
+use OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel;
 use Orchestra\Testbench\TestCase;
 
 class CartItemTest extends TestCase
@@ -14,7 +16,6 @@ class CartItemTest extends TestCase
      * Set the package service provider.
      *
      * @param  Application  $app
-     * @return array
      */
     protected function getPackageProviders($app): array
     {
@@ -124,6 +125,27 @@ class CartItemTest extends TestCase
         $this->assertEquals(100.00, $cartItem->vat);
         $this->assertEquals(600.00, $cartItem->totalPrice);
         $this->assertEquals(600.00, $cartItem->discountValue);
+    }
+
+    /** @test */
+    public function it_throws_an_exception_if_name_is_empty()
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Please supply a valid name.');
+
+        new CartItem(
+            1,
+            '',
+            'This is a simple description',
+            1,
+            1000.00,
+            1200.00,
+            '0',
+            '0',
+            200.00,
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
     }
 
     /** @test */
@@ -380,5 +402,213 @@ class CartItemTest extends TestCase
 
         $this->assertEquals('OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel', $cartItem->associatedModel);
         $this->assertEquals('fake_id', $cartItem->model);
+    }
+
+    /** @test */
+    public function it_can_resolve_the_associated_model_through_magic_accessor(): void
+    {
+        $cartItem = new CartItem(
+            1,
+            'First Cart item',
+            'This is a simple description',
+            1,
+            100.00,
+            122.00,
+            '0',
+            '0',
+            22.00,
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cartItem->associate(ProductModel::class);
+
+        unset($cartItem->model);
+
+        $this->assertInstanceOf(ProductModel::class, $cartItem->model);
+    }
+
+    /** @test */
+    public function it_can_resolve_dynamic_values_through_magic_accessor(): void
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            3,
+            100.00,
+            120.00,
+            '0',
+            '0',
+            20.00,
+            'https://example.com/image.png',
+            []
+        );
+
+        $this->assertEquals(1, $cartItem->id);
+        $this->assertEquals('Test Item', $cartItem->name);
+
+        $this->assertEquals(0.0, $cartItem->tax);
+        $this->assertEquals(100.00, $cartItem->priceTax);
+        $this->assertEquals(300.00, $cartItem->subtotal);
+        $this->assertEquals(300.00, $cartItem->total);
+        $this->assertEquals(0.0, $cartItem->taxTotal);
+
+        $this->assertNull($cartItem->nonExistentProperty);
+    }
+
+    /** @test */
+    public function it_can_access_dynamic_properties()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            1000.00,
+            1200.00,
+            '0',
+            '123',
+            22.00,
+            'https://example.com/image.png',
+            ['size' => 'L', 'color' => 'red']
+        );
+
+        $this->assertEquals(1200.00, $cartItem->totalPrice);
+        $this->assertEquals(1000.00, $cartItem->price);
+        $this->assertEquals(22.00, $cartItem->vat);
+        $this->assertEquals('Iva Inclusa', $cartItem->vatLabel);
+
+        $this->assertEquals(1000.00, $cartItem->subtotal);
+    }
+
+    /** @test */
+    public function it_can_apply_a_coupon_to_cart_item()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            1000.00,
+            1200.00,
+            '0',
+            '123',
+            22.00,
+            'https://example.com/image.png',
+            ['size' => 'L', 'color' => 'red']
+        );
+
+        $cartItem->applyCoupon('BLACK_FRIDAY_FIXED_2021', 'fixed', 100);
+
+        $this->assertEquals(1100.00, $cartItem->totalPrice);
+        $this->assertEquals(100, $cartItem->discountValue);
+
+        $coupon = $cartItem->getCoupon('BLACK_FRIDAY_FIXED_2021');
+        $this->assertEquals('BLACK_FRIDAY_FIXED_2021', $coupon->couponCode);
+        $this->assertEquals('fixed', $coupon->couponType);
+        $this->assertTrue($cartItem->hasCoupons());
+
+        $this->assertCount(1, $cartItem->appliedCoupons);
+    }
+
+    /** @test */
+    public function it_can_be_created_from_a_buyable()
+    {
+        $buyable = new BuyableProduct(
+            1,
+            'Item name',
+            'Item description',
+            1,
+            10.00,
+            12.22,
+            2.22,
+            '0',
+            '0',
+            'https://ecommerce.test/images/item-name.png',
+            ['size' => 'XL', 'color' => 'red']
+        );
+
+        $cartItem = CartItem::fromBuyable($buyable);
+
+        $this->assertEquals(1, $cartItem->id);
+        $this->assertEquals('Item name', $cartItem->name);
+        $this->assertEquals('Item description', $cartItem->subtitle);
+        $this->assertEquals(1, $cartItem->qty);
+        $this->assertEquals(10.00, $cartItem->price);
+        $this->assertEquals(12.22, $cartItem->totalPrice);
+        $this->assertEquals(2.22, $cartItem->vat);
+        $this->assertEquals('0', $cartItem->vatFcCode);
+        $this->assertEquals('0', $cartItem->productFcCode);
+        $this->assertEquals('https://ecommerce.test/images/item-name.png', $cartItem->urlImg);
+        $this->assertEquals(['size' => 'XL', 'color' => 'red'], $cartItem->options->all());
+    }
+
+    /** @test */
+    public function it_returns_null_if_associated_model_does_not_exist()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            100.00,
+            120.00,
+            '0',
+            '0',
+            20.00,
+            'https://example.com/image.png',
+            []
+        );
+
+        $cartItem->associate('NonExistent\\Model\\Class');
+
+        unset($cartItem->model);
+
+        $this->assertNull($cartItem->model);
+    }
+
+    /** @test */
+    public function it_can_access_public_properties_through_magic_get()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            100.00,
+            120.00,
+            '0',
+            '0',
+            20.00,
+            'https://example.com/image.png',
+            []
+        );
+
+        $this->assertEquals('Test Item', $cartItem->__get('name'));
+        $this->assertEquals(1, $cartItem->__get('qty'));
+    }
+
+    /** @test */
+    public function it_calculates_tax_via_magic_get()
+    {
+        $cartItem = new CartItem(
+            1,
+            'Test Item',
+            'Description',
+            1,
+            100.00,
+            120.00,
+            '0',
+            '0',
+            20.00,
+            'https://example.com/image.png',
+            []
+        );
+
+        $cartItem->taxRate = 10;
+        unset($cartItem->tax);
+
+        $this->assertEquals(10.00, $cartItem->tax);
     }
 }

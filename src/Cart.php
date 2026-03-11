@@ -19,12 +19,8 @@ use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
 class Cart
 {
     const DEFAULT_INSTANCE = 'default';
-    const CART_OPTIONS_KEY = 'options';
 
-    /**
-     * @var
-     */
-    private $options = [];
+    const CART_OPTIONS_KEY = 'options';
 
     /**
      * Instance of the session manager.
@@ -49,9 +45,6 @@ class Cart
 
     /**
      * Cart constructor.
-     *
-     * @param  SessionManager  $session
-     * @param  Dispatcher  $events
      */
     public function __construct(SessionManager $session, Dispatcher $events)
     {
@@ -63,11 +56,8 @@ class Cart
 
     /**
      * Set the current cart instance.
-     *
-     * @param  string|null  $instance
-     * @return Cart
      */
-    public function instance(string $instance = null): Cart
+    public function instance(?string $instance = null): Cart
     {
         $instance = $instance ?: self::DEFAULT_INSTANCE;
 
@@ -78,8 +68,6 @@ class Cart
 
     /**
      * Get the current cart instance.
-     *
-     * @return string
      */
     public function currentInstance(): string
     {
@@ -90,29 +78,19 @@ class Cart
      * Add an item to the cart.
      *
      * @param  mixed  $id
-     * @param  mixed  $name
-     * @param  string|null  $subtitle
-     * @param  int|null  $qty
-     * @param  float|null  $price
-     * @param  float|null  $totalPrice
-     * @param  float|null  $vat
-     * @param  string|null  $vatFcCode
-     * @param  string|null  $productFcCode
-     * @param  string|null  $urlImg
-     * @param  array  $options
      * @return array|CartItem|CartItem[]
      */
     public function add(
         $id,
-        string $name,
-        string $subtitle,
-        int $qty,
-        float $price,
-        float $totalPrice,
-        float $vat,
-        string $vatFcCode = '',
-        string $productFcCode = '',
-        string $urlImg = '',
+        ?string $name = null,
+        ?string $subtitle = null,
+        ?int $qty = null,
+        ?float $price = null,
+        ?float $totalPrice = null,
+        ?float $vat = null,
+        ?string $vatFcCode = '',
+        ?string $productFcCode = '',
+        ?string $urlImg = '',
         array $options = []
     ) {
         if ($this->isMulti($id)) {
@@ -153,7 +131,6 @@ class Cart
     /**
      * Update the cart item with the given rowId.
      *
-     * @param  string  $rowId
      * @param  mixed  $qty
      * @return CartItem|void
      */
@@ -198,7 +175,6 @@ class Cart
     /**
      * Remove the cart item with the given rowId from the cart.
      *
-     * @param  string  $rowId
      * @return void
      */
     public function remove(string $rowId)
@@ -223,7 +199,6 @@ class Cart
     /**
      * Get a cart item from the cart by its rowId.
      *
-     * @param  string  $rowId
      * @return CartItem
      */
     public function get(string $rowId)
@@ -250,8 +225,6 @@ class Cart
 
     /**
      * Get the content of the cart.
-     *
-     * @return Collection
      */
     public function content(): Collection
     {
@@ -276,13 +249,8 @@ class Cart
 
     /**
      * Get the total price of the items in the cart.
-     *
-     * @param  int|null  $decimals
-     * @param  string|null  $decimalPoint
-     * @param  string|null  $thousandSeparator
-     * @return float
      */
-    public function total(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
+    public function total(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): float
     {
         $total = $this->getContent()->reduce(function ($total, CartItem $cartItem) {
             return $total + $cartItem->totalPrice + (float) (($cartItem->qty - 1) * $cartItem->originalTotalPrice);
@@ -295,13 +263,8 @@ class Cart
 
     /**
      * Get the total vat of the items in the cart.
-     *
-     * @param  int|null  $decimals
-     * @param  string|null  $decimalPoint
-     * @param  string|null  $thousandSeparator
-     * @return float
      */
-    public function vat(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
+    public function vat(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): float
     {
         $vat = $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
             return $tax + $cartItem->vat + (float) (($cartItem->qty - 1) * $cartItem->originalVat);
@@ -314,13 +277,8 @@ class Cart
 
     /**
      * Get the subtotal (total - vat) of the items in the cart.
-     *
-     * @param  int|null  $decimals
-     * @param  string|null  $decimalPoint
-     * @param  string|null  $thousandSeparator
-     * @return float
      */
-    public function subtotal(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null): float
+    public function subtotal(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): float
     {
         $subtotal = $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
             $cartItemSubTotal = $cartItem->name !== 'discountCartItem'
@@ -335,13 +293,7 @@ class Cart
             : $this->formatFloat($subtotal);
     }
 
-    /**
-     * @param  int|null  $decimals
-     * @param  string|null  $decimalPoint
-     * @param  string|null  $thousandSeparator
-     * @return mixed
-     */
-    public function originalTotalPrice(int $decimals = null, string $decimalPoint = null, string $thousandSeparator = null)
+    public function originalTotalPrice(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): mixed
     {
         return $this->getContent()->reduce(function ($originalTotalPrice, CartItem $cartItem) {
             return $originalTotalPrice + ($cartItem->originalTotalPrice * $cartItem->qty);
@@ -350,9 +302,6 @@ class Cart
 
     /**
      * Search the cart content for a cart item matching the given search closure.
-     *
-     * @param  Closure  $search
-     * @return Collection
      */
     public function search(Closure $search): Collection
     {
@@ -364,7 +313,6 @@ class Cart
     /**
      * Associate the cart item with the given rowId with the given model.
      *
-     * @param  string  $rowId
      * @param  mixed  $model
      * @return void
      */
@@ -448,7 +396,6 @@ class Cart
     /**
      * Magic method to make accessing the total, tax and subtotal properties possible.
      *
-     * @param  string  $attribute
      * @return float|null
      */
     public function __get(string $attribute)
@@ -468,9 +415,6 @@ class Cart
         return null;
     }
 
-    /**
-     * @return string
-     */
     public function totalVatLabel(): string
     {
         return $this->vat() > 0 ? 'Iva Inclusa' : 'Esente Iva';
@@ -478,20 +422,16 @@ class Cart
 
     /**
      * Get the carts content, if there is no cart content set yet, return a new empty Collection.
-     *
-     * @return Collection
      */
     protected function getContent(): Collection
     {
         return $this->session->has($this->instance)
             ? $this->session->get($this->instance)
-            : new Collection();
+            : new Collection;
     }
 
     /**
      * Get the cart generic info, if there is no cart set yet, return a new empty Collection.
-     *
-     * @return Collection
      */
     protected function getCartInfo(): Collection
     {
@@ -504,18 +444,16 @@ class Cart
      * * Create a new CartItem from the supplied attributes.
      *
      *
-     * @param  $id
-     * @param  $name
-     * @param  $subtitle
-     * @param  $qty
-     * @param  $price
-     * @param  $totalPrice
-     * @param  $vatFcCode
-     * @param  $productFcCode
-     * @param  $vat
-     * @param  $urlImg
-     * @param  array  $options
-     * @return CartItem
+     * @param  mixed  $id
+     * @param  string|null  $name
+     * @param  string|null  $subtitle
+     * @param  int|null  $qty
+     * @param  float|null  $price
+     * @param  float|null  $totalPrice
+     * @param  float|null  $vat
+     * @param  string|null  $vatFcCode
+     * @param  string|null  $productFcCode
+     * @param  string|null  $urlImg
      */
     private function createCartItem(
         $id,
@@ -561,7 +499,6 @@ class Cart
      * Check if the item is a multidimensional array or an array of Buyable.
      *
      * @param  mixed  $item
-     * @return bool
      */
     private function isMulti($item): bool
     {
@@ -572,10 +509,6 @@ class Cart
         return is_array(head($item)) || head($item) instanceof Buyable;
     }
 
-    /**
-     * @param  $identifier
-     * @return bool
-     */
     private function storedCartWithIdentifierExists($identifier): bool
     {
         return $this->getConnection()
@@ -584,8 +517,6 @@ class Cart
 
     /**
      * Get the database connection.
-     *
-     * @return Connection
      */
     private function getConnection(): Connection
     {
@@ -596,8 +527,6 @@ class Cart
 
     /**
      * Get the database table name.
-     *
-     * @return string
      */
     private function getTableName(): string
     {
@@ -606,8 +535,6 @@ class Cart
 
     /**
      * Get the database connection name.
-     *
-     * @return string
      */
     private function getConnectionName(): string
     {
@@ -616,10 +543,6 @@ class Cart
         return is_null($connection) ? config('database.default') : $connection;
     }
 
-    /**
-     * @param  array  $items
-     * @return Collection
-     */
     public function addBatch(array $items): Collection
     {
         foreach ($items as $item) {
@@ -647,14 +570,8 @@ class Cart
 
     /**
      * Get the Formatted number.
-     *
-     * @param  $value
-     * @param  $decimals
-     * @param  $decimalPoint
-     * @param  $thousandSeparator
-     * @return string
      */
-    private function numberFormat($value, $decimals, $decimalPoint, $thousandSeparator): string
+    public function numberFormat($value, $decimals, $decimalPoint, $thousandSeparator): string
     {
         if (is_null($decimals)) {
             $decimals = is_null(config('cart.format.decimals')) ? 2 : config('cart.format.decimals');
@@ -669,9 +586,6 @@ class Cart
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
     }
 
-    /**
-     * @return array
-     */
     public function coupons(): array
     {
         return $this->getContent()->reduce(function ($coupons, CartItem $cartItem) {
@@ -692,12 +606,6 @@ class Cart
         }, []);
     }
 
-    /**
-     * @param  $rowId
-     * @param  string  $couponCode
-     * @param  string  $couponType
-     * @param  float  $couponValue
-     */
     public function applyCoupon(
         $rowId,
         string $couponCode,
@@ -734,10 +642,6 @@ class Cart
         }
     }
 
-    /**
-     * @param  $rowId
-     * @param  string  $couponCode
-     */
     public function detachCoupon(
         $rowId,
         string $couponCode
@@ -761,9 +665,6 @@ class Cart
         }
     }
 
-    /**
-     * @return bool
-     */
     public function hasCoupons(): bool
     {
         return count($this->coupons()) > 0;
@@ -788,7 +689,6 @@ class Cart
     }
 
     /**
-     * @param  string  $couponCode
      * @return array|ArrayAccess|mixed|null
      */
     public function getCoupon(
@@ -801,9 +701,6 @@ class Cart
             : null;
     }
 
-    /**
-     * @param  string|null  $couponCode
-     */
     public function removeCoupon(?string $couponCode)
     {
         if (! is_null($couponCode)) {
@@ -811,10 +708,6 @@ class Cart
         }
     }
 
-    /**
-     * @param  float  $value
-     * @return float
-     */
     private function formatFloat(float $value): float
     {
         return (float) number_format(
@@ -825,12 +718,7 @@ class Cart
         );
     }
 
-    /**
-     * @param  $couponCode
-     * @param  $couponType
-     * @param  $couponValue
-     */
-    private function applyGlobalCoupon(
+    public function applyGlobalCoupon(
         $couponCode,
         $couponType,
         $couponValue
@@ -863,9 +751,6 @@ class Cart
         );
     }
 
-    /**
-     * @return array
-     */
     public function getOptions(): array
     {
         $cart_info = $this->getCartInfo();
@@ -873,9 +758,6 @@ class Cart
         return Arr::has($cart_info, self::CART_OPTIONS_KEY) ? Arr::get($cart_info, self::CART_OPTIONS_KEY) : [];
     }
 
-    /**
-     * @param  array  $options
-     */
     public function setOptions(array $options): void
     {
         $content = $this->getCartInfo();
@@ -885,17 +767,12 @@ class Cart
         $this->session->put($this->getCartInstance(), $content);
     }
 
-    /**
-     * @return string
-     */
     private function getCartInstance(): string
     {
         return $this->instance.'_cart_info';
     }
 
     /**
-     * @param  $key
-     * @param  $default_value
      * @return array|ArrayAccess|mixed|null
      */
     public function getOptionsByKey($key, $default_value = null)
