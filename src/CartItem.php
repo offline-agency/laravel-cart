@@ -67,8 +67,10 @@ class CartItem implements Arrayable, Jsonable
 
     public $appliedCoupons;
 
+    /** @deprecated Use $vat instead. Kept for backward compat with __get computed properties. */
     public $tax = 0.0;
 
+    /** @deprecated Use $vatRate instead. Kept for backward compat with __get computed properties. */
     public $taxRate = 0.0;
 
     /**
@@ -84,11 +86,11 @@ class CartItem implements Arrayable, Jsonable
         string $subtitle,
         $qty,
         float $price,
-        $totalPrice,
-        $vatFcCode,
-        $productFcCode,
-        $vat,
-        $urlImg,
+        ?float $totalPrice,
+        string $vatFcCode = '',
+        string $productFcCode = '',
+        ?float $vat = null,
+        string $urlImg = '',
         ?Carbon $createdAt = null,
         ?Carbon $updatedAt = null,
         array $options = []
@@ -106,13 +108,16 @@ class CartItem implements Arrayable, Jsonable
         $this->name = $name;
         $this->subtitle = $subtitle;
         $this->originalPrice = floatval($price);
-        $this->originalTotalPrice = floatval($totalPrice);
+        $computedTotalPrice = $totalPrice !== null ? floatval($totalPrice) : $this->formatFloat(floatval($price) + floatval($vat));
+        $this->originalTotalPrice = $computedTotalPrice;
         $this->originalVat = floatval($vat);
         $this->price = floatval($price);
-        $this->totalPrice = floatval($totalPrice);
+        $this->totalPrice = $computedTotalPrice;
         $this->vat = floatval($vat);
         $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
         $this->vatRate = $this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0;
+        $this->taxRate = $this->vatRate;
+        $this->tax = $this->formatFloat($this->price * ($this->taxRate / 100));
         $this->vatFcCode = $vatFcCode;
         $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
@@ -124,6 +129,17 @@ class CartItem implements Arrayable, Jsonable
         $this->associatedModel = null;
         $this->model = null;
         $this->appliedCoupons = [];
+    }
+
+    /**
+     * Sync taxRate/tax from vatRate on unserialization of old stored carts.
+     */
+    public function __wakeup(): void
+    {
+        if ($this->taxRate === 0.0 && $this->vatRate > 0) {
+            $this->taxRate = $this->vatRate;
+            $this->tax = $this->formatFloat($this->price * ($this->taxRate / 100));
+        }
     }
 
     /**
@@ -274,15 +290,15 @@ class CartItem implements Arrayable, Jsonable
 
         return new self(
             $attributes['id'],
-            $attributes['name'],
-            $attributes['subtitle'],
+            (string) $attributes['name'],
+            (string) ($attributes['subtitle'] ?? ''),
             $attributes['qty'],
-            $attributes['price'],
-            $attributes['totalPrice'],
-            $attributes['vatFcCode'],
-            $attributes['productFcCode'],
-            $attributes['vat'],
-            $attributes['urlImg'],
+            (float) $attributes['price'],
+            isset($attributes['totalPrice']) ? (float) $attributes['totalPrice'] : null,
+            (string) ($attributes['vatFcCode'] ?? ''),
+            (string) ($attributes['productFcCode'] ?? ''),
+            isset($attributes['vat']) ? (float) $attributes['vat'] : null,
+            (string) ($attributes['urlImg'] ?? ''),
             $createdAt,
             $updatedAt,
             $options
