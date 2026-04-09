@@ -43,16 +43,6 @@ trait CanBeBought
         return (float) ($this->vat ?? 0.0);
     }
 
-    public function getVatFcCode(): string
-    {
-        return (string) ($this->vat_fc_code ?? $this->vatFcCode ?? '');
-    }
-
-    public function getProductFcCode(): string
-    {
-        return (string) ($this->product_fc_code ?? $this->productFcCode ?? '');
-    }
-
     public function getUrlImg(): string
     {
         return (string) ($this->url_img ?? $this->urlImg ?? $this->image ?? '');
@@ -65,6 +55,11 @@ trait CanBeBought
         }
 
         return [];
+    }
+
+    public function getWeight(): float
+    {
+        return (float) ($this->weight ?? 0.0);
     }
 
     // --- Setters (store in transient properties for cart manipulation) ---
@@ -102,16 +97,6 @@ trait CanBeBought
     public function setVat(float $vat): void
     {
         $this->vat = $vat;
-    }
-
-    public function setVatFcCode(string $vatFcCode): void
-    {
-        $this->vatFcCode = $vatFcCode;
-    }
-
-    public function setProductFcCode(string $productFcCode): void
-    {
-        $this->productFcCode = $productFcCode;
     }
 
     public function setUrlImg($urlImg): void

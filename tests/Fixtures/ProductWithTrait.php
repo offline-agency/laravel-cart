@@ -3,11 +3,12 @@
 namespace OfflineAgency\LaravelCart\Tests\Fixtures;
 
 use OfflineAgency\LaravelCart\CanBeBought;
-use OfflineAgency\LaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
+use OfflineAgency\LaravelCart\Traits\HasFiscalCodes;
 
-class ProductWithTrait implements Buyable
+class ProductWithTrait implements FiscalBuyable
 {
-    use CanBeBought;
+    use CanBeBought, HasFiscalCodes;
 
     public $id;
 
