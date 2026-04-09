@@ -59,7 +59,7 @@ class CartInspectCommand extends Command
         if ($content->isEmpty() && $stored->content !== '' && $stored->content !== serialize(collect())) {
             if ($this->option('json')) {
                 $this->output->writeln(json_encode([
-                    'error' => 'Failed to deserialize cart content',
+                    'error' => __('laravel-cart::cart.command_inspect_error'),
                     'identifier' => $identifier,
                     'instance' => $instance,
                 ], JSON_THROW_ON_ERROR));
@@ -225,23 +225,24 @@ class CartInspectCommand extends Command
 
     private function renderNotFound(string $identifier, string $instance): void
     {
-        $safeId = e($identifier);
-        $safeInstance = e($instance);
+        $message = e(__('laravel-cart::cart.command_inspect_not_found', ['identifier' => $identifier, 'instance' => $instance]));
 
         render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-red-500 text-white font-bold"> NOT FOUND </span>
-                <span class="ml-1 text-red-400">No cart found for identifier "{$safeId}" (instance: {$safeInstance})</span>
+                <span class="ml-1 text-red-400">{$message}</span>
             </div>
         HTML);
     }
 
     private function renderDeserializeError(): void
     {
-        render(<<<'HTML'
+        $message = e(__('laravel-cart::cart.command_inspect_error'));
+
+        render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-red-500 text-white font-bold"> ERROR </span>
-                <span class="ml-1 text-red-400">Failed to deserialize cart content. Use --raw to view raw data.</span>
+                <span class="ml-1 text-red-400">{$message}</span>
             </div>
         HTML);
     }

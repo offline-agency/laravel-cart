@@ -59,18 +59,19 @@ class CartClearCommand extends Command
     private function confirmAction(?string $instance): bool
     {
         $message = $instance !== null
-            ? "This will delete all stored cart records for instance '{$instance}'. Continue?"
-            : 'This will delete ALL stored cart records from the database. Continue?';
+            ? __('laravel-cart::cart.command_clear_instance', ['instance' => $instance])
+            : __('laravel-cart::cart.command_clear_confirm');
 
         return $this->confirm($message);
     }
 
     private function renderCancelled(): void
     {
-        render(<<<'HTML'
+        $message = e(__('laravel-cart::cart.command_clear_cancelled'));
+        render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> CANCELLED </span>
-                <span class="ml-1 text-yellow-400">Operation cancelled.</span>
+                <span class="ml-1 text-yellow-400">{$message}</span>
             </div>
         HTML);
     }
@@ -78,8 +79,8 @@ class CartClearCommand extends Command
     private function renderCleared(int $deleted, string $table, ?string $instance): void
     {
         $message = $instance !== null
-            ? "Cleared {$deleted} cart record(s) for instance '".e($instance)."'."
-            : "Cleared {$deleted} cart record(s) from the '".e($table)."' table.";
+            ? e(__('laravel-cart::cart.command_clear_instance_done', ['count' => $deleted, 'instance' => $instance]))
+            : e(__('laravel-cart::cart.command_clear_done', ['count' => $deleted, 'table' => $table]));
 
         render(<<<HTML
             <div class="mx-2 my-1">

@@ -38,7 +38,7 @@ it('can be cast to an array', function (): void {
         'price' => 1000.0,
         'totalPrice' => 1200.00,
         'vat' => 200.00,
-        'vatLabel' => 'Iva Inclusa',
+        'vatLabel' => 'VAT Included',
         'vatRate' => 20.00,
         'vatFcCode' => '0',
         'productFcCode' => '0',
@@ -420,7 +420,7 @@ it('can access dynamic properties', function (): void {
     expect($cartItem->totalPrice)->toEqual(1200.00);
     expect($cartItem->price)->toEqual(1000.00);
     expect($cartItem->vat)->toEqual(22.00);
-    expect($cartItem->vatLabel)->toBe('Iva Inclusa');
+    expect($cartItem->vatLabel)->toBe('VAT Included');
 
     expect($cartItem->subtotal)->toEqual(1000.00);
 });

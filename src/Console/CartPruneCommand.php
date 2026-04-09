@@ -15,6 +15,7 @@ class CartPruneCommand extends Command
     protected $signature = 'cart:prune
         {--hours=24 : Delete carts not updated in this many hours}
         {--instance= : Only prune carts for a specific instance}
+        {--expired-only : Only prune carts where expires_at has passed (normalized carts table)}
         {--dry-run : Show how many carts would be deleted without actually deleting}
         {--force : Skip confirmation prompt}';
 
@@ -24,6 +25,10 @@ class CartPruneCommand extends Command
 
     public function handle(): int
     {
+        if ($this->option('expired-only')) {
+            return $this->handleExpiredOnly();
+        }
+
         $hours = (int) $this->option('hours');
         $instance = $this->option('instance');
         $cutoff = Carbon::now()->subHours($hours);
@@ -62,7 +67,7 @@ class CartPruneCommand extends Command
         }
 
         if (! $this->option('force')) {
-            if (! $this->confirm("This will delete {$count} cart(s) older than {$hours} hours. Continue?")) {
+            if (! $this->confirm(__('laravel-cart::cart.command_prune_confirm', ['count' => $count, 'hours' => $hours]))) {
                 $this->renderCancelled();
 
                 return self::SUCCESS;
@@ -76,12 +81,61 @@ class CartPruneCommand extends Command
         return self::SUCCESS;
     }
 
+    private function handleExpiredOnly(): int
+    {
+        $cartsTable = (string) config('cart.database.carts_table', 'carts');
+        $cartItemsTable = (string) config('cart.database.cart_items_table', 'cart_items');
+        $connection = \Illuminate\Support\Facades\DB::connection($this->connectionName());
+
+        $query = $connection->table($cartsTable)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now());
+
+        $instance = $this->option('instance');
+        if ($instance !== null) {
+            $query->where('instance', $instance);
+        }
+
+        $count = (clone $query)->count();
+
+        if ($count === 0) {
+            $this->renderEmpty(0);
+
+            return self::SUCCESS;
+        }
+
+        if ($this->option('dry-run')) {
+            $this->renderDryRun($count, 0, []);
+
+            return self::SUCCESS;
+        }
+
+        if (! $this->option('force')) {
+            if (! $this->confirm(__('laravel-cart::cart.command_prune_confirm', ['count' => $count, 'hours' => 0]))) {
+                $this->renderCancelled();
+
+                return self::SUCCESS;
+            }
+        }
+
+        // Delete items first, then carts
+        $cartIds = (clone $query)->pluck('id');
+        $connection->table($cartItemsTable)->whereIn('cart_id', $cartIds)->delete();
+        $deleted = $query->delete();
+
+        $this->renderPruned($deleted, 0);
+
+        return self::SUCCESS;
+    }
+
     private function renderDryRun(int $count, int $hours, array $breakdown): void
     {
+        $dryRunMsg = e(__('laravel-cart::cart.command_prune_dry_run', ['count' => $count, 'hours' => $hours]));
+
         render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> DRY RUN </span>
-                <span class="ml-1">Found {$count} carts older than {$hours} hours.</span>
+                <span class="ml-1">{$dryRunMsg}</span>
             </div>
         HTML);
 
@@ -98,39 +152,47 @@ class CartPruneCommand extends Command
             HTML);
         }
 
-        render(<<<'HTML'
+        $noRecordsMsg = e(__('laravel-cart::cart.command_prune_no_records'));
+
+        render(<<<HTML
             <div class="mx-2 mt-1">
-                <span class="text-gray">No records deleted.</span>
+                <span class="text-gray">{$noRecordsMsg}</span>
             </div>
         HTML);
     }
 
     private function renderPruned(int $deleted, int $hours): void
     {
+        $prunedMsg = e(__('laravel-cart::cart.command_prune_done', ['count' => $deleted, 'hours' => $hours]));
+
         render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-green-500 text-black font-bold"> PRUNED </span>
-                <span class="ml-1">Deleted {$deleted} cart(s) older than {$hours} hours.</span>
+                <span class="ml-1">{$prunedMsg}</span>
             </div>
         HTML);
     }
 
     private function renderEmpty(int $hours): void
     {
+        $emptyMsg = e(__('laravel-cart::cart.command_prune_empty'));
+
         render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> EMPTY </span>
-                <span class="ml-1 text-yellow-400">No carts older than {$hours} hours found.</span>
+                <span class="ml-1 text-yellow-400">{$emptyMsg}</span>
             </div>
         HTML);
     }
 
     private function renderCancelled(): void
     {
-        render(<<<'HTML'
+        $cancelledMsg = e(__('laravel-cart::cart.command_clear_cancelled'));
+
+        render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> CANCELLED </span>
-                <span class="ml-1 text-yellow-400">Operation cancelled.</span>
+                <span class="ml-1 text-yellow-400">{$cancelledMsg}</span>
             </div>
         HTML);
     }

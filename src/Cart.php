@@ -9,11 +9,13 @@ use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Session\SessionManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Traits\Macroable;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Contracts\CartStorage;
 use OfflineAgency\LaravelCart\Contracts\Couponable;
+use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
 use OfflineAgency\LaravelCart\Events\CartItemAdded;
 use OfflineAgency\LaravelCart\Events\CartItemRemoved;
 use OfflineAgency\LaravelCart\Events\CartItemUpdated;
@@ -22,6 +24,7 @@ use OfflineAgency\LaravelCart\Events\CartStored;
 use OfflineAgency\LaravelCart\Events\CouponApplied;
 use OfflineAgency\LaravelCart\Events\CouponRemoved as CouponRemovedEvent;
 use OfflineAgency\LaravelCart\Exceptions\CartAlreadyStoredException;
+use OfflineAgency\LaravelCart\Exceptions\CartLimitExceededException;
 use OfflineAgency\LaravelCart\Exceptions\CouponAlreadyAppliedException;
 use OfflineAgency\LaravelCart\Exceptions\CouponNotFoundException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
@@ -31,11 +34,13 @@ use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
 
 class Cart
 {
+    use Macroable;
+
     const DEFAULT_INSTANCE = 'default';
 
     const CART_OPTIONS_KEY = 'options';
 
-    private SessionManager $session;
+    private CartStorage $storage;
 
     private Dispatcher $events;
 
@@ -44,9 +49,9 @@ class Cart
     /** @var Collection<string, CartCoupon> */
     private Collection $globalCoupons;
 
-    public function __construct(SessionManager $session, Dispatcher $events)
+    public function __construct(CartStorage $storage, Dispatcher $events)
     {
-        $this->session = $session;
+        $this->storage = $storage;
         $this->events = $events;
         $this->globalCoupons = collect();
 
@@ -59,7 +64,7 @@ class Cart
 
         $this->instance = sprintf('%s.%s', 'cart', $instance);
 
-        $this->globalCoupons = $this->session->get($this->instance.'_global_coupons', collect());
+        $this->globalCoupons = $this->storage->get($this->instance.'_global_coupons', collect());
 
         return $this;
     }
@@ -109,12 +114,14 @@ class Cart
 
         $content->put($cartItem->rowId, $cartItem);
 
+        $this->enforceCartLimits($content, $cartItem);
+
         if (config('cart.use_legacy_events', true)) {
             $this->events->dispatch('cart.added', $cartItem);
         }
         $this->events->dispatch(new CartItemAdded($cartItem));
 
-        $this->session->put($this->instance, $content);
+        $this->storage->put($this->instance, $content);
 
         return $cartItem;
     }
@@ -150,12 +157,16 @@ class Cart
             $content->put($cartItem->rowId, $cartItem);
         }
 
+        if ($cartItem->qty > 0) {
+            $this->enforceCartLimits($content, $cartItem);
+        }
+
         if (config('cart.use_legacy_events', true)) {
             $this->events->dispatch('cart.updated', $cartItem);
         }
         $this->events->dispatch(new CartItemUpdated($cartItem));
 
-        $this->session->put($this->instance, $content);
+        $this->storage->put($this->instance, $content);
 
         return $cartItem;
     }
@@ -179,7 +190,7 @@ class Cart
         }
         $this->events->dispatch(new CartItemRemoved($cartItem));
 
-        $this->session->put($this->instance, $content);
+        $this->storage->put($this->instance, $content);
     }
 
     public function get(string $rowId): CartItem
@@ -187,7 +198,7 @@ class Cart
         $content = $this->getContent();
 
         if (! $content->has($rowId)) {
-            throw new InvalidRowIDException("The cart does not contain rowId {$rowId}.");
+            throw new InvalidRowIDException(__('laravel-cart::cart.invalid_row_id'));
         }
 
         return $content->get($rowId);
@@ -196,8 +207,9 @@ class Cart
     public function destroy(): void
     {
         $this->setOptions([]);
-        $this->session->remove($this->instance);
-        $this->session->remove($this->instance.'_global_coupons');
+        $this->storage->remove($this->instance);
+        $this->storage->remove($this->instance.'_global_coupons');
+        $this->storage->remove($this->instance.'_meta');
         $this->globalCoupons = collect();
     }
 
@@ -206,11 +218,11 @@ class Cart
      */
     public function content(): Collection
     {
-        if (is_null($this->session->get($this->instance))) {
+        if (is_null($this->storage->get($this->instance))) {
             return new Collection([]);
         }
 
-        return $this->session->get($this->instance);
+        return $this->storage->get($this->instance);
     }
 
     public function count(): int|float
@@ -294,6 +306,16 @@ class Cart
     }
 
     /**
+     * Check whether the cart meets the configured minimum total.
+     */
+    public function meetsMinimum(): bool
+    {
+        $min = config('cart.limits.min_total');
+
+        return $min === null || $this->rawTotal() >= (float) $min;
+    }
+
+    /**
      * Get the raw item total before cart-level coupon discounts.
      */
     private function rawTotal(): float
@@ -357,11 +379,11 @@ class Cart
     /**
      * Return a Collection grouped by tax rate for generating fiscal receipts.
      *
-     * @return Collection<int, array{rate: float, net: string, vat: string, gross: string}>
+     * @return Collection<int, array{rate: float, net: string, vat: string, tax: string, gross: string, tax_name: string}>
      */
     public function vatBreakdown(): Collection
     {
-        $roundingMode = (int) config('cart.rounding_mode', PHP_ROUND_HALF_UP);
+        $roundingMode = (int) config('cart.format.rounding_mode', PHP_ROUND_HALF_UP);
         $decimals = (int) config('cart.format.decimals', 2);
         $decimalPoint = (string) config('cart.format.decimal_point', '.');
         $thousandSep = (string) config('cart.format.thousand_separator', ',');
@@ -397,7 +419,9 @@ class Cart
                 'rate' => $group['rate'],
                 'net' => number_format($net, $decimals, $decimalPoint, $thousandSep),
                 'vat' => number_format($vat, $decimals, $decimalPoint, $thousandSep),
+                'tax' => number_format($vat, $decimals, $decimalPoint, $thousandSep),
                 'gross' => number_format($gross, $decimals, $decimalPoint, $thousandSep),
+                'tax_name' => (string) __('laravel-cart::cart.tax_name'),
             ];
         });
     }
@@ -413,7 +437,7 @@ class Cart
     public function associate(string $rowId, mixed $model): void
     {
         if (is_string($model) && ! class_exists($model)) {
-            throw new UnknownModelException("The supplied model {$model} does not exist.");
+            throw new UnknownModelException(__('laravel-cart::cart.unknown_model', ['model' => $model]));
         }
 
         $cartItem = $this->get($rowId);
@@ -424,7 +448,7 @@ class Cart
 
         $content->put($cartItem->rowId, $cartItem);
 
-        $this->session->put($this->instance, $content);
+        $this->storage->put($this->instance, $content);
     }
 
     public function store(mixed $identifier, bool $overwrite = true): void
@@ -433,32 +457,38 @@ class Cart
         $exists = $this->storedCartWithIdentifierExists($identifier);
 
         if ($exists && ! $overwrite) {
-            throw new CartAlreadyStoredException("A cart with identifier {$identifier} was already stored.");
+            throw new CartAlreadyStoredException(__('laravel-cart::cart.cart_already_stored', ['identifier' => $identifier]));
         }
 
         $serializedContent = serialize($content);
         $couponsJson = $this->globalCoupons->isNotEmpty()
             ? json_encode($this->globalCoupons->map(fn (CartCoupon $c) => $c->toArray())->values()->all())
             : null;
+        $meta = $this->meta();
+        $metaJson = ! empty($meta) ? json_encode($meta) : null;
+
+        $data = [
+            'content' => $serializedContent,
+            'coupons' => $couponsJson,
+            'updated_at' => now(),
+        ];
+
+        // Include meta if the column exists (requires 0004 migration)
+        if ($this->hasMetaColumn()) {
+            $data['meta'] = $metaJson;
+        }
 
         if ($exists) {
             $this->getConnection()->table($this->getTableName())
                 ->where('identifier', $identifier)
                 ->where('instance', $this->currentInstance())
-                ->update([
-                    'content' => $serializedContent,
-                    'coupons' => $couponsJson,
-                    'updated_at' => now(),
-                ]);
+                ->update($data);
         } else {
-            $this->getConnection()->table($this->getTableName())->insert([
+            $this->getConnection()->table($this->getTableName())->insert(array_merge([
                 'identifier' => $identifier,
                 'instance' => $this->currentInstance(),
-                'content' => $serializedContent,
-                'coupons' => $couponsJson,
                 'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            ], $data));
         }
 
         if (config('cart.use_legacy_events', true)) {
@@ -516,12 +546,20 @@ class Cart
             $this->persistGlobalCoupons();
         }
 
+        // Restore metadata if available
+        if (! empty($stored->meta)) {
+            $restoredMeta = json_decode($stored->meta, true);
+            if (is_array($restoredMeta)) {
+                $this->storage->put($this->instance.'_meta', $restoredMeta);
+            }
+        }
+
         if (config('cart.use_legacy_events', true)) {
             $this->events->dispatch('cart.restored');
         }
         $this->events->dispatch(new CartRestored($identifier, $this->currentInstance()));
 
-        $this->session->put($this->instance, $content);
+        $this->storage->put($this->instance, $content);
 
         $this->instance($currentInstance);
 
@@ -550,7 +588,107 @@ class Cart
 
     public function totalVatLabel(): string
     {
-        return $this->vat() > 0 ? 'Iva Inclusa' : 'Esente Iva';
+        return $this->vat() > 0
+            ? __('laravel-cart::cart.tax_included')
+            : __('laravel-cart::cart.tax_exempt');
+    }
+
+    public function taxName(): string
+    {
+        return __('laravel-cart::cart.tax_name');
+    }
+
+    // ── Serialization ──────────────────────────────────────────────────────────
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            'instance' => $this->currentInstance(),
+            'items' => $this->getContent()->map(fn (CartItem $item) => $item->toArray())->values()->all(),
+            'count' => $this->count(),
+            'uniqueCount' => $this->uniqueCount(),
+            'subtotal' => $this->subtotal(),
+            'vat' => $this->vat(),
+            'total' => $this->total(),
+            'discount' => $this->discount(),
+            'coupons' => $this->listCoupons()->values()->all(),
+            'meta' => $this->meta(),
+            'isEmpty' => $this->isEmpty(),
+        ];
+    }
+
+    public function toJson(int $options = 0): string
+    {
+        return (string) json_encode($this->toArray(), $options);
+    }
+
+    /**
+     * Calculate the total weight of all items in the cart.
+     */
+    /**
+     * Sum a given attribute across all items in the cart.
+     */
+    public function sum(string $attribute): float
+    {
+        return (float) $this->getContent()->sum($attribute);
+    }
+
+    public function weight(): float
+    {
+        return $this->getContent()->reduce(function (float $total, CartItem $item): float {
+            $itemWeight = (float) $item->options->get('weight', 0);
+
+            return $total + ($itemWeight * $item->qty);
+        }, 0.0);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function snapshot(): array
+    {
+        return [
+            'timestamp' => now()->toIso8601String(),
+            ...$this->toArray(),
+        ];
+    }
+
+    // ── Metadata ───────────────────────────────────────────────────────────────
+
+    public function setMeta(string $key, mixed $value): static
+    {
+        $meta = $this->meta();
+        $meta[$key] = $value;
+        $this->storage->put($this->instance.'_meta', $meta);
+
+        return $this;
+    }
+
+    public function getMeta(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->meta(), $key, $default);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function meta(): array
+    {
+        $meta = $this->storage->get($this->instance.'_meta', []);
+
+        return is_array($meta) ? $meta : [];
+    }
+
+    public function forgetMeta(string $key): static
+    {
+        $meta = $this->meta();
+        unset($meta[$key]);
+        $this->storage->put($this->instance.'_meta', $meta);
+
+        return $this;
     }
 
     /**
@@ -558,8 +696,8 @@ class Cart
      */
     protected function getContent(): Collection
     {
-        return $this->session->has($this->instance)
-            ? $this->session->get($this->instance)
+        return $this->storage->has($this->instance)
+            ? $this->storage->get($this->instance)
             : new Collection;
     }
 
@@ -568,8 +706,8 @@ class Cart
      */
     protected function getCartInfo(): Collection
     {
-        return $this->session->has($this->getCartInstance())
-            ? $this->session->get($this->getCartInstance())
+        return $this->storage->has($this->getCartInstance())
+            ? $this->storage->get($this->getCartInstance())
             : new Collection();
     }
 
@@ -597,7 +735,7 @@ class Cart
             $cartItem->setQuantity($id['qty']);
         } else {
             if (! is_numeric($price)) {
-                throw new \InvalidArgumentException('Please supply a valid price.');
+                throw new \InvalidArgumentException(__('laravel-cart::cart.invalid_price'));
             }
             $cartItem = CartItem::fromAttributes(
                 $id, $name, $subtitle, $qty, $price, $totalPrice,
@@ -639,6 +777,16 @@ class Cart
         $connection = config('cart.database.connection');
 
         return is_null($connection) ? config('database.default') : $connection;
+    }
+
+    private function hasMetaColumn(): bool
+    {
+        try {
+            return \Illuminate\Support\Facades\Schema::connection($this->getConnectionName())
+                ->hasColumn($this->getTableName(), 'meta');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -757,7 +905,7 @@ class Cart
 
             $content->put($cartItem->rowId, $cartItem);
 
-            $this->session->put($this->instance, $content);
+            $this->storage->put($this->instance, $content);
         } else {
             $this->applyGlobalCoupon($couponCode, $couponType, $couponValue);
         }
@@ -773,7 +921,7 @@ class Cart
 
         $content->put($cartItem->rowId, $cartItem);
 
-        $this->session->put($this->instance, $content);
+        $this->storage->put($this->instance, $content);
 
         if ($cartItem->name === 'discountCartItem') {
             $this->remove($rowId);
@@ -825,7 +973,7 @@ class Cart
 
         if (! $found) {
             throw new InvalidCouponHashException(
-                "Coupon [{$couponCode}] not found in cart."
+                __('laravel-cart::cart.coupon_not_found', ['code' => $couponCode])
             );
         }
 
@@ -849,7 +997,7 @@ class Cart
             }
         }
 
-        $this->session->put($this->instance, $content);
+        $this->storage->put($this->instance, $content);
 
         if (config('cart.use_legacy_events', true)) {
             $this->events->dispatch('cart.coupons_cleared');
@@ -899,14 +1047,17 @@ class Cart
         }
 
         if ($coupon->isExpired()) {
-            throw new InvalidCouponException($coupon->code, "Coupon [{$coupon->code}] has expired.");
+            throw new InvalidCouponException(
+                $coupon->code,
+                __('laravel-cart::cart.coupon_expired', ['code' => $coupon->code])
+            );
         }
 
         $currentTotal = $this->rawTotal();
         if (! $coupon->isApplicableTo($currentTotal)) {
             throw new InvalidCouponException(
                 $coupon->code,
-                "Coupon [{$coupon->code}] requires a minimum cart amount of {$coupon->minCartAmount}."
+                __('laravel-cart::cart.coupon_min_amount', ['code' => $coupon->code, 'amount' => $coupon->minCartAmount])
             );
         }
 
@@ -1074,7 +1225,7 @@ class Cart
     public function removeGlobalCoupon(string $couponHash): static
     {
         if (! $this->globalCoupons->has($couponHash)) {
-            throw new InvalidCouponHashException("Global coupon [{$couponHash}] not found.");
+            throw new InvalidCouponHashException(__('laravel-cart::cart.coupon_not_found', ['code' => $couponHash]));
         }
 
         $coupon = $this->globalCoupons->get($couponHash);
@@ -1173,7 +1324,7 @@ class Cart
 
         $content->put(self::CART_OPTIONS_KEY, $options);
 
-        $this->session->put($this->getCartInstance(), $content);
+        $this->storage->put($this->getCartInstance(), $content);
     }
 
     public function getOptionsByKey(mixed $key, mixed $default_value = null): mixed
@@ -1188,13 +1339,62 @@ class Cart
         return $this->instance.'_cart_info';
     }
 
+    /**
+     * Enforce configured cart limits before persisting a change.
+     *
+     * @param  Collection<string, CartItem>  $content  The cart content including the new/updated item.
+     * @param  CartItem  $cartItem  The item being added or updated.
+     *
+     * @throws CartLimitExceededException
+     */
+    private function enforceCartLimits(Collection $content, CartItem $cartItem): void
+    {
+        $maxQty = config('cart.limits.max_qty_per_item');
+        if ($maxQty !== null && $cartItem->qty > (int) $maxQty) {
+            throw new CartLimitExceededException(
+                (string) __('laravel-cart::cart.limit_max_qty'),
+                (int) $maxQty,
+                $cartItem->qty,
+            );
+        }
+
+        $maxItems = config('cart.limits.max_items');
+        if ($maxItems !== null && $content->count() > (int) $maxItems) {
+            throw new CartLimitExceededException(
+                (string) __('laravel-cart::cart.limit_max_items'),
+                (int) $maxItems,
+                $content->count(),
+            );
+        }
+
+        $maxTotal = config('cart.limits.max_total');
+        if ($maxTotal !== null) {
+            $total = $content->reduce(function (float $total, CartItem $item): float {
+                return $total + $item->totalPrice + (float) (($item->qty - 1) * $item->originalTotalPrice);
+            }, 0.0);
+
+            if ($total > (float) $maxTotal) {
+                throw new CartLimitExceededException(
+                    (string) __('laravel-cart::cart.limit_max_total'),
+                    (float) $maxTotal,
+                    $total,
+                );
+            }
+        }
+    }
+
     private function formatFloat(float $value): float
     {
-        return (float) number_format($value, 2, '.', '');
+        $decimals = (int) config('cart.format.decimals', 2);
+
+        /** @var int<0,4> $mode */
+        $mode = (int) config('cart.format.rounding_mode', PHP_ROUND_HALF_UP);
+
+        return round($value, $decimals, $mode);
     }
 
     private function persistGlobalCoupons(): void
     {
-        $this->session->put($this->instance.'_global_coupons', $this->globalCoupons);
+        $this->storage->put($this->instance.'_global_coupons', $this->globalCoupons);
     }
 }

@@ -127,19 +127,23 @@ class CartListCommand extends Command
 
     private function renderFooter(int $shown, int $total): void
     {
+        $footer = e(__('laravel-cart::cart.command_list_footer', ['shown' => $shown, 'total' => $total]));
+
         render(<<<HTML
             <div class="mx-2 mt-1">
-                <span class="text-gray">Showing {$shown} of {$total} stored carts.</span>
+                <span class="text-gray">{$footer}</span>
             </div>
         HTML);
     }
 
     private function renderEmpty(): void
     {
-        render(<<<'HTML'
+        $empty = e(__('laravel-cart::cart.command_list_empty'));
+
+        render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> EMPTY </span>
-                <span class="ml-1 text-yellow-400">No stored carts found.</span>
+                <span class="ml-1 text-yellow-400">{$empty}</span>
             </div>
         HTML);
     }

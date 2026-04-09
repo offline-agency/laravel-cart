@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart;
 
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\DatabaseManager;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\ServiceProvider;
 use OfflineAgency\LaravelCart\Console\CartClearCommand;
@@ -12,6 +16,10 @@ use OfflineAgency\LaravelCart\Console\CartListCommand;
 use OfflineAgency\LaravelCart\Console\CartMigrateDriverCommand;
 use OfflineAgency\LaravelCart\Console\CartPruneCommand;
 use OfflineAgency\LaravelCart\Console\CartStatsCommand;
+use OfflineAgency\LaravelCart\Contracts\CartStorage;
+use OfflineAgency\LaravelCart\Exceptions\InvalidDriverException;
+use OfflineAgency\LaravelCart\Storage\DatabaseStorage;
+use OfflineAgency\LaravelCart\Storage\SessionStorage;
 
 class CartServiceProvider extends ServiceProvider
 {
@@ -20,9 +28,24 @@ class CartServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton('cart', Cart::class);
-
         $this->mergeConfigFrom(__DIR__.'/../config/cart.php', 'cart');
+
+        $this->app->singleton(CartStorage::class, function ($app) {
+            $driver = (string) config('cart.storage.driver', 'session');
+
+            return match ($driver) {
+                'database' => new DatabaseStorage($app->make(DatabaseManager::class)),
+                'session' => new SessionStorage($app->make(SessionManager::class)),
+                default => throw new InvalidDriverException($driver),
+            };
+        });
+
+        $this->app->singleton('cart', function ($app) {
+            return new Cart(
+                $app->make(CartStorage::class),
+                $app->make(Dispatcher::class),
+            );
+        });
     }
 
     /**
@@ -30,6 +53,8 @@ class CartServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->loadTranslationsFrom(__DIR__.'/../lang', 'laravel-cart');
+
         $this->registerPublishables();
         $this->registerLogoutListener();
         $this->commands([
@@ -46,6 +71,15 @@ class CartServiceProvider extends ServiceProvider
     private function registerPublishables(): void
     {
         $this->publishes([__DIR__.'/../config/cart.php' => config_path('cart.php')], 'config');
+
+        $this->publishes([
+            __DIR__.'/../lang' => $this->app->langPath('vendor/laravel-cart'),
+        ], 'laravel-cart-lang');
+
+        $this->publishes([
+            __DIR__.'/../database/migrations/0002_00_00_000002_create_carts_table.php' => database_path('migrations/'.date('Y_m_d_His').'_create_carts_table.php'),
+            __DIR__.'/../database/migrations/0003_00_00_000003_create_cart_items_table.php' => database_path('migrations/'.date('Y_m_d_His').'_create_cart_items_table.php'),
+        ], 'cart-database-migrations');
 
         if (! class_exists('CreateCartTable')) {
             $timestamp = date('Y_m_d_His');

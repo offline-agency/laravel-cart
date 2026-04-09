@@ -34,7 +34,7 @@ class CartExportCommand extends Command
 
         $dir = dirname($path);
         if (! is_dir($dir)) {
-            $this->renderError("Directory does not exist: {$dir}");
+            $this->renderError(__('laravel-cart::cart.command_export_dir_not_found', ['dir' => $dir]));
 
             return self::FAILURE;
         }
@@ -50,7 +50,7 @@ class CartExportCommand extends Command
                 $sinceDate = Carbon::parse($since);
                 $query->where('created_at', '>=', $sinceDate);
             } catch (\Throwable) {
-                $this->renderError("Invalid date format: {$since}. Use Y-m-d.");
+                $this->renderError(__('laravel-cart::cart.command_export_invalid_date', ['date' => $since]));
 
                 return self::FAILURE;
             }
@@ -65,7 +65,7 @@ class CartExportCommand extends Command
         }
 
         if ($totalCount > 5000) {
-            $this->renderWarning("Large export: {$totalCount} carts. This may take a while.");
+            $this->renderWarning(__('laravel-cart::cart.command_export_warning', ['limit' => $totalCount]));
         }
 
         $this->renderExporting($totalCount);
@@ -110,7 +110,7 @@ class CartExportCommand extends Command
 
         $size = $this->formatFileSize((int) filesize($path));
 
-        $this->renderDone(e($path), $size);
+        $this->renderDone(e(__('laravel-cart::cart.command_export_done', ['path' => $path, 'size' => $size])));
 
         return self::SUCCESS;
     }
@@ -133,22 +133,24 @@ class CartExportCommand extends Command
         HTML);
     }
 
-    private function renderDone(string $path, string $size): void
+    private function renderDone(string $message): void
     {
         render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-green-500 text-black font-bold"> DONE </span>
-                <span class="ml-1">Exported to <span class="text-blue-400">{$path}</span> ({$size})</span>
+                <span class="ml-1">{$message}</span>
             </div>
         HTML);
     }
 
     private function renderEmpty(): void
     {
-        render(<<<'HTML'
+        $message = e(__('laravel-cart::cart.command_export_empty'));
+
+        render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> EMPTY </span>
-                <span class="ml-1 text-yellow-400">No stored carts found matching criteria.</span>
+                <span class="ml-1 text-yellow-400">{$message}</span>
             </div>
         HTML);
     }

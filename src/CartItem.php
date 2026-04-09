@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
 
 /**
  * @property-read mixed $model
@@ -96,10 +97,10 @@ class CartItem implements Arrayable, Jsonable
         array $options = []
     ) {
         if (empty($id)) {
-            throw new InvalidArgumentException('Please supply a valid identifier.');
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_id'));
         }
         if (empty($name)) {
-            throw new InvalidArgumentException('Please supply a valid name.');
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_name'));
         }
 
         $this->rowId = $this->generateRowId((string) $id, $options);
@@ -114,9 +115,38 @@ class CartItem implements Arrayable, Jsonable
         $this->price = floatval($price);
         $this->totalPrice = $computedTotalPrice;
         $this->vat = floatval($vat);
-        $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
-        $this->vatRate = $this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0;
-        $this->taxRate = $this->vatRate;
+
+        // Auto-apply default tax rate when no explicit VAT is provided
+        if ($this->vat === 0.0 && $this->price > 0 && $vat === null) {
+            $defaultRate = (float) config('cart.tax.default_rate', 0.0);
+            if ($defaultRate > 0) {
+                $behavior = (string) config('cart.tax.tax_behavior', 'inclusive');
+                if ($behavior === 'exclusive') {
+                    $this->vat = $this->formatFloat($this->price * $defaultRate / 100);
+                    $this->totalPrice = $this->formatFloat($this->price + $this->vat);
+                    $this->originalTotalPrice = $this->totalPrice;
+                    $this->originalVat = $this->vat;
+                } else {
+                    $this->vat = $this->formatFloat($this->totalPrice * $defaultRate / (100 + $defaultRate));
+                    $this->price = $this->formatFloat($this->totalPrice - $this->vat);
+                    $this->originalPrice = $this->price;
+                    $this->originalVat = $this->vat;
+                }
+                $this->vatRate = $defaultRate;
+                $this->taxRate = $defaultRate;
+            }
+        }
+
+        $this->vatLabel = $this->vat > 0
+            ? __('laravel-cart::cart.tax_included')
+            : __('laravel-cart::cart.tax_exempt');
+
+        if (! isset($this->vatRate)) {
+            $this->vatRate = $this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0;
+        }
+        if (! isset($this->taxRate) || $this->taxRate === 0.0) {
+            $this->taxRate = $this->vatRate;
+        }
         $this->tax = $this->formatFloat($this->price * ($this->taxRate / 100));
         $this->vatFcCode = $vatFcCode;
         $this->productFcCode = $productFcCode;
@@ -150,7 +180,7 @@ class CartItem implements Arrayable, Jsonable
     public function setQuantity($qty)
     {
         if (empty($qty)) {
-            throw new InvalidArgumentException('Please supply a valid quantity. Provided: '.$qty);
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_qty', ['qty' => $qty]));
         }
 
         $this->qty = $qty;
@@ -263,8 +293,8 @@ class CartItem implements Arrayable, Jsonable
             $item->getQty(),
             $item->getPrice(),
             $item->getTotalPrice(),
-            $item->getVatFcCode(),
-            $item->getProductFcCode(),
+            $item instanceof FiscalBuyable ? $item->getVatFcCode() : '',
+            $item instanceof FiscalBuyable ? $item->getProductFcCode() : '',
             $item->getVat(),
             $item->getUrlImg(),
             Carbon::now(),
@@ -386,6 +416,15 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
+     * Determine if the cart item represents the given Buyable.
+     */
+    public function is(Buyable $buyable): bool
+    {
+        return $this->id == $buyable->getId()
+            && $this->associatedModel === get_class($buyable);
+    }
+
+    /**
      * Convert the object to its JSON representation.
      *
      * @param  int  $options
@@ -495,11 +534,11 @@ class CartItem implements Arrayable, Jsonable
 
     public function formatFloat(float $value): float
     {
-        return (float) number_format(
-            $value, // the number to format
-            2, // how many decimal points
-            '.', // decimal separator
-            '' // thousands separator, set it to blank
-        );
+        $decimals = (int) config('cart.format.decimals', 2);
+
+        /** @var int<0,4> $mode */
+        $mode = (int) config('cart.format.rounding_mode', PHP_ROUND_HALF_UP);
+
+        return round($value, $decimals, $mode);
     }
 }

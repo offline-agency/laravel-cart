@@ -30,14 +30,14 @@ class CartMigrateDriverCommand extends Command
         $chunk = (int) $this->option('chunk');
 
         if ($from === $to) {
-            $this->renderError('Source and target drivers must be different.');
+            $this->renderError(__('laravel-cart::cart.command_migrate_same_driver'));
 
             return self::FAILURE;
         }
 
         $validDrivers = ['session', 'database'];
         if (! in_array($from, $validDrivers, true) || ! in_array($to, $validDrivers, true)) {
-            $this->renderError('Valid drivers are: session, database.');
+            $this->renderError(__('laravel-cart::cart.command_migrate_invalid_driver'));
 
             return self::FAILURE;
         }
@@ -45,11 +45,7 @@ class CartMigrateDriverCommand extends Command
         $this->renderMigrateHeader($from, $to);
 
         if ($from === 'database' && $to === 'session') {
-            $this->renderUnsupported(
-                'Cannot migrate from database to session via CLI. '
-                .'Session writes require an active HTTP request. '
-                .'Use Cart::restore() within an authenticated request context instead.'
-            );
+            $this->renderUnsupported(__('laravel-cart::cart.command_migrate_no_db_to_session'));
 
             return self::FAILURE;
         }
@@ -66,11 +62,7 @@ class CartMigrateDriverCommand extends Command
         $sessionDriver = config('session.driver');
 
         if ($sessionDriver !== 'database' && $sessionDriver !== 'file') {
-            $this->renderUnsupported(
-                "Session driver '{$sessionDriver}' is not supported for CLI migration. "
-                .'Only "database" and "file" session drivers can be read from the CLI. '
-                .'Use Cart::store() within an authenticated request context for other drivers.'
-            );
+            $this->renderUnsupported(__('laravel-cart::cart.command_migrate_unsupported_session', ['driver' => $sessionDriver]));
 
             return self::FAILURE;
         }
@@ -106,7 +98,7 @@ class CartMigrateDriverCommand extends Command
         }
 
         if (! $this->option('force')) {
-            if (! $this->confirm("Migrate cart data from {$total} session(s) to the database? Continue?")) {
+            if (! $this->confirm(__('laravel-cart::cart.command_migrate_confirm', ['count' => $total]))) {
                 $this->renderCancelled();
 
                 return self::SUCCESS;
@@ -206,7 +198,7 @@ class CartMigrateDriverCommand extends Command
         $path = config('session.files', storage_path('framework/sessions'));
 
         if (! is_dir($path)) {
-            $this->renderError("Session files directory not found: {$path}");
+            $this->renderError(__('laravel-cart::cart.command_migrate_session_dir_not_found', ['path' => $path]));
 
             return self::FAILURE;
         }
@@ -229,7 +221,7 @@ class CartMigrateDriverCommand extends Command
         }
 
         if (! $this->option('force')) {
-            if (! $this->confirm("Migrate cart data from {$total} session file(s) to the database? Continue?")) {
+            if (! $this->confirm(__('laravel-cart::cart.command_migrate_confirm', ['count' => $total]))) {
                 $this->renderCancelled();
 
                 return self::SUCCESS;
@@ -363,22 +355,22 @@ class CartMigrateDriverCommand extends Command
 
     private function renderMigrateResult(int $migrated, int $failed, int $skipped): void
     {
+        $doneMessage = e(__('laravel-cart::cart.command_migrate_done', ['migrated' => $migrated, 'failed' => $failed, 'skipped' => $skipped]));
+
         render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-green-500 text-black font-bold"> DONE </span>
-                <span class="ml-1">
-                    Migrated <span class="font-bold text-white">{$migrated}</span> carts.
-                    Failed: <span class="font-bold text-red-400">{$failed}</span>.
-                    Skipped: <span class="font-bold text-yellow-400">{$skipped}</span>.
-                </span>
+                <span class="ml-1">{$doneMessage}</span>
             </div>
         HTML);
 
         if ($failed > 0) {
+            $warnMessage = e(__('laravel-cart::cart.command_migrate_failed_warning', ['count' => $failed]));
+
             render(<<<HTML
                 <div class="mx-2">
                     <span class="px-1 bg-yellow-500 text-black font-bold"> WARN </span>
-                    <span class="ml-1 text-yellow-400">{$failed} carts failed to migrate (see above for details).</span>
+                    <span class="ml-1 text-yellow-400">{$warnMessage}</span>
                 </div>
             HTML);
         }
@@ -400,20 +392,24 @@ class CartMigrateDriverCommand extends Command
 
     private function renderDryRun(int $count): void
     {
+        $message = e(__('laravel-cart::cart.command_migrate_dry_run', ['count' => $count]));
+
         render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> DRY RUN </span>
-                <span class="ml-1">Found {$count} sessions to scan. No records written.</span>
+                <span class="ml-1">{$message}</span>
             </div>
         HTML);
     }
 
     private function renderEmpty(): void
     {
-        render(<<<'HTML'
+        $message = e(__('laravel-cart::cart.command_migrate_empty'));
+
+        render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> EMPTY </span>
-                <span class="ml-1 text-yellow-400">No sessions found.</span>
+                <span class="ml-1 text-yellow-400">{$message}</span>
             </div>
         HTML);
     }
@@ -444,10 +440,12 @@ class CartMigrateDriverCommand extends Command
 
     private function renderCancelled(): void
     {
-        render(<<<'HTML'
+        $message = e(__('laravel-cart::cart.command_clear_cancelled'));
+
+        render(<<<HTML
             <div class="mx-2 my-1">
                 <span class="px-1 bg-yellow-500 text-black font-bold"> CANCELLED </span>
-                <span class="ml-1 text-yellow-400">Operation cancelled.</span>
+                <span class="ml-1 text-yellow-400">{$message}</span>
             </div>
         HTML);
     }
