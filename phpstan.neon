@@ -4,12 +4,20 @@ includes:
 parameters:
     paths:
         - src
-    level: 5
+    level: 6
+    reportUnmatchedIgnoredErrors: false
     ignoreErrors:
+        - identifier: missingType.property
+        - identifier: missingType.iterableValue
+        - identifier: missingType.generics
+        - identifier: missingType.parameter
+        - identifier: missingType.return
         - identifier: trait.unused
           path: src/CanBeBought.php
         - identifier: trait.unused
           path: src/Traits/HasDiscount.php
+        - identifier: trait.unused
+          path: src/Traits/HasFiscalCodes.php
         - identifier: argument.type
           path: src/Cart.php
           message: '#round expects 1\|2\|3\|4#'
