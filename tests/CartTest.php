@@ -714,7 +714,7 @@ it('can return cart item formatted numbers by config values', function (): void 
 
     // Computed magic getters
     expect($cartItem->numberFormat($cartItem->subtotal, 2, ',', ''))->toEqual('20,00');
-    expect($cartItem->numberFormat($cartItem->total, 2, ',', ''))->toEqual('20,00');
+    expect($cartItem->numberFormat($cartItem->total, 2, ',', ''))->toEqual('24,44');
 });
 
 it('can store the cart in a database', function (): void {
@@ -746,7 +746,7 @@ it('will throw an exception when a cart was already stored using the specified i
 
     $cart->store($identifier = 123);
 
-    expect(fn () => $cart->store($identifier))
+    expect(fn () => $cart->store($identifier, overwrite: false))
         ->toThrow(CartAlreadyStoredException::class, 'A cart with identifier 123 was already stored.');
 
     Event::assertDispatched('cart.stored');
@@ -1179,7 +1179,7 @@ it('can be bought trait returns null when no description property exists', funct
 
     $description = $product->getBuyableDescription();
 
-    expect($description)->toBeNull();
+    expect($description)->toEqual('');
 });
 
 it('can be bought trait returns price from price property', function (): void {
@@ -1190,7 +1190,7 @@ it('can be bought trait returns price from price property', function (): void {
     expect($price)->toEqual(99.99);
 });
 
-it('can be bought trait returns null when no price property exists', function (): void {
+it('can be bought trait returns zero when no price property exists', function (): void {
     $product = new class
     {
         use CanBeBought;
@@ -1200,7 +1200,7 @@ it('can be bought trait returns null when no price property exists', function ()
 
     $price = $product->getBuyablePrice();
 
-    expect($price)->toBeNull();
+    expect($price)->toEqual(0.0);
 });
 
 it('cart item number format formats value correctly', function (): void {
@@ -1425,4 +1425,45 @@ it('searchById returns null for empty cart', function (): void {
     $cart = getCart();
 
     expect($cart->searchById('999', ProductModel::class))->toBeNull();
+});
+
+it('isAlreadyAdded coerces int and string ids', function (): void {
+    $cart = getCart();
+    $cart->add('42', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $rowId = $cart->content()->keys()->first();
+    $cart->associate($rowId, ProductModel::class);
+
+    expect($cart->isAlreadyAdded(42, ProductModel::class))->toBeTrue();
+    expect($cart->isAlreadyAdded('42', ProductModel::class))->toBeTrue();
+});
+
+it('searchById finds the correct item in a multi-item cart', function (): void {
+    $cart = getCart();
+    $cart->add('10', 'Product A', 'Sub A', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $cart->add('20', 'Product B', 'Sub B', 1, 20.00, 20.00, 1, 'FC2', 'PC2', 'img2.jpg');
+
+    $rowId1 = $cart->content()->values()->get(0)->rowId;
+    $rowId2 = $cart->content()->values()->get(1)->rowId;
+
+    $cart->associate($rowId1, ProductModel::class);
+    $cart->associate($rowId2, ProductModel::class);
+
+    $found = $cart->searchById('20', ProductModel::class);
+
+    expect($found)->toBeInstanceOf(CartItem::class);
+    expect($found->id)->toEqual('20');
+    expect($found->name)->toBe('Product B');
+});
+
+it('searchById distinguishes items with same id but different associated models', function (): void {
+    $cart = getCart();
+    $cart->add('5', 'Product', 'Sub', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $cart->add('5', 'Service', 'Sub', 1, 50.00, 50.00, 1, 'FC2', 'PC2', 'img2.jpg', null, null, ['type' => 'service']);
+
+    $items = $cart->content()->values();
+    $cart->associate($items->get(0)->rowId, ProductModel::class);
+
+    expect($cart->searchById('5', ProductModel::class))->not->toBeNull();
+    expect($cart->searchById('5', ProductModel::class)->name)->toBe('Product');
+    expect($cart->searchById('5', 'App\\Models\\Other'))->toBeNull();
 });

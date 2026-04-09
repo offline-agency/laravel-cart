@@ -427,22 +427,39 @@ class Cart
         $this->session->put($this->instance, $content);
     }
 
-    public function store(mixed $identifier): void
+    public function store(mixed $identifier, bool $overwrite = true): void
     {
         $content = $this->getContent();
+        $exists = $this->storedCartWithIdentifierExists($identifier);
 
-        if ($this->storedCartWithIdentifierExists($identifier)) {
+        if ($exists && ! $overwrite) {
             throw new CartAlreadyStoredException("A cart with identifier {$identifier} was already stored.");
         }
 
-        $this->getConnection()->table($this->getTableName())->insert([
-            'identifier' => $identifier,
-            'instance' => $this->currentInstance(),
-            'content' => serialize($content),
-            'coupons' => $this->globalCoupons->isNotEmpty()
-                ? json_encode($this->globalCoupons->map(fn (CartCoupon $c) => $c->toArray())->values()->all())
-                : null,
-        ]);
+        $serializedContent = serialize($content);
+        $couponsJson = $this->globalCoupons->isNotEmpty()
+            ? json_encode($this->globalCoupons->map(fn (CartCoupon $c) => $c->toArray())->values()->all())
+            : null;
+
+        if ($exists) {
+            $this->getConnection()->table($this->getTableName())
+                ->where('identifier', $identifier)
+                ->where('instance', $this->currentInstance())
+                ->update([
+                    'content' => $serializedContent,
+                    'coupons' => $couponsJson,
+                    'updated_at' => now(),
+                ]);
+        } else {
+            $this->getConnection()->table($this->getTableName())->insert([
+                'identifier' => $identifier,
+                'instance' => $this->currentInstance(),
+                'content' => $serializedContent,
+                'coupons' => $couponsJson,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         if (config('cart.use_legacy_events', true)) {
             $this->events->dispatch('cart.stored');
@@ -454,7 +471,7 @@ class Cart
      * @param  bool  $mergeOnRestore  When true the restored cart is merged with the current session
      *                                cart (union by rowId) instead of replacing it.
      */
-    public function restore(mixed $identifier, bool $mergeOnRestore = false): void
+    public function restore(mixed $identifier, bool $mergeOnRestore = false, bool $keepStored = false): void
     {
         if (! $this->storedCartWithIdentifierExists($identifier)) {
             return;
@@ -508,8 +525,10 @@ class Cart
 
         $this->instance($currentInstance);
 
-        $this->getConnection()->table($this->getTableName())
-            ->where('identifier', $identifier)->delete();
+        if (! $keepStored) {
+            $this->getConnection()->table($this->getTableName())
+                ->where('identifier', $identifier)->delete();
+        }
     }
 
     public function __get(string $attribute): ?float
