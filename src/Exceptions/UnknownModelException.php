@@ -1,9 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart\Exceptions;
 
-use RuntimeException;
-
-class UnknownModelException extends RuntimeException
+final class UnknownModelException extends CartException
 {
 }

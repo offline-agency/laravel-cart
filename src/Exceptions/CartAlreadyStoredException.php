@@ -1,9 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart\Exceptions;
 
-use RuntimeException;
-
-class CartAlreadyStoredException extends RuntimeException
+final class CartAlreadyStoredException extends CartException
 {
 }
