@@ -3,8 +3,9 @@
 namespace OfflineAgency\LaravelCart\Tests\Fixtures;
 
 use OfflineAgency\LaravelCart\CanBeBought;
+use OfflineAgency\LaravelCart\Contracts\Buyable;
 
-class ProductWithTrait
+class ProductWithTrait implements Buyable
 {
     use CanBeBought;
 
@@ -17,6 +18,22 @@ class ProductWithTrait
     public $description;
 
     public $price;
+
+    public $subtitle;
+
+    public $qty;
+
+    public $totalPrice;
+
+    public $vat;
+
+    public $vatFcCode;
+
+    public $productFcCode;
+
+    public $urlImg;
+
+    public $cartOptions = [];
 
     public function __construct($id = null, $name = null, $title = null, $description = null, $price = null)
     {
