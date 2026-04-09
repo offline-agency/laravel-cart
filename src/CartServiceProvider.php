@@ -6,6 +6,12 @@ use Illuminate\Auth\Events\Logout;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\ServiceProvider;
 use OfflineAgency\LaravelCart\Console\CartClearCommand;
+use OfflineAgency\LaravelCart\Console\CartExportCommand;
+use OfflineAgency\LaravelCart\Console\CartInspectCommand;
+use OfflineAgency\LaravelCart\Console\CartListCommand;
+use OfflineAgency\LaravelCart\Console\CartMigrateDriverCommand;
+use OfflineAgency\LaravelCart\Console\CartPruneCommand;
+use OfflineAgency\LaravelCart\Console\CartStatsCommand;
 
 class CartServiceProvider extends ServiceProvider
 {
@@ -26,7 +32,15 @@ class CartServiceProvider extends ServiceProvider
     {
         $this->registerPublishables();
         $this->registerLogoutListener();
-        $this->commands([CartClearCommand::class]);
+        $this->commands([
+            CartClearCommand::class,
+            CartStatsCommand::class,
+            CartListCommand::class,
+            CartInspectCommand::class,
+            CartPruneCommand::class,
+            CartExportCommand::class,
+            CartMigrateDriverCommand::class,
+        ]);
     }
 
     private function registerPublishables(): void
