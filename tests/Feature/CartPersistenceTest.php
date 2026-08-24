@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\DB;
+
 beforeEach(function (): void {
     $this->cart = $this->app->make('cart');
     $this->cart->destroy();
@@ -102,4 +104,39 @@ it('store and restore roundtrip for cart-level coupons via DB', function (): voi
 
     expect($this->cart->getGlobalCoupons())->toHaveCount(1)
         ->and($this->cart->getGlobalCoupons()->first()->code)->toBe('DB_COUPON');
+});
+
+it('mergeOnRestore keeps the session item when the same rowId is stored', function (): void {
+    $stored = $this->cart->add('1', 'Stored name', '', 5, 10.0, 12.2, 2.2);
+    $rowId = $stored->rowId;
+
+    $this->cart->store('user-merge-conflict');
+    $this->cart->destroy();
+
+    // Same id and options produce the same rowId, with a different quantity
+    $this->cart->add('1', 'Session name', '', 1, 10.0, 12.2, 2.2);
+
+    $this->cart->restore('user-merge-conflict', mergeOnRestore: true);
+
+    expect($this->cart->content())->toHaveCount(1)
+        ->and($this->cart->get($rowId)->qty)->toBe(1)
+        ->and($this->cart->get($rowId)->name)->toBe('Session name');
+});
+
+it('stores a null coupons column when the cart has no cart-level coupons', function (): void {
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
+    $this->cart->store('user-no-coupons');
+
+    $row = DB::connection('testing')->table('cart')
+        ->where('identifier', 'user-no-coupons')->first();
+
+    expect($row->coupons)->toBeNull();
+});
+
+it('restore is a no-op for an unknown identifier', function (): void {
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
+
+    $this->cart->restore('never-stored');
+
+    expect($this->cart->content())->toHaveCount(1);
 });

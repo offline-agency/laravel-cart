@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\Carbon;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
 use OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel;
@@ -550,4 +551,47 @@ it('calculates tax via magic get', function (): void {
     unset($cartItem->tax);
 
     expect($cartItem->tax)->toEqual(10.00);
+});
+
+it('fromArray keeps the supplied Carbon timestamps', function (): void {
+    $createdAt = Carbon::parse('2026-01-02 03:04:05');
+    $updatedAt = Carbon::parse('2026-02-03 04:05:06');
+
+    $item = CartItem::fromArray([
+        'id' => '1',
+        'name' => 'Product',
+        'subtitle' => 'Subtitle',
+        'qty' => 2,
+        'price' => 10.0,
+        'totalPrice' => 12.2,
+        'vat' => 2.2,
+        'vatFcCode' => '',
+        'productFcCode' => '',
+        'urlImg' => '',
+        'createdAt' => $createdAt,
+        'updatedAt' => $updatedAt,
+        'options' => ['size' => 'L'],
+    ]);
+
+    expect($item->createdAt)->toBe($createdAt)
+        ->and($item->updatedAt)->toBe($updatedAt)
+        ->and($item->options->size)->toBe('L');
+});
+
+it('fromArray falls back to the current time when timestamps are absent', function (): void {
+    $item = CartItem::fromArray([
+        'id' => '1',
+        'name' => 'Product',
+        'subtitle' => '',
+        'qty' => 1,
+        'price' => 10.0,
+        'totalPrice' => 12.2,
+        'vat' => 2.2,
+        'vatFcCode' => '',
+        'productFcCode' => '',
+        'urlImg' => '',
+    ]);
+
+    expect($item->createdAt)->toBeInstanceOf(Carbon::class)
+        ->and($item->updatedAt)->toBeInstanceOf(Carbon::class);
 });

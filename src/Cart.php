@@ -439,9 +439,7 @@ class Cart
             'identifier' => $identifier,
             'instance' => $this->currentInstance(),
             'content' => serialize($content),
-            'coupons' => $this->globalCoupons->isNotEmpty()
-                ? json_encode($this->globalCoupons->map(fn (CartCoupon $c) => $c->toArray())->values()->all())
-                : null,
+            'coupons' => $this->globalCoupons->isNotEmpty() ? json_encode($this->globalCoupons->map(fn (CartCoupon $c) => $c->toArray())->values()->all()) : null,
         ]);
 
         if (config('cart.use_legacy_events', true)) {
