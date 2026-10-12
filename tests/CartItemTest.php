@@ -38,7 +38,7 @@ it('can be cast to an array', function (): void {
         'price' => 1000.0,
         'totalPrice' => 1200.00,
         'vat' => 200.00,
-        'vatLabel' => 'Iva Inclusa',
+        'vatLabel' => 'VAT Included',
         'vatRate' => 20.00,
         'vatFcCode' => '0',
         'productFcCode' => '0',
@@ -391,11 +391,11 @@ it('can resolve dynamic values through magic accessor', function (): void {
     expect($cartItem->id)->toEqual(1);
     expect($cartItem->name)->toBe('Test Item');
 
-    expect($cartItem->tax)->toEqual(0.0);
-    expect($cartItem->priceTax)->toEqual(100.00);
+    expect($cartItem->tax)->toEqual(20.0);
+    expect($cartItem->priceTax)->toEqual(120.00);
     expect($cartItem->subtotal)->toEqual(300.00);
-    expect($cartItem->total)->toEqual(300.00);
-    expect($cartItem->taxTotal)->toEqual(0.0);
+    expect($cartItem->total)->toEqual(360.00);
+    expect($cartItem->taxTotal)->toEqual(60.0);
 
     expect($cartItem->nonExistentProperty)->toBeNull();
 });
@@ -420,7 +420,7 @@ it('can access dynamic properties', function (): void {
     expect($cartItem->totalPrice)->toEqual(1200.00);
     expect($cartItem->price)->toEqual(1000.00);
     expect($cartItem->vat)->toEqual(22.00);
-    expect($cartItem->vatLabel)->toBe('Iva Inclusa');
+    expect($cartItem->vatLabel)->toBe('VAT Included');
 
     expect($cartItem->subtotal)->toEqual(1000.00);
 });
@@ -553,45 +553,118 @@ it('calculates tax via magic get', function (): void {
     expect($cartItem->tax)->toEqual(10.00);
 });
 
-it('fromArray keeps the supplied Carbon timestamps', function (): void {
-    $createdAt = Carbon::parse('2026-01-02 03:04:05');
-    $updatedAt = Carbon::parse('2026-02-03 04:05:06');
+it('fromBuyable sets createdAt and updatedAt as Carbon instances', function (): void {
+    $before = Carbon::now()->subSecond();
 
-    $item = CartItem::fromArray([
-        'id' => '1',
-        'name' => 'Product',
-        'subtitle' => 'Subtitle',
-        'qty' => 2,
-        'price' => 10.0,
-        'totalPrice' => 12.2,
-        'vat' => 2.2,
-        'vatFcCode' => '',
-        'productFcCode' => '',
-        'urlImg' => '',
-        'createdAt' => $createdAt,
-        'updatedAt' => $updatedAt,
-        'options' => ['size' => 'L'],
-    ]);
+    $buyable = new BuyableProduct(
+        1,
+        'Item name',
+        'Item description',
+        1,
+        10.00,
+        12.22,
+        2.22,
+        '0',
+        '0',
+        'https://ecommerce.test/images/item-name.png',
+        ['size' => 'XL', 'color' => 'red']
+    );
 
-    expect($item->createdAt)->toBe($createdAt)
-        ->and($item->updatedAt)->toBe($updatedAt)
-        ->and($item->options->size)->toBe('L');
+    $cartItem = CartItem::fromBuyable($buyable);
+
+    expect($cartItem->createdAt)->toBeInstanceOf(Carbon::class);
+    expect($cartItem->updatedAt)->toBeInstanceOf(Carbon::class);
+    expect($cartItem->createdAt->greaterThanOrEqualTo($before))->toBeTrue();
+    expect($cartItem->updatedAt->greaterThanOrEqualTo($before))->toBeTrue();
 });
 
-it('fromArray falls back to the current time when timestamps are absent', function (): void {
-    $item = CartItem::fromArray([
-        'id' => '1',
-        'name' => 'Product',
-        'subtitle' => '',
+it('fromAttributes passes explicit Carbon timestamps through', function (): void {
+    $createdAt = Carbon::parse('2023-06-15 10:00:00');
+    $updatedAt = Carbon::parse('2024-01-20 14:30:00');
+
+    $cartItem = CartItem::fromAttributes(
+        1,
+        'Test Item',
+        'Description',
+        1,
+        100.00,
+        120.00,
+        '0',
+        '0',
+        20.00,
+        'https://example.com/image.png',
+        $createdAt,
+        $updatedAt,
+        ['size' => 'L']
+    );
+
+    expect($cartItem->createdAt->eq($createdAt))->toBeTrue();
+    expect($cartItem->updatedAt->eq($updatedAt))->toBeTrue();
+});
+
+it('fromAttributes defaults timestamps to Carbon::now when null', function (): void {
+    $before = Carbon::now()->subSecond();
+
+    $cartItem = CartItem::fromAttributes(
+        1,
+        'Test Item',
+        'Description',
+        1,
+        100.00,
+        120.00,
+        '0',
+        '0',
+        20.00,
+        'https://example.com/image.png',
+    );
+
+    expect($cartItem->createdAt)->toBeInstanceOf(Carbon::class);
+    expect($cartItem->updatedAt)->toBeInstanceOf(Carbon::class);
+    expect($cartItem->createdAt->greaterThanOrEqualTo($before))->toBeTrue();
+});
+
+it('fromArray preserves existing Carbon timestamps', function (): void {
+    $createdAt = Carbon::parse('2022-03-10 08:00:00');
+    $updatedAt = Carbon::parse('2023-09-25 16:45:00');
+
+    $cartItem = CartItem::fromArray([
+        'id' => 1,
+        'name' => 'Test Item',
+        'subtitle' => 'Description',
         'qty' => 1,
-        'price' => 10.0,
-        'totalPrice' => 12.2,
-        'vat' => 2.2,
-        'vatFcCode' => '',
-        'productFcCode' => '',
-        'urlImg' => '',
+        'price' => 100.00,
+        'totalPrice' => 120.00,
+        'vatFcCode' => '0',
+        'productFcCode' => '0',
+        'vat' => 20.00,
+        'urlImg' => 'https://example.com/image.png',
+        'createdAt' => $createdAt,
+        'updatedAt' => $updatedAt,
+        'options' => [],
     ]);
 
-    expect($item->createdAt)->toBeInstanceOf(Carbon::class)
-        ->and($item->updatedAt)->toBeInstanceOf(Carbon::class);
+    expect($cartItem->createdAt->eq($createdAt))->toBeTrue();
+    expect($cartItem->updatedAt->eq($updatedAt))->toBeTrue();
+});
+
+it('fromArray falls back to Carbon::now when timestamps are missing', function (): void {
+    $before = Carbon::now()->subSecond();
+
+    $cartItem = CartItem::fromArray([
+        'id' => 1,
+        'name' => 'Test Item',
+        'subtitle' => 'Description',
+        'qty' => 1,
+        'price' => 100.00,
+        'totalPrice' => 120.00,
+        'vatFcCode' => '0',
+        'productFcCode' => '0',
+        'vat' => 20.00,
+        'urlImg' => 'https://example.com/image.png',
+        'options' => [],
+    ]);
+
+    expect($cartItem->createdAt)->toBeInstanceOf(Carbon::class);
+    expect($cartItem->updatedAt)->toBeInstanceOf(Carbon::class);
+    expect($cartItem->createdAt->greaterThanOrEqualTo($before))->toBeTrue();
 });

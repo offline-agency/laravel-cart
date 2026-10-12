@@ -31,12 +31,23 @@ use OfflineAgency\LaravelCart\Contracts\Couponable;
  * @method static float subtotal(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null)
  * @method static float originalTotalPrice(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null)
  * @method static float discount()
- * @method static Collection<int, array{rate: float, net: string, vat: string, gross: string}> vatBreakdown()
+ * @method static Collection<int, array{rate: float, net: string, vat: string, tax: string, gross: string, tax_name: string}> vatBreakdown()
+ * @method static string taxName()
+ * @method static bool meetsMinimum()
  * @method static Collection<string, CartItem> search(Closure $search)
  * @method static void associate(string $rowId, mixed $model)
- * @method static void store(mixed $identifier)
- * @method static void restore(mixed $identifier, bool $mergeOnRestore = false)
+ * @method static void store(mixed $identifier, bool $overwrite = true)
+ * @method static void restore(mixed $identifier, bool $mergeOnRestore = false, bool $keepStored = false)
  * @method static string totalVatLabel()
+ * @method static array toArray()
+ * @method static string toJson(int $options = 0)
+ * @method static float sum(string $attribute)
+ * @method static float weight()
+ * @method static array snapshot()
+ * @method static static setMeta(string $key, mixed $value)
+ * @method static mixed getMeta(string $key, mixed $default = null)
+ * @method static array meta()
+ * @method static static forgetMeta(string $key)
  * @method static Collection<string, CartItem> addBatch(array $items)
  * @method static string numberFormat(float|int $value, ?int $decimals, ?string $decimalPoint, ?string $thousandSeparator)
  * @method static array<string, object> coupons()
@@ -88,10 +99,13 @@ class Cart extends Facade
      *
      * @return \OfflineAgency\LaravelCart\Cart
      */
-    public static function fake(): \OfflineAgency\LaravelCart\Cart
+    /**
+     * @return \OfflineAgency\LaravelCart\Testing\CartFake
+     */
+    public static function fake(): \OfflineAgency\LaravelCart\Testing\CartFake
     {
-        $fake = new \OfflineAgency\LaravelCart\Cart(
-            app('session'),
+        $fake = new \OfflineAgency\LaravelCart\Testing\CartFake(
+            new \OfflineAgency\LaravelCart\Storage\SessionStorage(app('session')),
             app('events'),
         );
 

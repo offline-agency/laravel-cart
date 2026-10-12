@@ -1,50 +1,137 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart;
 
 trait CanBeBought
 {
-    /**
-     * Get the identifier of the Buyable item.
-     *
-     * @return int|string
-     */
-    public function getBuyableIdentifier($options = null)
+    // --- Getters (with sensible defaults reading from common Eloquent columns) ---
+
+    public function getId(): int|string
     {
         return method_exists($this, 'getKey') ? $this->getKey() : $this->id;
     }
 
-    /**
-     * Get the description or title of the Buyable item.
-     *
-     * @return string
-     */
-    public function getBuyableDescription($options = null)
+    public function getName(): string
     {
-        if (property_exists($this, 'name')) {
-            return $this->name;
-        }
-        if (property_exists($this, 'title')) {
-            return $this->title;
-        }
-        if (property_exists($this, 'description')) {
-            return $this->description;
+        return (string) ($this->name ?? $this->title ?? '');
+    }
+
+    public function getSubtitle(): string
+    {
+        return (string) ($this->subtitle ?? $this->description ?? '');
+    }
+
+    public function getQty(): int
+    {
+        return (int) ($this->qty ?? 1);
+    }
+
+    public function getPrice(): float
+    {
+        return (float) ($this->price ?? 0.0);
+    }
+
+    public function getTotalPrice(): float
+    {
+        return $this->getPrice() + $this->getVat();
+    }
+
+    public function getVat(): float
+    {
+        return (float) ($this->vat ?? 0.0);
+    }
+
+    public function getUrlImg(): string
+    {
+        return (string) ($this->url_img ?? $this->urlImg ?? $this->image ?? '');
+    }
+
+    public function getOptions(): array
+    {
+        if (property_exists($this, 'cartOptions') && is_array($this->cartOptions)) {
+            return $this->cartOptions;
         }
 
-        return null;
+        return [];
+    }
+
+    public function getWeight(): float
+    {
+        return (float) ($this->weight ?? 0.0);
+    }
+
+    // --- Setters (store in transient properties for cart manipulation) ---
+
+    public function setId($id): void
+    {
+        $this->id = $id;
+    }
+
+    public function setName(string $name): void
+    {
+        $this->name = $name;
+    }
+
+    public function setSubtitle(string $subtitle): void
+    {
+        $this->subtitle = $subtitle;
+    }
+
+    public function setQty(int $qty): void
+    {
+        $this->qty = $qty;
+    }
+
+    public function setPrice(float $price): void
+    {
+        $this->price = $price;
+    }
+
+    public function setTotalPrice(float $totalPrice): void
+    {
+        $this->totalPrice = $totalPrice;
+    }
+
+    public function setVat(float $vat): void
+    {
+        $this->vat = $vat;
+    }
+
+    public function setUrlImg($urlImg): void
+    {
+        $this->urlImg = $urlImg;
+    }
+
+    public function setOptions(array $options): void
+    {
+        $this->cartOptions = $options;
+    }
+
+    // --- Legacy methods (deprecated, kept for backward compatibility) ---
+
+    /**
+     * @deprecated Use getId() instead.
+     */
+    public function getBuyableIdentifier($options = null)
+    {
+        return $this->getId();
     }
 
     /**
-     * Get the price of the Buyable item.
-     *
-     * @return float
+     * @deprecated Use getName() or getSubtitle() instead.
+     */
+    public function getBuyableDescription($options = null)
+    {
+        return (string) ($this->name ?? $this->title ?? $this->description ?? '');
+    }
+
+    /**
+     * @deprecated Use getPrice() instead.
      */
     public function getBuyablePrice($options = null)
     {
-        if (property_exists($this, 'price')) {
-            return $this->price;
-        }
-
-        return null;
+        return $this->getPrice();
     }
 }

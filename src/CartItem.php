@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
 
 /**
  * @property-read mixed $model
@@ -67,8 +68,10 @@ class CartItem implements Arrayable, Jsonable
 
     public $appliedCoupons;
 
+    /** @deprecated Use $vat instead. Kept for backward compat with __get computed properties. */
     public $tax = 0.0;
 
+    /** @deprecated Use $vatRate instead. Kept for backward compat with __get computed properties. */
     public $taxRate = 0.0;
 
     /**
@@ -84,20 +87,20 @@ class CartItem implements Arrayable, Jsonable
         string $subtitle,
         $qty,
         float $price,
-        $totalPrice,
-        $vatFcCode,
-        $productFcCode,
-        $vat,
-        $urlImg,
+        ?float $totalPrice,
+        string $vatFcCode = '',
+        string $productFcCode = '',
+        ?float $vat = null,
+        string $urlImg = '',
         ?Carbon $createdAt = null,
         ?Carbon $updatedAt = null,
         array $options = []
     ) {
         if (empty($id)) {
-            throw new InvalidArgumentException('Please supply a valid identifier.');
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_id'));
         }
         if (empty($name)) {
-            throw new InvalidArgumentException('Please supply a valid name.');
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_name'));
         }
 
         $this->rowId = $this->generateRowId((string) $id, $options);
@@ -106,13 +109,45 @@ class CartItem implements Arrayable, Jsonable
         $this->name = $name;
         $this->subtitle = $subtitle;
         $this->originalPrice = floatval($price);
-        $this->originalTotalPrice = floatval($totalPrice);
+        $computedTotalPrice = $totalPrice !== null ? floatval($totalPrice) : $this->formatFloat(floatval($price) + floatval($vat));
+        $this->originalTotalPrice = $computedTotalPrice;
         $this->originalVat = floatval($vat);
         $this->price = floatval($price);
-        $this->totalPrice = floatval($totalPrice);
+        $this->totalPrice = $computedTotalPrice;
         $this->vat = floatval($vat);
-        $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
-        $this->vatRate = $this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0;
+
+        // Auto-apply default tax rate when no explicit VAT is provided
+        if ($this->vat === 0.0 && $this->price > 0 && $vat === null) {
+            $defaultRate = (float) config('cart.tax.default_rate', 0.0);
+            if ($defaultRate > 0) {
+                $behavior = (string) config('cart.tax.tax_behavior', 'inclusive');
+                if ($behavior === 'exclusive') {
+                    $this->vat = $this->formatFloat($this->price * $defaultRate / 100);
+                    $this->totalPrice = $this->formatFloat($this->price + $this->vat);
+                    $this->originalTotalPrice = $this->totalPrice;
+                    $this->originalVat = $this->vat;
+                } else {
+                    $this->vat = $this->formatFloat($this->totalPrice * $defaultRate / (100 + $defaultRate));
+                    $this->price = $this->formatFloat($this->totalPrice - $this->vat);
+                    $this->originalPrice = $this->price;
+                    $this->originalVat = $this->vat;
+                }
+                $this->vatRate = $defaultRate;
+                $this->taxRate = $defaultRate;
+            }
+        }
+
+        $this->vatLabel = $this->vat > 0
+            ? __('laravel-cart::cart.tax_included')
+            : __('laravel-cart::cart.tax_exempt');
+
+        if (! isset($this->vatRate)) {
+            $this->vatRate = $this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0;
+        }
+        if (! isset($this->taxRate) || $this->taxRate === 0.0) {
+            $this->taxRate = $this->vatRate;
+        }
+        $this->tax = $this->formatFloat($this->price * ($this->taxRate / 100));
         $this->vatFcCode = $vatFcCode;
         $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
@@ -127,6 +162,17 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
+     * Sync taxRate/tax from vatRate on unserialization of old stored carts.
+     */
+    public function __wakeup(): void
+    {
+        if ($this->taxRate === 0.0 && $this->vatRate > 0) {
+            $this->taxRate = $this->vatRate;
+            $this->tax = $this->formatFloat($this->price * ($this->taxRate / 100));
+        }
+    }
+
+    /**
      * Set the quantity for this cart item.
      *
      * @param  int|float  $qty
@@ -134,7 +180,7 @@ class CartItem implements Arrayable, Jsonable
     public function setQuantity($qty)
     {
         if (empty($qty)) {
-            throw new InvalidArgumentException('Please supply a valid quantity. Provided: '.$qty);
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_qty', ['qty' => $qty]));
         }
 
         $this->qty = $qty;
@@ -247,8 +293,8 @@ class CartItem implements Arrayable, Jsonable
             $item->getQty(),
             $item->getPrice(),
             $item->getTotalPrice(),
-            $item->getVatFcCode(),
-            $item->getProductFcCode(),
+            $item instanceof FiscalBuyable ? $item->getVatFcCode() : '',
+            $item instanceof FiscalBuyable ? $item->getProductFcCode() : '',
             $item->getVat(),
             $item->getUrlImg(),
             Carbon::now(),
@@ -274,15 +320,15 @@ class CartItem implements Arrayable, Jsonable
 
         return new self(
             $attributes['id'],
-            $attributes['name'],
-            $attributes['subtitle'],
+            (string) $attributes['name'],
+            (string) ($attributes['subtitle'] ?? ''),
             $attributes['qty'],
-            $attributes['price'],
-            $attributes['totalPrice'],
-            $attributes['vatFcCode'],
-            $attributes['productFcCode'],
-            $attributes['vat'],
-            $attributes['urlImg'],
+            (float) $attributes['price'],
+            isset($attributes['totalPrice']) ? (float) $attributes['totalPrice'] : null,
+            (string) ($attributes['vatFcCode'] ?? ''),
+            (string) ($attributes['productFcCode'] ?? ''),
+            isset($attributes['vat']) ? (float) $attributes['vat'] : null,
+            (string) ($attributes['urlImg'] ?? ''),
             $createdAt,
             $updatedAt,
             $options
@@ -367,6 +413,15 @@ class CartItem implements Arrayable, Jsonable
             'model' => $this->model,
             'appliedCoupons' => $this->appliedCoupons,
         ];
+    }
+
+    /**
+     * Determine if the cart item represents the given Buyable.
+     */
+    public function is(Buyable $buyable): bool
+    {
+        return $this->id == $buyable->getId()
+            && $this->associatedModel === get_class($buyable);
     }
 
     /**
@@ -479,11 +534,11 @@ class CartItem implements Arrayable, Jsonable
 
     public function formatFloat(float $value): float
     {
-        return (float) number_format(
-            $value, // the number to format
-            2, // how many decimal points
-            '.', // decimal separator
-            '' // thousands separator, set it to blank
-        );
+        $decimals = (int) config('cart.format.decimals', 2);
+
+        /** @var int<0,4> $mode */
+        $mode = (int) config('cart.format.rounding_mode', PHP_ROUND_HALF_UP);
+
+        return round($value, $decimals, $mode);
     }
 }

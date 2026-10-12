@@ -2,9 +2,9 @@
 
 namespace OfflineAgency\LaravelCart\Tests\Fixtures;
 
-use OfflineAgency\LaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
 
-class BuyableProduct implements Buyable
+class BuyableProduct implements FiscalBuyable
 {
     private $id;
 
@@ -176,5 +176,10 @@ class BuyableProduct implements Buyable
     public function setOptions(array $options): void
     {
         $this->options = $options;
+    }
+
+    public function getWeight(): float
+    {
+        return 0.0;
     }
 }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function (): void {
@@ -139,4 +140,25 @@ it('restore is a no-op for an unknown identifier', function (): void {
     $this->cart->restore('never-stored');
 
     expect($this->cart->content())->toHaveCount(1);
+});
+
+it('preserves createdAt and updatedAt through store and restore', function (): void {
+    $createdAt = Carbon::parse('2024-01-15 09:00:00');
+    $updatedAt = Carbon::parse('2024-06-20 18:30:00');
+
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2, '', '', '', $createdAt, $updatedAt);
+
+    $this->cart->store('user-timestamps');
+    $this->cart->destroy();
+
+    expect($this->cart->count())->toBe(0);
+
+    $this->cart->restore('user-timestamps');
+
+    $item = $this->cart->content()->first();
+
+    expect($item->createdAt)->toBeInstanceOf(Carbon::class);
+    expect($item->updatedAt)->toBeInstanceOf(Carbon::class);
+    expect($item->createdAt->eq($createdAt))->toBeTrue();
+    expect($item->updatedAt->eq($updatedAt))->toBeTrue();
 });

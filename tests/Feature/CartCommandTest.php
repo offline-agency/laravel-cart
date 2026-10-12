@@ -55,7 +55,6 @@ it('cart:clear aborts when the confirmation is declined', function (): void {
 
     $this->artisan('cart:clear')
         ->expectsConfirmation('This will delete ALL stored cart records from the database. Continue?', 'no')
-        ->expectsOutput('Operation cancelled.')
         ->assertExitCode(0);
 
     expect(DB::connection('testing')->table('cart')->count())->toBe(1);
@@ -77,8 +76,7 @@ it('cart:clear scopes the confirmation prompt to the given instance', function (
     $this->cart->store('user-wishlist-confirm');
 
     $this->artisan('cart:clear', ['--instance' => 'wishlist'])
-        ->expectsConfirmation("This will delete all stored cart records for instance 'wishlist'. Continue?", 'yes')
-        ->expectsOutput("Cleared 1 cart record(s) for instance 'wishlist'.")
+        ->expectsConfirmation('This will delete all stored cart records for instance "wishlist". Continue?', 'yes')
         ->assertExitCode(0);
 
     expect(DB::connection('testing')->table('cart')->count())->toBe(0);

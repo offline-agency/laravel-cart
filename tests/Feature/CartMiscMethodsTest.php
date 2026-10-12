@@ -102,20 +102,20 @@ it('originalTotalPrice reflects pre-coupon prices after coupon is applied', func
 
 // ── Cart::totalVatLabel ────────────────────────────────────────────────────────
 
-it('totalVatLabel returns Iva Inclusa when VAT is present', function (): void {
+it('totalVatLabel returns VAT Included when VAT is present', function (): void {
     $this->cart->add('1', 'Taxed Item', '', 1, 100.0, 122.0, 22.0);
 
-    expect($this->cart->totalVatLabel())->toBe('Iva Inclusa');
+    expect($this->cart->totalVatLabel())->toBe('VAT Included');
 });
 
-it('totalVatLabel returns Esente Iva when VAT is zero', function (): void {
+it('totalVatLabel returns Tax Exempt when VAT is zero', function (): void {
     $this->cart->add('1', 'Exempt Item', '', 1, 10.0, 10.0, 0.0);
 
-    expect($this->cart->totalVatLabel())->toBe('Esente Iva');
+    expect($this->cart->totalVatLabel())->toBe('Tax Exempt');
 });
 
-it('totalVatLabel returns Esente Iva on an empty cart', function (): void {
-    expect($this->cart->totalVatLabel())->toBe('Esente Iva');
+it('totalVatLabel returns Tax Exempt on an empty cart', function (): void {
+    expect($this->cart->totalVatLabel())->toBe('Tax Exempt');
 });
 
 // ── Cart::getCoupon (item-level lookup) ────────────────────────────────────────

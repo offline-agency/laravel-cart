@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace OfflineAgency\LaravelCart\Exceptions;
 
-use RuntimeException;
-
-final class InvalidCouponException extends RuntimeException
+final class InvalidCouponException extends CartException
 {
     public function __construct(
         public readonly string $couponCode,
