@@ -16,11 +16,14 @@
 
 ## Compatibility Matrix
 
-| PHP / Laravel | 10.x | 11.x | 12.x |
-|:---:|:---:|:---:|:---:|
-| 8.2 | Yes | Yes | Yes |
-| 8.3 | Yes | Yes | Yes |
-| 8.4 | Yes | Yes | Yes |
+| PHP / Laravel | 12.x | 13.x |
+|:---:|:---:|:---:|
+| 8.2 | Yes | No  |
+| 8.3 | Yes | Yes |
+| 8.4 | Yes | Yes |
+| 8.5 | Yes | Yes |
+
+Laravel 10 and 11 are end-of-life; use `^3.x` of this package on them.
 
 ---
 
