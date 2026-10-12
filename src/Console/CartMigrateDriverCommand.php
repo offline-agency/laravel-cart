@@ -50,11 +50,7 @@ class CartMigrateDriverCommand extends Command
             return self::FAILURE;
         }
 
-        if ($from === 'session' && $to === 'database') {
-            return $this->migrateSessionToDatabase($chunk);
-        }
-
-        return self::SUCCESS;
+        return $this->migrateSessionToDatabase($chunk);
     }
 
     private function migrateSessionToDatabase(int $chunk): int

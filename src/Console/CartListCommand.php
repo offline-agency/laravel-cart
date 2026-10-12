@@ -7,7 +7,7 @@ namespace OfflineAgency\LaravelCart\Console;
 use Illuminate\Console\Command;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
 
-use function Termwind\{render};
+use function Termwind\render;
 
 class CartListCommand extends Command
 {
@@ -61,8 +61,7 @@ class CartListCommand extends Command
 
             $itemCount = $content->count();
             $couponCount = count($coupons);
-            $itemsOk = $cart->content !== '' && $content->isNotEmpty() || $cart->content === '' || $itemCount === 0;
-            $deserialized = $cart->content === '' || $content->isNotEmpty() || $itemCount === 0;
+            $deserialized = $content->isNotEmpty() || $cart->content === '' || $cart->content === serialize(collect());
 
             return [
                 'identifier' => $cart->identifier,
