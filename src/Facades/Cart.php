@@ -98,8 +98,6 @@ class Cart extends Facade
      *   $cart = Cart::fake();
      *   Cart::add('1', 'Product', null, 1, 9.99);
      *   expect(Cart::count())->toBe(1);
-     *
-     * @return \OfflineAgency\LaravelCart\Cart
      */
     public static function fake(): CartFake
     {
