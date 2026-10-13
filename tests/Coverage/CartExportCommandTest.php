@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\CartItem;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 function covExportSerializedContent(): string
 {
     $item = new CartItem(id: '1', name: 'Exported product', subtitle: '', qty: 1, price: 10.0, totalPrice: 12.2, vat: 2.2);
 
-    return serialize(collect([$item->rowId => $item]));
+    return CartContentCodec::encode(collect([$item->rowId => $item]));
 }
 
 beforeEach(function (): void {

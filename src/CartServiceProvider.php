@@ -30,7 +30,10 @@ class CartServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/cart.php', 'cart');
 
-        $this->app->singleton(CartStorage::class, function ($app) {
+        // Scoped: the cart and its storage carry per-user state (current
+        // instance, cart-level coupons, read cache), so they are rebuilt for
+        // every request / queued job instead of living for the whole worker.
+        $this->app->scoped(CartStorage::class, function ($app) {
             $driver = (string) config('cart.storage.driver', 'session');
 
             return match ($driver) {
@@ -40,7 +43,7 @@ class CartServiceProvider extends ServiceProvider
             };
         });
 
-        $this->app->singleton('cart', function ($app) {
+        $this->app->scoped('cart', function ($app) {
             return new Cart(
                 $app->make(CartStorage::class),
                 $app->make(Dispatcher::class),

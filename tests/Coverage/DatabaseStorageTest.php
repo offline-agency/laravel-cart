@@ -52,7 +52,7 @@ it('persists and hydrates cart content items', function (): void {
     $plain = covDbCartItem('1', ['size' => 'M']);
     $associated = covDbCartItem('2');
     $associated->associate('App\\Models\\Product');
-    $associated->appliedCoupons = ['CODE10' => ['value' => 10]];
+    $associated->appliedCoupons = ['CODE10' => (object) ['couponCode' => 'CODE10', 'couponType' => 'fixed', 'couponValue' => 10.0]];
     $associated->discountValue = 1.5;
 
     $content = new Collection([$plain->rowId => $plain, $associated->rowId => $associated]);
@@ -82,7 +82,7 @@ it('persists and hydrates cart content items', function (): void {
 
     $loadedAssociated = $loaded->get($associated->rowId);
     expect($loadedAssociated->associatedModel)->toBe('App\\Models\\Product')
-        ->and($loadedAssociated->appliedCoupons)->toBe(['CODE10' => ['value' => 10]])
+        ->and($loadedAssociated->appliedCoupons)->toEqual(['CODE10' => (object) ['couponCode' => 'CODE10', 'couponType' => 'fixed', 'couponValue' => 10.0]])
         ->and($loadedAssociated->discountValue)->toBe(1.5);
 
     expect(DB::table('cart_items')->count())->toBe(2);
@@ -204,6 +204,11 @@ it('removes the whole cart for content keys', function (): void {
 
 it('only clears coupons when removing the global coupons key', function (): void {
     $storage = covDbStorage();
+    $first = covDbCartItem('1');
+    $second = covDbCartItem('2');
+    $storage->put('default', new Collection([$first->rowId => $first, $second->rowId => $second]));
+    $storage->put('default_meta', ['source' => 'web']);
+    $storage->put('default_cart_info', ['options' => ['gift' => true]]);
     $storage->put('default_global_coupons', collect([
         new CartCoupon(hash: 'h', code: 'C', type: 'fixed', value: 1.0),
     ]));
@@ -211,7 +216,16 @@ it('only clears coupons when removing the global coupons key', function (): void
     $storage->remove('default_global_coupons');
 
     expect(DB::table('carts')->count())->toBe(1)
-        ->and(DB::table('carts')->value('coupons'))->toBeNull();
+        ->and(DB::table('carts')->value('coupons'))->toBeNull()
+        ->and(DB::table('cart_items')->count())->toBe(2);
+
+    // A fresh storage object reads the database, so the instance cache cannot mask a wipe.
+    $fresh = covDbStorage();
+
+    expect($fresh->get('default')->keys()->all())->toEqualCanonicalizing([$first->rowId, $second->rowId])
+        ->and($fresh->get('default_meta'))->toBe(['source' => 'web'])
+        ->and($fresh->get('default_cart_info'))->toBe(['options' => ['gift' => true]])
+        ->and($fresh->get('default_global_coupons'))->toBeEmpty();
 });
 
 it('does nothing when removing a key without a stored cart', function (): void {

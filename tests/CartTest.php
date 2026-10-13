@@ -15,6 +15,7 @@ use OfflineAgency\LaravelCart\Exceptions\CartAlreadyStoredException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidRowIDException;
 use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
 use OfflineAgency\LaravelCart\Storage\SessionStorage;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 use OfflineAgency\LaravelCart\Tests\Fixtures;
 use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
 use OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel;
@@ -729,7 +730,7 @@ it('can store the cart in a database', function (): void {
 
     $cart->store($identifier = 123);
 
-    $serialized = serialize($cart->content());
+    $serialized = CartContentCodec::encode($cart->content());
 
     $this->assertDatabaseHas('cart', ['identifier' => $identifier, 'instance' => 'default', 'content' => $serialized]);
 

@@ -62,7 +62,7 @@ class CartStatsCommand extends Command
 
         (clone $query)->orderBy('identifier')->chunk(100, function ($carts) use (&$totalItems, &$totalValue): void {
             foreach ($carts as $cart) {
-                $content = $this->deserializeContent($cart->content);
+                $content = $this->decodeContent($cart->content) ?? collect();
                 $totalItems += $content->count();
                 $totalValue += $content->sum(fn ($item) => $item->totalPrice * $item->qty);
             }

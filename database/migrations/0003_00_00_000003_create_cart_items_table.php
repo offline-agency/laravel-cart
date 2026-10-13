@@ -16,10 +16,13 @@ return new class extends Migration
         Schema::create($table, function (Blueprint $table) use ($cartsTable) {
             $table->id();
             $table->foreignId('cart_id')->constrained($cartsTable)->cascadeOnDelete();
-            $table->string('row_id')->index();
+            $table->string('row_id');
             $table->string('item_id');
             $table->string('name');
             $table->string('subtitle')->default('');
+            $table->decimal('original_price', 12, 4)->default(0);
+            $table->decimal('original_total_price', 12, 4)->default(0);
+            $table->decimal('original_vat', 12, 4)->default(0);
             $table->decimal('price', 12, 4)->default(0);
             $table->decimal('total_price', 12, 4)->default(0);
             $table->decimal('vat', 12, 4)->default(0);
@@ -33,6 +36,8 @@ return new class extends Migration
             $table->decimal('discount_value', 12, 4)->default(0);
             $table->string('associated_model')->nullable();
             $table->timestamps();
+
+            $table->unique(['cart_id', 'row_id']);
         });
     }
 

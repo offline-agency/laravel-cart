@@ -74,12 +74,12 @@ class CartExportCommand extends Command
 
         (clone $query)->orderBy('identifier')->chunk(100, function ($rows) use (&$carts): void {
             foreach ($rows as $row) {
-                $content = $this->deserializeContent($row->content);
+                $content = $this->decodeContent($row->content);
 
                 $cart = [
                     'identifier' => $row->identifier,
                     'instance' => $row->instance,
-                    'items' => $content->isNotEmpty()
+                    'items' => $content !== null && $content->isNotEmpty()
                         ? $content->map(fn ($item) => $item->toArray())->values()->toArray()
                         : null,
                     'coupons' => $this->decodeCoupons($row->coupons ?? null),
@@ -87,7 +87,7 @@ class CartExportCommand extends Command
                     'updated_at' => $row->updated_at,
                 ];
 
-                if ($cart['items'] === null && $row->content !== '' && $row->content !== serialize(collect())) {
+                if ($content === null) {
                     $cart['error'] = 'Failed to deserialize';
                 }
 

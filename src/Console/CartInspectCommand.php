@@ -54,9 +54,9 @@ class CartInspectCommand extends Command
             return self::SUCCESS;
         }
 
-        $content = $this->deserializeContent($stored->content);
+        $content = $this->decodeContent($stored->content);
 
-        if ($content->isEmpty() && $stored->content !== '' && $stored->content !== serialize(collect())) {
+        if ($content === null) {
             if ($this->option('json')) {
                 $this->output->writeln(json_encode([
                     'error' => __('laravel-cart::cart.command_inspect_error'),

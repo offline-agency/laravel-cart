@@ -56,17 +56,15 @@ class CartListCommand extends Command
         $carts = $query->limit($limit)->get();
 
         $rows = $carts->map(function (object $cart): array {
-            $content = $this->deserializeContent($cart->content);
+            $content = $this->decodeContent($cart->content);
             $coupons = $this->decodeCoupons($cart->coupons ?? null);
 
-            $itemCount = $content->count();
             $couponCount = count($coupons);
-            $deserialized = $content->isNotEmpty() || $cart->content === '' || $cart->content === serialize(collect());
 
             return [
                 'identifier' => $cart->identifier,
                 'instance' => $cart->instance,
-                'items' => $deserialized ? $itemCount : null,
+                'items' => $content?->count(),
                 'coupons' => $couponCount,
                 'created_at' => $cart->created_at,
                 'updated_at' => $cart->updated_at,

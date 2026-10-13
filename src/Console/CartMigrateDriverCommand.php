@@ -7,6 +7,7 @@ namespace OfflineAgency\LaravelCart\Console;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 use function Termwind\render;
 
@@ -161,7 +162,7 @@ class CartMigrateDriverCommand extends Command
                                     $this->cartQuery()->insert([
                                         'identifier' => $identifier,
                                         'instance' => $instance,
-                                        'content' => serialize($content),
+                                        'content' => CartContentCodec::encode($content),
                                         'coupons' => $coupons,
                                         'created_at' => now(),
                                         'updated_at' => now(),
@@ -284,7 +285,7 @@ class CartMigrateDriverCommand extends Command
                             $this->cartQuery()->insert([
                                 'identifier' => $identifier,
                                 'instance' => $instance,
-                                'content' => serialize($content),
+                                'content' => CartContentCodec::encode($content),
                                 'coupons' => null,
                                 'created_at' => now(),
                                 'updated_at' => now(),

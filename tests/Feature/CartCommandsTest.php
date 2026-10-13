@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\CartItem;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 function seedCartRow(
     string $identifier,
@@ -34,7 +35,7 @@ function seedCartRow(
     DB::connection('testing')->table('cart')->insert([
         'identifier' => $identifier,
         'instance' => $instance,
-        'content' => serialize($collection),
+        'content' => CartContentCodec::encode($collection),
         'coupons' => $coupons !== null ? json_encode($coupons) : null,
         'created_at' => $now,
         'updated_at' => $updatedAt ?? $now,

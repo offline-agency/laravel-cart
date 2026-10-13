@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\CartItem;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 beforeEach(function (): void {
     $this->artisan('migrate', ['--database' => 'testing']);
@@ -17,7 +18,7 @@ it('cart:list renders the formatted table with items, coupons and dates', functi
         [
             'identifier' => 'single-item-user',
             'instance' => 'default',
-            'content' => serialize(collect([$one->rowId => $one])),
+            'content' => CartContentCodec::encode(collect([$one->rowId => $one])),
             'coupons' => json_encode([['code' => 'ONE', 'type' => 'fixed', 'value' => 1]]),
             'created_at' => now()->toDateTimeString(),
             'updated_at' => now()->toDateTimeString(),
@@ -25,7 +26,7 @@ it('cart:list renders the formatted table with items, coupons and dates', functi
         [
             'identifier' => 'multi-item-user-with-long-identifier',
             'instance' => 'wishlist',
-            'content' => serialize(collect([$one->rowId => $one, $two->rowId => $two])),
+            'content' => CartContentCodec::encode(collect([$one->rowId => $one, $two->rowId => $two])),
             'coupons' => json_encode([
                 ['code' => 'A', 'type' => 'fixed', 'value' => 1],
                 ['code' => 'B', 'type' => 'percentage', 'value' => 10],
@@ -36,7 +37,7 @@ it('cart:list renders the formatted table with items, coupons and dates', functi
         [
             'identifier' => 'empty-user',
             'instance' => 'default',
-            'content' => serialize(collect()),
+            'content' => CartContentCodec::encode(collect()),
             'coupons' => null,
             'created_at' => now()->subDay()->toDateTimeString(),
             'updated_at' => now()->subDay()->toDateTimeString(),

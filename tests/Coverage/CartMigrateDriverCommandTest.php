@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 function covMigrateCreateSessionsTable(): void
 {
@@ -100,7 +101,7 @@ describe('database sessions', function (): void {
         DB::table('cart')->insert([
             'identifier' => 'existing',
             'instance' => 'default',
-            'content' => serialize(collect(['original'])),
+            'content' => CartContentCodec::encode(collect(['original'])),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -110,9 +111,9 @@ describe('database sessions', function (): void {
             ->assertExitCode(0);
 
         expect(DB::table('cart')->count())->toBe(3)
-            ->and(unserialize(DB::table('cart')->where('identifier', 'guest-session')->value('content'))->all())->toBe(['item-a'])
-            ->and(unserialize(DB::table('cart')->where('identifier', '7')->value('content'))->all())->toBe(['item-b'])
-            ->and(unserialize(DB::table('cart')->where('identifier', 'existing')->value('content'))->all())->toBe(['original'])
+            ->and(CartContentCodec::decode(DB::table('cart')->where('identifier', 'guest-session')->value('content'))->all())->toBe(['item-a'])
+            ->and(CartContentCodec::decode(DB::table('cart')->where('identifier', '7')->value('content'))->all())->toBe(['item-b'])
+            ->and(CartContentCodec::decode(DB::table('cart')->where('identifier', 'existing')->value('content'))->all())->toBe(['original'])
             ->and(DB::table('cart')->where('instance', 'wishlist')->exists())->toBeFalse();
     });
 
@@ -188,7 +189,7 @@ describe('file sessions', function (): void {
         DB::table('cart')->insert([
             'identifier' => 'existing',
             'instance' => 'default',
-            'content' => serialize(collect(['original'])),
+            'content' => CartContentCodec::encode(collect(['original'])),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -198,8 +199,8 @@ describe('file sessions', function (): void {
             ->assertExitCode(0);
 
         expect(DB::table('cart')->count())->toBe(2)
-            ->and(unserialize(DB::table('cart')->where('identifier', 'migrate-me')->value('content'))->all())->toBe(['item-a'])
-            ->and(unserialize(DB::table('cart')->where('identifier', 'existing')->value('content'))->all())->toBe(['original']);
+            ->and(CartContentCodec::decode(DB::table('cart')->where('identifier', 'migrate-me')->value('content'))->all())->toBe(['item-a'])
+            ->and(CartContentCodec::decode(DB::table('cart')->where('identifier', 'existing')->value('content'))->all())->toBe(['original']);
     });
 
     it('skips files that cannot be read', function (): void {

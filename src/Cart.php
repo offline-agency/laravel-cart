@@ -25,12 +25,14 @@ use OfflineAgency\LaravelCart\Events\CouponApplied;
 use OfflineAgency\LaravelCart\Events\CouponRemoved as CouponRemovedEvent;
 use OfflineAgency\LaravelCart\Exceptions\CartAlreadyStoredException;
 use OfflineAgency\LaravelCart\Exceptions\CartLimitExceededException;
+use OfflineAgency\LaravelCart\Exceptions\CartStorageException;
 use OfflineAgency\LaravelCart\Exceptions\CouponAlreadyAppliedException;
 use OfflineAgency\LaravelCart\Exceptions\CouponNotFoundException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidCouponHashException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidRowIDException;
 use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 class Cart
 {
@@ -106,7 +108,8 @@ class Cart
             $vatFcCode, $productFcCode, $vat, $urlImg, $createdAt, $updatedAt, $options
         );
 
-        $content = $this->getContent();
+        // Validate a candidate copy so a rejected add leaves the stored content untouched.
+        $content = $this->getContent()->collect();
 
         if ($content->has($cartItem->rowId)) {
             $cartItem->qty += $content->get($cartItem->rowId)->qty;
@@ -128,7 +131,10 @@ class Cart
 
     public function update(string $rowId, mixed $qty): ?CartItem
     {
-        $cartItem = $this->get($rowId);
+        // Work on candidate copies: the stored item and collection are only
+        // changed once the limits have accepted the update.
+        $storedItem = $this->get($rowId);
+        $cartItem = clone $storedItem;
 
         if ($qty instanceof Buyable) {
             $cartItem->updateFromBuyable($qty);
@@ -138,7 +144,7 @@ class Cart
             $cartItem->qty = $qty;
         }
 
-        $content = $this->getContent();
+        $content = $this->getContent()->collect();
 
         if ($rowId !== $cartItem->rowId) {
             $content->pull($rowId);
@@ -160,6 +166,14 @@ class Cart
         if ($cartItem->qty > 0) {
             $this->enforceCartLimits($content, $cartItem);
         }
+
+        // Commit: carry the accepted state onto the stored instance so existing
+        // references to the item observe the update, as before.
+        foreach (get_object_vars($cartItem) as $property => $value) {
+            $storedItem->{$property} = $value;
+        }
+        $cartItem = $storedItem;
+        $content->put($cartItem->rowId, $cartItem);
 
         if (config('cart.use_legacy_events', true)) {
             $this->events->dispatch('cart.updated', $cartItem);
@@ -456,7 +470,7 @@ class Cart
             throw new CartAlreadyStoredException(__('laravel-cart::cart.cart_already_stored', ['identifier' => $identifier]));
         }
 
-        $serializedContent = serialize($content);
+        $serializedContent = CartContentCodec::encode($content);
         $couponsJson = $this->globalCoupons->isNotEmpty()
             ? json_encode($this->globalCoupons->map(fn (CartCoupon $c) => $c->toArray())->values()->all())
             : null;
@@ -506,7 +520,11 @@ class Cart
         $stored = $this->getConnection()->table($this->getTableName())
             ->where('identifier', $identifier)->first();
 
-        $storedContent = unserialize($stored->content);
+        $storedContent = CartContentCodec::decode($stored->content);
+
+        if ($storedContent === null) {
+            throw new CartStorageException(__('laravel-cart::cart.stored_cart_undecodable', ['identifier' => $identifier]));
+        }
 
         $currentInstance = $this->currentInstance();
 
@@ -1302,6 +1320,10 @@ class Cart
             'global',
             $discount_value
         );
+
+        $content = $this->getContent();
+        $content->put($cartItem->rowId, $cartItem);
+        $this->storage->put($this->instance, $content);
     }
 
     public function getOptions(): array

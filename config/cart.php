@@ -43,6 +43,11 @@ return [
     |--------------------------------------------------------------------------
     | User foreign key configuration
     |--------------------------------------------------------------------------
+    |
+    | Column (and its type) holding the authenticated owner of a cart in the
+    | "carts" table used by the database storage driver. Guest carts are
+    | stored under the nullable "session_id" column instead.
+    |
     */
 
     'users' => [

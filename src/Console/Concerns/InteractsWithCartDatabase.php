@@ -7,6 +7,7 @@ namespace OfflineAgency\LaravelCart\Console\Concerns;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 trait InteractsWithCartDatabase
 {
@@ -26,15 +27,12 @@ trait InteractsWithCartDatabase
         return config('cart.database.connection') ?? config('database.default');
     }
 
-    private function deserializeContent(string $content): Collection
+    /**
+     * Decode a stored cart content payload; null when it cannot be decoded.
+     */
+    private function decodeContent(?string $content): ?Collection
     {
-        try {
-            $result = unserialize($content);
-
-            return $result instanceof Collection ? $result : collect();
-        } catch (\Throwable) {
-            return collect();
-        }
+        return CartContentCodec::decode($content);
     }
 
     private function decodeCoupons(?string $json): array
