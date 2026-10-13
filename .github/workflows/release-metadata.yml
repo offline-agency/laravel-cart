@@ -1,0 +1,35 @@
+# Pre-merge check: rejects conflicting/multiple release labels (or a label
+# that disagrees with the Conventional Commit title) before a PR can merge.
+# Make "Release metadata" a required status check on main.
+
+name: Release metadata
+
+on:
+    pull_request:
+        branches: [main]
+        types: [opened, edited, labeled, unlabeled, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+    group: release-metadata-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
+
+jobs:
+    release-metadata:
+        name: Release metadata
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: read
+            pull-requests: read
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Validate release labels and title
+              run: node .github/scripts/release/validate-pr.mjs
+
+            - name: Release tooling tests
+              run: node --test .github/scripts/release/test/*.test.mjs
