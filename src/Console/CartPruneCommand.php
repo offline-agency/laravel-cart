@@ -6,8 +6,11 @@ namespace OfflineAgency\LaravelCart\Console;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
+use OfflineAgency\LaravelCart\Support\CartConfig;
+use OfflineAgency\LaravelCart\Support\Coerce;
 
 use function Termwind\render;
 
@@ -35,9 +38,9 @@ class CartPruneCommand extends Command
         $cutoff = Carbon::now()->subHours($hours);
 
         $query = $this->cartQuery()
-            ->where(function ($q) use ($cutoff): void {
+            ->where(function (Builder $q) use ($cutoff): void {
                 $q->where('updated_at', '<', $cutoff)
-                    ->orWhere(function ($q2) use ($cutoff): void {
+                    ->orWhere(function (Builder $q2) use ($cutoff): void {
                         $q2->whereNull('updated_at')
                             ->where('created_at', '<', $cutoff);
                     });
@@ -84,8 +87,8 @@ class CartPruneCommand extends Command
 
     private function handleExpiredOnly(): int
     {
-        $cartsTable = (string) config('cart.database.carts_table', 'carts');
-        $cartItemsTable = (string) config('cart.database.cart_items_table', 'cart_items');
+        $cartsTable = CartConfig::string('cart.database.carts_table', 'carts');
+        $cartItemsTable = CartConfig::string('cart.database.cart_items_table', 'cart_items');
         $connection = DB::connection($this->connectionName());
 
         $query = $connection->table($cartsTable)
@@ -129,6 +132,9 @@ class CartPruneCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * @param  array<array-key, mixed>  $breakdown  Cart count per instance.
+     */
     private function renderDryRun(int $count, int $hours, array $breakdown): void
     {
         $dryRunMsg = e(__('laravel-cart::cart.command_prune_dry_run', ['count' => $count, 'hours' => $hours]));
@@ -141,6 +147,7 @@ class CartPruneCommand extends Command
         HTML);
 
         foreach ($breakdown as $inst => $instCount) {
+            $instCount = Coerce::int($instCount);
             $safeInst = e((string) $inst);
             $dots = str_repeat('.', max(1, 35 - mb_strlen((string) $inst)));
 

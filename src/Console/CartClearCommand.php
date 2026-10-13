@@ -6,6 +6,7 @@ namespace OfflineAgency\LaravelCart\Console;
 
 use Illuminate\Console\Command;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
+use OfflineAgency\LaravelCart\Support\Coerce;
 
 use function Termwind\render;
 
@@ -35,7 +36,7 @@ class CartClearCommand extends Command
     public function handle(): int
     {
         $table = $this->tableName();
-        $instance = $this->option('instance');
+        $instance = Coerce::nullableString($this->option('instance'));
 
         if (! $this->option('force') && ! $this->confirmAction($instance)) {
             $this->renderCancelled();

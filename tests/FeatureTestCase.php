@@ -4,12 +4,23 @@ declare(strict_types=1);
 
 namespace OfflineAgency\LaravelCart\Tests;
 
+use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Foundation\Application;
+use Illuminate\Testing\PendingCommand;
+use LogicException;
+use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\CartServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class FeatureTestCase extends Orchestra
 {
+    use CartAssertions;
+
+    /**
+     * The cart under test; assigned by the beforeEach() hooks of the suites using it.
+     */
+    protected Cart $cart;
+
     /**
      * @param  Application  $app
      * @return array<int, class-string>
@@ -34,14 +45,32 @@ abstract class FeatureTestCase extends Orchestra
     {
         parent::setUp();
 
-        $this->app->afterResolving('migrator', function ($migrator): void {
-            $migrator->path(realpath(__DIR__.'/../database/migrations'));
+        app()->afterResolving('migrator', function (Migrator $migrator): void {
+            $migrator->path(__DIR__.'/../database/migrations');
         });
 
         // A server database outlives the test, unlike SQLite :memory:, so start every test empty.
         if (self::usesServerDatabase()) {
             $this->artisan('db:wipe', ['--database' => 'testing']);
         }
+    }
+
+    /**
+     * Console output is mocked in these tests, so artisan() always returns a
+     * PendingCommand (an exit code is only returned when mocking is disabled).
+     *
+     * @param  string  $command
+     * @param  array<string, mixed>  $parameters
+     */
+    public function artisan($command, $parameters = []): PendingCommand
+    {
+        $result = parent::artisan($command, $parameters);
+
+        if (! $result instanceof PendingCommand) {
+            throw new LogicException('Console output mocking must stay enabled for the package tests.');
+        }
+
+        return $result;
     }
 
     /**

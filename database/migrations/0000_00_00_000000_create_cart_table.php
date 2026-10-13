@@ -9,9 +9,9 @@ class CreateCartTable extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create(config('cart.database.table'), function (Blueprint $table) {
+        Schema::create(config()->string('cart.database.table', 'cart'), function (Blueprint $table) {
             $table->string('identifier');
             $table->string('instance');
             $table->longText('content');
@@ -24,8 +24,8 @@ class CreateCartTable extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down()
+    public function down(): void
     {
-        Schema::drop(config('cart.database.table'));
+        Schema::drop(config()->string('cart.database.table', 'cart'));
     }
 }

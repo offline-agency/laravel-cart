@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace OfflineAgency\LaravelCart\Console;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
+use OfflineAgency\LaravelCart\Support\Coerce;
+use stdClass;
 
 use function Termwind\render;
 
@@ -55,18 +58,19 @@ class CartListCommand extends Command
 
         $carts = $query->limit($limit)->get();
 
-        $rows = $carts->map(function (object $cart): array {
+        $rows = $carts->map(function (stdClass $cart): array {
             $content = $this->decodeContent($cart->content);
             $coupons = $this->decodeCoupons($cart->coupons ?? null);
+            $createdAt = Coerce::nullableString($cart->created_at);
 
             $couponCount = count($coupons);
 
             return [
-                'identifier' => $cart->identifier,
-                'instance' => $cart->instance,
+                'identifier' => Coerce::string($cart->identifier),
+                'instance' => Coerce::string($cart->instance),
                 'items' => $content?->count(),
                 'coupons' => $couponCount,
-                'created_at' => $cart->created_at,
+                'created_at' => $createdAt,
                 'updated_at' => $cart->updated_at,
             ];
         });
@@ -97,6 +101,9 @@ class CartListCommand extends Command
         HTML);
     }
 
+    /**
+     * @param  array{identifier: string, instance: string, items: int|null, coupons: int, created_at: string|null, updated_at: mixed}  $row
+     */
     private function renderCartRow(array $row): void
     {
         $identifier = e(str_pad(mb_substr($row['identifier'], 0, 14), 14));
@@ -109,7 +116,7 @@ class CartListCommand extends Command
         $coupons = $couponCount > 0
             ? str_pad($couponCount.' coupon'.($couponCount !== 1 ? 's' : ''), 12)
             : str_pad('─', 12);
-        $date = $row['created_at'] ? date('Y-m-d H:i', strtotime($row['created_at'])) : 'n/a';
+        $date = $row['created_at'] ? Carbon::parse($row['created_at'])->format('Y-m-d H:i') : 'n/a';
 
         render(<<<HTML
             <div class="mx-4">

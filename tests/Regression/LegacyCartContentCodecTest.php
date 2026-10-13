@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\Cart;
@@ -11,6 +12,7 @@ use OfflineAgency\LaravelCart\CartItemOptions;
 use OfflineAgency\LaravelCart\Enums\CouponType;
 use OfflineAgency\LaravelCart\Exceptions\CartStorageException;
 use OfflineAgency\LaravelCart\Support\CartContentCodec;
+use OfflineAgency\LaravelCart\Support\Coerce;
 use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
 
 /**
@@ -47,7 +49,7 @@ function regCodecUsesPostgres(): bool
 
 function regCodecCart(): Cart
 {
-    return app('cart');
+    return resolveCart();
 }
 
 beforeEach(function (): void {
@@ -61,7 +63,7 @@ it('stores the legacy cart content without NUL bytes', function (): void {
 
     $cart->store('nul-check');
 
-    $stored = (string) DB::table('cart')->where('identifier', 'nul-check')->value('content');
+    $stored = Coerce::string(DB::table('cart')->where('identifier', 'nul-check')->value('content'));
 
     expect($stored)->not->toContain("\0")
         ->and($stored)->toStartWith(CartContentCodec::PREFIX);
@@ -165,11 +167,11 @@ it('lets the console commands read carts written by Cart::store()', function ():
 
     $path = sys_get_temp_dir().'/reg-codec-export-'.uniqid().'.json';
     $this->artisan('cart:export', ['--path' => $path])->assertExitCode(0);
-    $export = json_decode((string) file_get_contents($path), true);
+    $export = decodeJson(file_get_contents($path));
     @unlink($path);
 
-    expect($export['carts'][0]['items'][0]['name'])->toBe('Product')
-        ->and($export['carts'][0])->not->toHaveKey('error');
+    expect(data_get($export, 'carts.0.items.0.name'))->toBe('Product')
+        ->and(data_get($export, 'carts.0'))->not->toHaveKey('error');
 });
 
 it('keeps flagging undecodable content in the console commands', function (): void {
@@ -189,15 +191,15 @@ it('keeps flagging undecodable content in the console commands', function (): vo
 
     $path = sys_get_temp_dir().'/reg-codec-export-'.uniqid().'.json';
     $this->artisan('cart:export', ['--path' => $path])->assertExitCode(0);
-    $export = json_decode((string) file_get_contents($path), true);
+    $export = decodeJson(file_get_contents($path));
     @unlink($path);
 
-    expect($export['carts'][0]['error'])->toBe('Failed to deserialize');
+    expect(data_get($export, 'carts.0.error'))->toBe('Failed to deserialize');
 });
 
 it('writes NUL-free content when migrating session carts to the database', function (): void {
     config(['session.driver' => 'database']);
-    DB::connection('testing')->getSchemaBuilder()->create('sessions', function ($table): void {
+    DB::connection('testing')->getSchemaBuilder()->create('sessions', function (Blueprint $table): void {
         $table->string('id')->primary();
         $table->text('payload')->nullable();
         $table->integer('last_activity')->default(0);
@@ -213,12 +215,12 @@ it('writes NUL-free content when migrating session carts to the database', funct
     $this->artisan('cart:migrate-driver', ['--from' => 'session', '--to' => 'database', '--force' => true])
         ->assertExitCode(0);
 
-    $content = (string) DB::table('cart')->where('identifier', 'sess-1')->value('content');
+    $content = Coerce::string(DB::table('cart')->where('identifier', 'sess-1')->value('content'));
     $decoded = CartContentCodec::decode($content);
 
     expect($content)->not->toContain("\0")
         ->and($decoded)->toBeInstanceOf(Collection::class)
-        ->and($decoded->first()->name)->toBe('Migrated');
+        ->and($decoded?->first()?->name)->toBe('Migrated');
 });
 
 it('decodes an empty payload as an empty cart', function (?string $payload): void {
@@ -231,12 +233,12 @@ it('round-trips the values a cart legitimately holds', function (): void {
     $item->options = new CartItemOptions(['type' => CouponType::Fixed]);
 
     $decoded = CartContentCodec::decode(CartContentCodec::encode(collect([$item->rowId => $item])));
-    $restored = $decoded->first();
+    $restored = $decoded?->first();
 
-    expect($restored->model)->toBeInstanceOf(RegCodecModel::class)
-        ->and($restored->model->name)->toBe('Model')
-        ->and($restored->options->type)->toBe(CouponType::Fixed)
-        ->and($restored->createdAt->equalTo($item->createdAt))->toBeTrue();
+    expect($restored?->model)->toBeInstanceOf(RegCodecModel::class)
+        ->and($restored?->model instanceof RegCodecModel ? $restored->model->getAttribute('name') : null)->toBe('Model')
+        ->and($restored?->options->get('type'))->toBe(CouponType::Fixed)
+        ->and($restored?->createdAt->equalTo($item->createdAt))->toBeTrue();
 });
 
 it('returns null for payloads naming unknown classes or failing to wake up', function (): void {

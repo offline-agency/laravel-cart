@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Http\Request;
-use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Contracts\CartStorage;
 use OfflineAgency\LaravelCart\Exceptions\CartExpiredException;
@@ -44,16 +43,16 @@ it('builds a default invalid driver message', function () {
 
 it('throws an invalid driver exception for unsupported storage drivers', function () {
     config(['cart.storage.driver' => 'redis']);
-    $this->app->forgetInstance(CartStorage::class);
+    app()->forgetInstance(CartStorage::class);
 
-    $this->app->make(CartStorage::class);
+    app()->make(CartStorage::class);
 })->throws(InvalidDriverException::class, 'The cart storage driver [redis] is not supported.');
 
 it('resolves the database storage driver', function () {
     config(['cart.storage.driver' => 'database']);
-    $this->app->forgetInstance(CartStorage::class);
+    app()->forgetInstance(CartStorage::class);
 
-    expect($this->app->make(CartStorage::class))->toBeInstanceOf(DatabaseStorage::class);
+    expect(app()->make(CartStorage::class))->toBeInstanceOf(DatabaseStorage::class);
 });
 
 it('transforms a cart item into an array resource', function () {
@@ -65,8 +64,7 @@ it('transforms a cart item into an array resource', function () {
 });
 
 it('transforms a cart into an array resource', function () {
-    /** @var Cart $cart */
-    $cart = $this->app->make('cart');
+    $cart = resolveCart();
     $cart->add(1, 'Item', 'Sub', 1, 10.0, 12.2, 2.2);
 
     $data = (new CartResource($cart))->toArray(Request::create('/'));

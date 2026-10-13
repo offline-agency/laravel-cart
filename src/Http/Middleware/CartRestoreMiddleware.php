@@ -7,6 +7,7 @@ namespace OfflineAgency\LaravelCart\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use OfflineAgency\LaravelCart\Cart;
+use OfflineAgency\LaravelCart\Support\Coerce;
 use Symfony\Component\HttpFoundation\Response;
 
 class CartRestoreMiddleware
@@ -15,6 +16,9 @@ class CartRestoreMiddleware
         private readonly Cart $cart,
     ) {}
 
+    /**
+     * @param  Closure(Request): Response  $next
+     */
     public function handle(Request $request, Closure $next): Response
     {
         if (! config('cart.middleware.auto_restore', false)) {
@@ -29,7 +33,7 @@ class CartRestoreMiddleware
         if ($this->cart->isEmpty()) {
             try {
                 $this->cart->restore(
-                    $user->getAuthIdentifier(),
+                    Coerce::key($user->getAuthIdentifier()),
                     mergeOnRestore: true,
                     keepStored: true,
                 );

@@ -40,8 +40,8 @@ it('syncs taxRate from vatRate on unserialization', function () {
 
     $restored = unserialize(serialize($item));
 
-    expect($restored->taxRate)->toBe(22.0)
-        ->and($restored->tax)->toBe(22.0);
+    expect($restored)->toBeInstanceOf(CartItem::class)
+        ->and($restored instanceof CartItem ? [$restored->taxRate, $restored->tax] : null)->toBe([22.0, 22.0]);
 });
 
 it('determines whether the item represents a given buyable', function () {

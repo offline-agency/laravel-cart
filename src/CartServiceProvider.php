@@ -6,6 +6,7 @@ namespace OfflineAgency\LaravelCart;
 
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\ServiceProvider;
@@ -20,6 +21,7 @@ use OfflineAgency\LaravelCart\Contracts\CartStorage;
 use OfflineAgency\LaravelCart\Exceptions\InvalidDriverException;
 use OfflineAgency\LaravelCart\Storage\DatabaseStorage;
 use OfflineAgency\LaravelCart\Storage\SessionStorage;
+use OfflineAgency\LaravelCart\Support\CartConfig;
 
 class CartServiceProvider extends ServiceProvider
 {
@@ -33,8 +35,8 @@ class CartServiceProvider extends ServiceProvider
         // Scoped: the cart and its storage carry per-user state (current
         // instance, cart-level coupons, read cache), so they are rebuilt for
         // every request / queued job instead of living for the whole worker.
-        $this->app->scoped(CartStorage::class, function ($app) {
-            $driver = (string) config('cart.storage.driver', 'session');
+        $this->app->scoped(CartStorage::class, function (Application $app): CartStorage {
+            $driver = CartConfig::string('cart.storage.driver', 'session');
 
             return match ($driver) {
                 'database' => new DatabaseStorage($app->make(DatabaseManager::class)),
@@ -43,7 +45,7 @@ class CartServiceProvider extends ServiceProvider
             };
         });
 
-        $this->app->scoped('cart', function ($app) {
+        $this->app->scoped('cart', function (Application $app): Cart {
             return new Cart(
                 $app->make(CartStorage::class),
                 $app->make(Dispatcher::class),
@@ -95,8 +97,8 @@ class CartServiceProvider extends ServiceProvider
 
     private function registerLogoutListener(): void
     {
-        $this->app['events']->listen(Logout::class, function (): void {
-            if ($this->app['config']->get('cart.destroy_on_logout')) {
+        $this->app->make(Dispatcher::class)->listen(Logout::class, function (): void {
+            if (config('cart.destroy_on_logout')) {
                 $this->app->make(SessionManager::class)->forget('cart');
             }
         });

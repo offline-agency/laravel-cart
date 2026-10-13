@@ -4,21 +4,28 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\ColumnDefinition;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        $table = config('cart.database.carts_table', 'carts');
-        $fkType = config('cart.users.foreign_key_type', 'unsignedBigInteger');
-        $fkColumn = config('cart.users.foreign_key', 'user_id');
+        $table = config()->string('cart.database.carts_table', 'carts');
+        $fkType = config()->string('cart.users.foreign_key_type', 'unsignedBigInteger');
+        $fkColumn = config()->string('cart.users.foreign_key', 'user_id');
 
         Schema::create($table, function (Blueprint $table) use ($fkType, $fkColumn) {
             $table->id();
             // Authenticated owner. Guests are identified by session_id instead,
             // so a session id is never written to the user foreign key column.
-            $table->{$fkType}($fkColumn)->nullable()->index();
+            $ownerColumn = $table->{$fkType}($fkColumn);
+
+            if (! $ownerColumn instanceof ColumnDefinition) {
+                throw new InvalidArgumentException("[cart.users.foreign_key_type] must name a column type method of the schema Blueprint, [{$fkType}] given.");
+            }
+
+            $ownerColumn->nullable()->index();
             $table->string('session_id')->nullable()->index();
             $table->string('instance')->index();
             $table->json('coupons')->nullable();
@@ -36,6 +43,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists(config('cart.database.carts_table', 'carts'));
+        Schema::dropIfExists(config()->string('cart.database.carts_table', 'carts'));
     }
 };

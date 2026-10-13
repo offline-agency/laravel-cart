@@ -11,7 +11,7 @@ class AddCouponsColumnToCartTable extends Migration
      */
     public function up(): void
     {
-        Schema::table(config('cart.database.table', 'cart'), function (Blueprint $table): void {
+        Schema::table(config()->string('cart.database.table', 'cart'), function (Blueprint $table): void {
             $table->json('coupons')->nullable()->after('content');
         });
     }
@@ -21,7 +21,7 @@ class AddCouponsColumnToCartTable extends Migration
      */
     public function down(): void
     {
-        Schema::table(config('cart.database.table', 'cart'), function (Blueprint $table): void {
+        Schema::table(config()->string('cart.database.table', 'cart'), function (Blueprint $table): void {
             $table->dropColumn('coupons');
         });
     }

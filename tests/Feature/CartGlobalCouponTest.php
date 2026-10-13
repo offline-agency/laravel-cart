@@ -10,7 +10,7 @@ use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidCouponHashException;
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -20,16 +20,16 @@ it('adds a global percentage coupon', function (): void {
     $coupons = $this->cart->getGlobalCoupons();
     expect($coupons)->toHaveCount(1)
         ->and($coupons->first())->toBeInstanceOf(CartCoupon::class)
-        ->and($coupons->first()->isGlobal)->toBeTrue()
-        ->and($coupons->first()->isPercentage())->toBeTrue();
+        ->and($coupons->first()?->isGlobal)->toBeTrue()
+        ->and($coupons->first()?->isPercentage())->toBeTrue();
 });
 
 it('adds a global fixed coupon', function (): void {
     $this->cart->addGlobalCoupon('hash2', 'SAVE20', 'fixed', 20.0);
 
     $coupons = $this->cart->getGlobalCoupons();
-    expect($coupons->first()->isFixed())->toBeTrue()
-        ->and($coupons->first()->value)->toBe(20.0);
+    expect($coupons->first()?->isFixed())->toBeTrue()
+        ->and($coupons->first()?->value)->toBe(20.0);
 });
 
 it('removes a global coupon', function (): void {
@@ -88,8 +88,8 @@ it('gets all global coupons', function (): void {
 it('fires cart.global_coupon_added event', function (): void {
     // Fake before resolving Cart so it gets the fake dispatcher
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
     $cart->addGlobalCoupon('hash1', 'SAVE10', 'fixed', 10.0);
 
     Event::assertDispatched('cart.global_coupon_added');
@@ -97,8 +97,8 @@ it('fires cart.global_coupon_added event', function (): void {
 
 it('fires cart.global_coupon_removed event', function (): void {
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
     $cart->addGlobalCoupon('hash1', 'SAVE10', 'fixed', 10.0);
     $cart->removeGlobalCoupon('hash1');
 
@@ -117,7 +117,7 @@ it('removeGlobalCoupon returns static for fluent chaining', function (): void {
 it('global coupons persist in session across requests', function (): void {
     $this->cart->addGlobalCoupon('hash1', 'SAVE10', 'fixed', 10.0);
 
-    $cart2 = $this->app->make('cart');
+    $cart2 = resolveCart();
 
     expect($cart2->getGlobalCoupons())->toHaveCount(1);
 });

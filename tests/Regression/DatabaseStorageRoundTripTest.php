@@ -20,6 +20,7 @@ function regRoundTripCart(): Cart
 }
 
 /**
+ * @param  Collection<string, CartItem>  $content
  * @return array<string, array<string, mixed>>
  */
 function regRoundTripSnapshot(Collection $content): array
@@ -83,7 +84,7 @@ it('round-trips prices, VAT, coupons, options and the model association', functi
         ->and($restored->get($fixed->rowId)->originalTotalPrice)->toBe(61.0)
         ->and($restored->get($fixed->rowId)->originalVat)->toBe(11.0)
         ->and($restored->get($fixed->rowId)->appliedCoupons['FIVE']->discountValue)->toBe(5.0)
-        ->and($restored->getCoupon('TEN')->couponType)->toBe('percentage')
+        ->and($restored->getCoupon('TEN')?->couponType)->toBe('percentage')
         ->and($restored->hasGlobalCoupon())->toBeTrue();
 
     // Coupons hydrated from the database can still be detached.

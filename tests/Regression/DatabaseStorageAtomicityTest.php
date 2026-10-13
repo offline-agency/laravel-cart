@@ -36,14 +36,20 @@ it('keeps the previous cart when a write fails midway', function (): void {
 
     $valid = regAtomicItem('3');
     $broken = regAtomicItem('4');
-    $broken->name = null; // violates the NOT NULL constraint on insert
+
+    // Fail the new rows' insert, after the old rows were deleted in the same transaction.
+    DB::connection('testing')->beforeExecuting(function (string $query, array $bindings): void {
+        if (str_starts_with(strtolower($query), 'insert into "cart_items"')) {
+            throw new QueryException('testing', $query, $bindings, new RuntimeException('Simulated insert failure.'));
+        }
+    });
 
     expect(fn () => $storage->put('cart.default', new Collection([$valid->rowId => $valid, $broken->rowId => $broken])))
         ->toThrow(QueryException::class);
 
     expect(DB::table('cart_items')->pluck('item_id')->sort()->values()->all())->toBe(['1', '2'])
-        ->and(regAtomicStorage()->get('cart.default')->keys()->all())->toEqualCanonicalizing([$one->rowId, $two->rowId])
-        ->and($storage->get('cart.default')->keys()->all())->toEqualCanonicalizing([$one->rowId, $two->rowId]);
+        ->and(cartItemsOf(regAtomicStorage()->get('cart.default'))->keys()->all())->toEqualCanonicalizing([$one->rowId, $two->rowId])
+        ->and(cartItemsOf($storage->get('cart.default'))->keys()->all())->toEqualCanonicalizing([$one->rowId, $two->rowId]);
 });
 
 it('tolerates a concurrent request creating the same cart', function (): void {

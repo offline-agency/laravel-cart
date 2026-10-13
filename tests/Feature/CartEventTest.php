@@ -15,10 +15,10 @@ use OfflineAgency\LaravelCart\Events\CouponRemoved;
 beforeEach(function (): void {
     $this->artisan('migrate', ['--database' => 'testing']);
 
-    $this->app['config']->set('cart.use_legacy_events', true);
+    config()->set('cart.use_legacy_events', true);
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $this->cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -33,12 +33,12 @@ it('dispatches CartItemAdded typed event on add (legacy on)', function (): void 
 
 it('dispatches CartItemUpdated typed event on update (legacy on)', function (): void {
     $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
-    $rowId = $this->cart->content()->keys()->first();
+    $rowId = $this->cart->content()->keys()->firstOrFail();
 
     Event::clearResolvedInstances();
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
     $cart->update($rowId, 2);
 
     Event::assertDispatched(CartItemUpdated::class);
@@ -47,12 +47,12 @@ it('dispatches CartItemUpdated typed event on update (legacy on)', function (): 
 
 it('dispatches CartItemRemoved typed event on remove (legacy on)', function (): void {
     $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
-    $rowId = $this->cart->content()->keys()->first();
+    $rowId = $this->cart->content()->keys()->firstOrFail();
 
     Event::clearResolvedInstances();
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
     $cart->remove($rowId);
 
     Event::assertDispatched(CartItemRemoved::class);
@@ -73,8 +73,8 @@ it('dispatches CartRestored typed event on restore (legacy on)', function (): vo
 
     Event::clearResolvedInstances();
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
     $cart->restore('user-restore-event');
 
     Event::assertDispatched(CartRestored::class);
@@ -84,11 +84,11 @@ it('dispatches CartRestored typed event on restore (legacy on)', function (): vo
 // ── use_legacy_events = false ──────────────────────────────────────────────────
 
 it('dispatches only typed CartItemAdded when use_legacy_events is false', function (): void {
-    $this->app['config']->set('cart.use_legacy_events', false);
+    config()->set('cart.use_legacy_events', false);
 
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
     $cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
 
     Event::assertDispatched(CartItemAdded::class);
@@ -97,8 +97,8 @@ it('dispatches only typed CartItemAdded when use_legacy_events is false', functi
 
 it('dispatches CouponApplied and CouponRemoved events', function (): void {
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
 
     $coupon = new CartCoupon(hash: 'h1', code: 'TEST', type: 'fixed', value: 5.0, isGlobal: true);
     $cart->addCoupon($coupon);

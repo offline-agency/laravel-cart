@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 beforeEach(function (): void {
     $this->artisan('migrate', ['--database' => 'testing']);
 
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 

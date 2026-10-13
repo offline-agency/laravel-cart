@@ -45,7 +45,7 @@ it('keeps items, meta and options when only the coupons are removed', function (
     $fresh = regRemoveStorage();
 
     expect($fresh->get('cart.default'))->toHaveCount(1)
-        ->and($fresh->get('cart.default')->get($item->rowId)->name)->toBe('Kept')
+        ->and(cartItemsOf($fresh->get('cart.default'))->get($item->rowId)?->name)->toBe('Kept')
         ->and($fresh->get('cart.default_meta'))->toBe(['source' => 'web'])
         ->and($fresh->get('cart.default_cart_info'))->toBe(['options' => ['gift' => true]])
         ->and($fresh->get('cart.default_global_coupons'))->toBeEmpty()

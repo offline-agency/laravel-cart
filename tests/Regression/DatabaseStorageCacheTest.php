@@ -22,6 +22,9 @@ function regCacheStorage(): DatabaseStorage
     return new DatabaseStorage(app(DatabaseManager::class));
 }
 
+/**
+ * @return Collection<string, CartItem>
+ */
 function regCacheContent(string $id): Collection
 {
     $item = new CartItem(id: $id, name: 'Item '.$id, subtitle: '', qty: 1, price: 3.0, totalPrice: 3.0, vat: 0.0);
@@ -53,7 +56,7 @@ it('does not serve user A cart to user B from the same storage instance', functi
 
     $this->actingAs(new GenericUser(['id' => 1]));
 
-    expect($storage->get('cart.default')->first()->id)->toBe('a');
+    expect(cartItemsOf($storage->get('cart.default'))->first()?->id)->toBe('a');
 });
 
 it('does not serve the guest cart after the user authenticates', function (): void {
@@ -102,21 +105,21 @@ it('starts a fresh cart when writing to an expired one', function (): void {
 
     regCacheStorage()->put('cart.default', regCacheContent('new'));
 
-    expect(regCacheStorage()->get('cart.default')->first()->id)->toBe('new');
+    expect(cartItemsOf(regCacheStorage()->get('cart.default'))->first()?->id)->toBe('new');
 });
 
 it('resolves the cart and its storage once per request or job', function (): void {
     config(['cart.storage.driver' => 'database']);
 
-    $cart = app('cart');
+    $cart = resolveCart();
     $storage = app(CartStorage::class);
 
-    expect(app('cart'))->toBe($cart)
+    expect(resolveCart())->toBe($cart)
         ->and(app(CartStorage::class))->toBe($storage);
 
-    $this->app->forgetScopedInstances();
+    app()->forgetScopedInstances();
 
-    expect(app('cart'))->not->toBe($cart)
+    expect(resolveCart())->not->toBe($cart)
         ->and(app(CartStorage::class))->not->toBe($storage);
 });
 
@@ -124,18 +127,16 @@ it('does not leak cart state between jobs of a long-lived worker', function (): 
     config(['cart.storage.driver' => 'database']);
 
     $this->actingAs(new GenericUser(['id' => 1]));
-    /** @var Cart $cart */
-    $cart = app('cart');
+    $cart = resolveCart();
     $cart->add('1', 'A product', '', 1, 10.0, 10.0, 0.0);
     $cart->addCoupon(new CartCoupon(hash: 'h', code: 'A-ONLY', type: 'fixed', value: 1.0));
 
     // What the queue worker does between jobs.
-    $this->app->forgetScopedInstances();
+    app()->forgetScopedInstances();
     Facade::clearResolvedInstances();
 
     $this->actingAs(new GenericUser(['id' => 2]));
-    /** @var Cart $next */
-    $next = app('cart');
+    $next = resolveCart();
 
     expect($next->listCoupons())->toBeEmpty()
         ->and($next->isEmpty())->toBeTrue();

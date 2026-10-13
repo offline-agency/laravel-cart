@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace OfflineAgency\LaravelCart\Console;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
+use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
+use OfflineAgency\LaravelCart\Support\Coerce;
 
 use function Termwind\render;
 
@@ -23,8 +27,8 @@ class CartInspectCommand extends Command
 
     public function handle(): int
     {
-        $identifier = $this->argument('identifier');
-        $instance = $this->option('instance');
+        $identifier = Coerce::string($this->argument('identifier'));
+        $instance = Coerce::string($this->option('instance'));
 
         $stored = $this->cartQuery()
             ->where('identifier', $identifier)
@@ -49,7 +53,7 @@ class CartInspectCommand extends Command
                     <div class="px-1 bg-gray-700 text-gray-300 font-bold"> Raw Content </div>
                 </div>
             HTML);
-            $this->output->writeln($stored->content);
+            $this->output->writeln(Coerce::nullableString($stored->content) ?? '');
 
             return self::SUCCESS;
         }
@@ -78,7 +82,7 @@ class CartInspectCommand extends Command
             $this->output->writeln(json_encode([
                 'identifier' => $stored->identifier,
                 'instance' => $stored->instance,
-                'items' => $content->map(fn ($item) => $item->toArray())->values()->toArray(),
+                'items' => $content->map(fn (CartItem $item): array => $item->toArray())->values()->all(),
                 'coupons' => $coupons,
                 'created_at' => $stored->created_at,
                 'updated_at' => $stored->updated_at,
@@ -87,7 +91,8 @@ class CartInspectCommand extends Command
             return self::SUCCESS;
         }
 
-        $date = $stored->created_at ? date('Y-m-d H:i:s', strtotime($stored->created_at)) : 'n/a';
+        $createdAt = Coerce::nullableString($stored->created_at);
+        $date = $createdAt ? Carbon::parse($createdAt)->format('Y-m-d H:i:s') : 'n/a';
         $this->renderHeader(e($identifier), e($instance), $date);
 
         if ($content->isNotEmpty()) {
@@ -117,7 +122,10 @@ class CartInspectCommand extends Command
         HTML);
     }
 
-    private function renderItemsSection($content): void
+    /**
+     * @param  Collection<string, CartItem>  $content
+     */
+    private function renderItemsSection(Collection $content): void
     {
         $count = $content->count();
 
@@ -132,15 +140,15 @@ class CartInspectCommand extends Command
         }
     }
 
-    private function renderItemRow(object $item): void
+    private function renderItemRow(CartItem $item): void
     {
         $rowId = e(mb_substr($item->rowId, 0, 8).'...');
         $id = e(str_pad(mb_substr((string) $item->id, 0, 8), 8));
         $name = e(str_pad(mb_substr($item->name, 0, 22), 22));
         $qty = str_pad('×'.$item->qty, 5);
-        $price = str_pad(number_format((float) $item->price, 2), 10, ' ', STR_PAD_LEFT);
+        $price = str_pad(number_format($item->price, 2), 10, ' ', STR_PAD_LEFT);
         $lineTotal = str_pad(
-            number_format((float) $item->totalPrice * $item->qty, 2), 12, ' ', STR_PAD_LEFT
+            number_format($item->totalPrice * $item->qty, 2), 12, ' ', STR_PAD_LEFT
         );
 
         render(<<<HTML
@@ -155,6 +163,9 @@ class CartInspectCommand extends Command
         HTML);
     }
 
+    /**
+     * @param  list<array<array-key, mixed>>  $coupons
+     */
     private function renderCouponsSection(array $coupons): void
     {
         render(<<<'HTML'
@@ -168,13 +179,16 @@ class CartInspectCommand extends Command
         }
     }
 
+    /**
+     * @param  array<array-key, mixed>  $coupon
+     */
     private function renderCouponRow(array $coupon): void
     {
-        $code = e(str_pad($coupon['code'] ?? '?', 14));
-        $type = e(str_pad($coupon['type'] ?? '?', 12));
+        $code = e(str_pad(Coerce::string($coupon['code'] ?? '?'), 14));
+        $type = e(str_pad(Coerce::string($coupon['type'] ?? '?'), 12));
         $val = ($coupon['type'] ?? '') === 'percentage'
-            ? (($coupon['value'] ?? 0).'%')
-            : number_format((float) ($coupon['value'] ?? 0), 2);
+            ? Coerce::string($coupon['value'] ?? 0).'%'
+            : number_format(Coerce::float($coupon['value'] ?? 0), 2);
         $value = str_pad($val, 8);
         $scope = ($coupon['isGlobal'] ?? false) ? 'global' : 'item';
 
@@ -188,12 +202,15 @@ class CartInspectCommand extends Command
         HTML);
     }
 
-    private function renderTotals($content): void
+    /**
+     * @param  Collection<string, CartItem>  $content
+     */
+    private function renderTotals(Collection $content): void
     {
-        $subtotal = $content->sum(fn ($item) => $item->price * $item->qty);
-        $vat = $content->sum(fn ($item) => $item->vat * $item->qty);
-        $discount = $content->sum(fn ($item) => $item->discountValue ?? 0);
-        $total = $content->sum(fn ($item) => $item->totalPrice * $item->qty);
+        $subtotal = $content->sum(fn (CartItem $item): float => $item->price * $item->qty);
+        $vat = $content->sum(fn (CartItem $item): float => $item->vat * $item->qty);
+        $discount = $content->sum(fn (CartItem $item): float => $item->discountValue);
+        $total = $content->sum(fn (CartItem $item): float => $item->totalPrice * $item->qty);
 
         render(<<<'HTML'
             <div class="mx-2 mt-1">
@@ -209,7 +226,7 @@ class CartInspectCommand extends Command
         ];
 
         foreach ($rows as [$label, $value]) {
-            $formatted = number_format((float) $value, 2);
+            $formatted = number_format($value, 2);
             $dots = str_repeat('.', max(1, 38 - mb_strlen($label)));
             $colorClass = $label === 'Total' ? 'text-green-400 font-bold' : 'text-white';
 

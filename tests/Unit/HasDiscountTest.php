@@ -7,12 +7,15 @@ use OfflineAgency\LaravelCart\Enums\CouponType;
 use OfflineAgency\LaravelCart\Tests\Fixtures\PlainPromo;
 use OfflineAgency\LaravelCart\Tests\Fixtures\PromoModel;
 
+/**
+ * @param  array<string, mixed>  $attributes
+ */
 function promoModel(array $attributes = []): PromoModel
 {
     $promo = new PromoModel($attributes);
 
     if (array_key_exists('id', $attributes)) {
-        $promo->id = $attributes['id'];
+        $promo->setAttribute('id', $attributes['id']);
     }
 
     return $promo;
@@ -69,7 +72,7 @@ it('getCouponExpiresAt parses a string date into Carbon', function (): void {
     $expiresAt = promoModel(['coupon_expires_at' => '2027-01-31'])->getCouponExpiresAt();
 
     expect($expiresAt)->toBeInstanceOf(Carbon::class)
-        ->and($expiresAt->toDateString())->toBe('2027-01-31');
+        ->and($expiresAt?->toDateString())->toBe('2027-01-31');
 });
 
 it('getCouponUsageLimit casts the column to int and defaults to null', function (): void {

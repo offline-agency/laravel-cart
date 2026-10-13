@@ -8,14 +8,17 @@ use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
 use OfflineAgency\LaravelCart\Tests\Fixtures\PromoModel;
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
+/**
+ * @param  array<string, mixed>  $attributes
+ */
 function couponable(array $attributes): PromoModel
 {
     $promo = new PromoModel($attributes);
-    $promo->id = $attributes['id'] ?? 'promo-1';
+    $promo->setAttribute('id', $attributes['id'] ?? 'promo-1');
 
     return $promo;
 }
@@ -33,7 +36,7 @@ it('addCoupon accepts any Couponable and converts it to a CartCoupon', function 
         'coupon_min_cart_amount' => 50.0,
     ]));
 
-    $coupon = $this->cart->listCoupons()->first();
+    $coupon = $this->cart->listCoupons()->firstOrFail();
 
     expect($this->cart->listCoupons())->toHaveCount(1)
         ->and($coupon->hash)->toBe('promo-77')

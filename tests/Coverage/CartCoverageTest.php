@@ -7,7 +7,7 @@ use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\Exceptions\CartLimitExceededException;
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 

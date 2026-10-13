@@ -12,6 +12,7 @@ use OfflineAgency\LaravelCart\Events\CartItemUpdated;
 use OfflineAgency\LaravelCart\Exceptions\CartLimitExceededException;
 use OfflineAgency\LaravelCart\Storage\DatabaseStorage;
 use OfflineAgency\LaravelCart\Storage\SessionStorage;
+use PHPUnit\Framework\Assert;
 
 /**
  * Defect 8: add()/update() mutated the stored items before the limits were
@@ -56,6 +57,10 @@ function regLimitSeed(string $driver): array
     return [$cart, $item];
 }
 
+/**
+ * @param  array<array-key, mixed>  $before
+ * @param  callable(Cart): mixed  $operation
+ */
 function regLimitAssertUnchanged(string $driver, Cart $cart, array $before, callable $operation): void
 {
     $dispatched = [];
@@ -67,7 +72,7 @@ function regLimitAssertUnchanged(string $driver, Cart $cart, array $before, call
 
     try {
         $operation($cart);
-        test()->fail('Expected CartLimitExceededException');
+        Assert::fail('Expected CartLimitExceededException');
     } catch (CartLimitExceededException) {
         // expected
     }

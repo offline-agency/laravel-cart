@@ -46,9 +46,9 @@ final class CartContentCodec
 
     /**
      * Decode stored content. Returns null when the payload is malformed or is
-     * not a Collection; an empty payload is an empty cart.
+     * not a Collection of cart items; an empty payload is an empty cart.
      *
-     * @return Collection<array-key, mixed>|null
+     * @return Collection<string, CartItem>|null
      */
     public static function decode(?string $payload): ?Collection
     {
@@ -70,7 +70,28 @@ final class CartContentCodec
             return null;
         }
 
-        return $result instanceof Collection ? $result : null;
+        return $result instanceof Collection ? self::cartItems($result) : null;
+    }
+
+    /**
+     * Key the items by row id; null when the collection holds anything but cart items.
+     *
+     * @param  Collection<array-key, mixed>  $content
+     * @return Collection<string, CartItem>|null
+     */
+    public static function cartItems(Collection $content): ?Collection
+    {
+        $items = [];
+
+        foreach ($content as $item) {
+            if (! $item instanceof CartItem) {
+                return null;
+            }
+
+            $items[$item->rowId] = $item;
+        }
+
+        return new Collection($items);
     }
 
     /**

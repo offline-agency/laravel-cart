@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
 use OfflineAgency\LaravelCart\Support\CartContentCodec;
+use OfflineAgency\LaravelCart\Support\Coerce;
 
 use function Termwind\render;
 
@@ -56,7 +57,7 @@ class CartMigrateDriverCommand extends Command
 
     private function migrateSessionToDatabase(int $chunk): int
     {
-        $sessionDriver = config('session.driver');
+        $sessionDriver = Coerce::nullableString(config('session.driver'));
 
         if ($sessionDriver !== 'database' && $sessionDriver !== 'file') {
             $this->renderUnsupported(__('laravel-cart::cart.command_migrate_unsupported_session', ['driver' => $sessionDriver]));
@@ -73,8 +74,8 @@ class CartMigrateDriverCommand extends Command
 
     private function migrateFromDatabaseSessions(int $chunk): int
     {
-        $sessionsTable = config('session.table', 'sessions');
-        $sessionConnection = config('session.connection') ?? config('database.default');
+        $sessionsTable = Coerce::string(config('session.table', 'sessions'));
+        $sessionConnection = Coerce::nullableString(config('session.connection'));
 
         $total = DB::connection($sessionConnection)
             ->table($sessionsTable)
@@ -117,17 +118,14 @@ class CartMigrateDriverCommand extends Command
                     $progressBar->advance();
 
                     try {
-                        $payload = $this->decodeSessionPayload($session->payload);
+                        $payload = $this->decodeSessionPayload(Coerce::string($session->payload));
                         if ($payload === null) {
                             $skipped++;
 
                             continue;
                         }
 
-                        $cartKeys = array_filter(
-                            array_keys($payload),
-                            fn ($key) => str_starts_with($key, 'cart.')
-                        );
+                        $cartKeys = $this->cartKeys($payload);
 
                         if (empty($cartKeys)) {
                             $skipped++;
@@ -135,7 +133,7 @@ class CartMigrateDriverCommand extends Command
                             continue;
                         }
 
-                        $identifier = $session->user_id ?? $session->id;
+                        $identifier = Coerce::string($session->user_id ?? $session->id);
 
                         foreach ($cartKeys as $cartKey) {
                             $instance = str_replace('cart.', '', $cartKey);
@@ -171,12 +169,12 @@ class CartMigrateDriverCommand extends Command
 
                                 $migrated++;
                             } catch (\Throwable $e) {
-                                $this->renderCartError((string) $identifier, $e->getMessage());
+                                $this->renderCartError($identifier, $e->getMessage());
                                 $failed++;
                             }
                         }
                     } catch (\Throwable $e) {
-                        $this->renderCartError($session->id ?? 'unknown', $e->getMessage());
+                        $this->renderCartError(Coerce::string($session->id ?? 'unknown'), $e->getMessage());
                         $failed++;
                     }
                 }
@@ -192,7 +190,7 @@ class CartMigrateDriverCommand extends Command
 
     private function migrateFromFileSessions(int $chunk): int
     {
-        $path = config('session.files', storage_path('framework/sessions'));
+        $path = Coerce::string(config('session.files', storage_path('framework/sessions')));
 
         if (! is_dir($path)) {
             $this->renderError(__('laravel-cart::cart.command_migrate_session_dir_not_found', ['path' => $path]));
@@ -200,7 +198,7 @@ class CartMigrateDriverCommand extends Command
             return self::FAILURE;
         }
 
-        $files = glob("{$path}/*");
+        $files = glob("{$path}/*") ?: [];
         $total = count($files);
 
         $this->renderScanResult($total);
@@ -250,10 +248,7 @@ class CartMigrateDriverCommand extends Command
                     continue;
                 }
 
-                $cartKeys = array_filter(
-                    array_keys($payload),
-                    fn ($key) => str_starts_with($key, 'cart.')
-                );
+                $cartKeys = $this->cartKeys($payload);
 
                 if (empty($cartKeys)) {
                     $skipped++;
@@ -312,6 +307,23 @@ class CartMigrateDriverCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * The session keys holding a cart instance ("cart.{instance}").
+     *
+     * @param  array<array-key, mixed>  $payload
+     * @return list<string>
+     */
+    private function cartKeys(array $payload): array
+    {
+        return array_values(array_filter(
+            array_map(strval(...), array_keys($payload)),
+            fn (string $key): bool => str_starts_with($key, 'cart.'),
+        ));
+    }
+
+    /**
+     * @return array<array-key, mixed>|null
+     */
     private function decodeSessionPayload(string $payload): ?array
     {
         $decoded = base64_decode($payload, true);

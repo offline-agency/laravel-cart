@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace OfflineAgency\LaravelCart\Console;
 
+use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
+use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
+use OfflineAgency\LaravelCart\Support\Coerce;
 
 use function Termwind\render;
 
@@ -54,17 +58,17 @@ class CartStatsCommand extends Command
 
         $uniqueInstances = (clone $query)->distinct('instance')->count('instance');
         $withCoupons = (clone $query)->whereNotNull('coupons')->count();
-        $oldest = (clone $query)->min('created_at');
-        $newest = (clone $query)->max('created_at');
+        $oldest = Coerce::nullableString((clone $query)->min('created_at'));
+        $newest = Coerce::nullableString((clone $query)->max('created_at'));
 
         $totalItems = 0;
         $totalValue = 0.0;
 
-        (clone $query)->orderBy('identifier')->chunk(100, function ($carts) use (&$totalItems, &$totalValue): void {
+        (clone $query)->orderBy('identifier')->chunk(100, function (Collection $carts) use (&$totalItems, &$totalValue): void {
             foreach ($carts as $cart) {
-                $content = $this->decodeContent($cart->content) ?? collect();
+                $content = $this->decodeContent($cart->content) ?? new Collection;
                 $totalItems += $content->count();
-                $totalValue += $content->sum(fn ($item) => $item->totalPrice * $item->qty);
+                $totalValue += $content->sum(fn (CartItem $item): float => $item->totalPrice * $item->qty);
             }
         });
 
@@ -109,8 +113,8 @@ class CartStatsCommand extends Command
             ['Total stored carts', number_format($totalCarts)],
             ['Unique instances', (string) $uniqueInstances],
             ['Carts with coupons', number_format($withCoupons)],
-            ['Oldest cart', $oldest ? date('Y-m-d', strtotime($oldest)) : 'n/a'],
-            ['Newest cart', $newest ? date('Y-m-d', strtotime($newest)) : 'n/a'],
+            ['Oldest cart', $oldest ? Carbon::parse($oldest)->format('Y-m-d') : 'n/a'],
+            ['Newest cart', $newest ? Carbon::parse($newest)->format('Y-m-d') : 'n/a'],
             ['Avg items per cart', number_format($avgItems, 1)],
             ['Avg cart value', number_format($avgValue, 2)],
         ];

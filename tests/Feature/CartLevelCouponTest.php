@@ -13,7 +13,7 @@ use OfflineAgency\LaravelCart\Exceptions\CouponNotFoundException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -24,7 +24,7 @@ it('addCoupon stores a CartCoupon and returns static', function (): void {
 
     expect($result)->toBeInstanceOf(Cart::class)
         ->and($this->cart->listCoupons())->toHaveCount(1)
-        ->and($this->cart->listCoupons()->first()->code)->toBe('SAVE10');
+        ->and($this->cart->listCoupons()->first()?->code)->toBe('SAVE10');
 });
 
 it('addCoupon throws CouponAlreadyAppliedException for duplicate hash', function (): void {
@@ -173,8 +173,8 @@ it('hasCartCoupon returns false when coupon is absent', function (): void {
 
 it('CouponApplied typed event fires when addCoupon is called', function (): void {
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
     $coupon = new CartCoupon(hash: 'h1', code: 'SAVE10', type: 'fixed', value: 10.0, isGlobal: true);
 
     $cart->addCoupon($coupon);
@@ -184,8 +184,8 @@ it('CouponApplied typed event fires when addCoupon is called', function (): void
 
 it('CouponRemoved typed event fires when removeCartCoupon is called', function (): void {
     Event::fake();
-    $this->app->forgetInstance('cart');
-    $cart = $this->app->make('cart');
+    app()->forgetInstance('cart');
+    $cart = resolveCart();
     $coupon = new CartCoupon(hash: 'h1', code: 'SAVE10', type: 'fixed', value: 10.0, isGlobal: true);
     $cart->addCoupon($coupon);
     $cart->removeCartCoupon('h1');

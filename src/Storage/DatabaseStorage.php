@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OfflineAgency\LaravelCart\Storage;
 
 use Carbon\Carbon;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
@@ -12,6 +13,12 @@ use Illuminate\Support\Collection;
 use OfflineAgency\LaravelCart\CartCoupon;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Contracts\CartStorage;
+use OfflineAgency\LaravelCart\Contracts\Couponable;
+use OfflineAgency\LaravelCart\Exceptions\CartStorageException;
+use OfflineAgency\LaravelCart\Support\CartConfig;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
+use OfflineAgency\LaravelCart\Support\Coerce;
+use OfflineAgency\LaravelCart\Support\CouponData;
 use stdClass;
 
 /**
@@ -52,10 +59,10 @@ class DatabaseStorage implements CartStorage
     public function __construct(
         DatabaseManager $database,
     ) {
-        $this->connection = $database->connection(config('cart.database.connection'));
-        $this->cartsTable = (string) config('cart.database.carts_table', 'carts');
-        $this->cartItemsTable = (string) config('cart.database.cart_items_table', 'cart_items');
-        $this->ownerColumn = (string) config('cart.users.foreign_key', 'user_id');
+        $this->connection = $database->connection(CartConfig::connection());
+        $this->cartsTable = CartConfig::string('cart.database.carts_table', 'carts');
+        $this->cartItemsTable = CartConfig::string('cart.database.cart_items_table', 'cart_items');
+        $this->ownerColumn = CartConfig::string('cart.users.foreign_key', 'user_id');
     }
 
     public function get(string $key, mixed $default = null): mixed
@@ -75,10 +82,10 @@ class DatabaseStorage implements CartStorage
         }
 
         $result = match ($this->suffixOf($key)) {
-            '_global_coupons' => $this->deserializeCoupons($cart->coupons),
-            '_cart_info' => $this->decodeArray($cart->options),
-            '_meta' => $this->decodeArray($cart->meta),
-            default => $this->loadItems((int) $cart->id),
+            '_global_coupons' => $this->deserializeCoupons(Coerce::nullableString($cart->coupons)),
+            '_cart_info' => $this->decodeArray(Coerce::nullableString($cart->options)),
+            '_meta' => $this->decodeArray(Coerce::nullableString($cart->meta)),
+            default => $this->loadItems($this->cartId($cart)),
         };
 
         $this->remember($cacheKey, $cart, $key, $result);
@@ -92,18 +99,18 @@ class DatabaseStorage implements CartStorage
         $instance = $this->parseInstance($key);
         $suffix = $this->suffixOf($key);
 
-        $cart = $this->connection->transaction(function () use ($column, $owner, $instance, $suffix, $value): object {
+        $cart = $this->connection->transaction(function () use ($column, $owner, $instance, $suffix, $value): stdClass {
             $cart = $this->lockOrCreateCart($column, $owner, $instance);
 
             if ($suffix !== null) {
                 $this->connection->table($this->cartsTable)
-                    ->where('id', $cart->id)
+                    ->where('id', $this->cartId($cart))
                     ->update([
                         self::SUFFIX_COLUMNS[$suffix] => $this->encodeCartColumn($suffix, $value),
                         'updated_at' => now(),
                     ]);
             } elseif ($value instanceof Collection) {
-                $this->syncCartItems((int) $cart->id, $value);
+                $this->syncCartItems($this->cartId($cart), $value);
             }
 
             return $cart;
@@ -150,14 +157,14 @@ class DatabaseStorage implements CartStorage
         }
 
         if ($suffix === null) {
-            $this->deleteCart((int) $cart->id);
+            $this->deleteCart($this->cartId($cart));
 
             return;
         }
 
         // Suffix keys only clear their own column; items and the other columns stay.
         $this->connection->table($this->cartsTable)
-            ->where('id', $cart->id)
+            ->where('id', $this->cartId($cart))
             ->update([self::SUFFIX_COLUMNS[$suffix] => null, 'updated_at' => now()]);
     }
 
@@ -169,7 +176,6 @@ class DatabaseStorage implements CartStorage
      */
     private function resolveOwner(): array
     {
-        /** @var int|string|null $authId */
         $authId = auth()->id();
 
         if ($authId !== null) {
@@ -204,9 +210,9 @@ class DatabaseStorage implements CartStorage
         return true;
     }
 
-    private function remember(string $cacheKey, object $cart, string $key, mixed $value): void
+    private function remember(string $cacheKey, stdClass $cart, string $key, mixed $value): void
     {
-        $this->cache[$cacheKey]['expires_at'] = empty($cart->expires_at) ? null : Carbon::parse($cart->expires_at);
+        $this->cache[$cacheKey]['expires_at'] = $this->expiresAt($cart);
         $this->cache[$cacheKey]['values'][$key] = $value;
     }
 
@@ -221,6 +227,9 @@ class DatabaseStorage implements CartStorage
         return $suffix === null ? $key : substr($key, 0, -strlen($suffix));
     }
 
+    /**
+     * @return key-of<self::SUFFIX_COLUMNS>|null
+     */
     private function suffixOf(string $key): ?string
     {
         foreach (array_keys(self::SUFFIX_COLUMNS) as $suffix) {
@@ -242,14 +251,20 @@ class DatabaseStorage implements CartStorage
     /**
      * Find the owner's cart, purging it when its TTL has elapsed.
      */
-    private function findCart(string $column, int|string $owner, string $instance, bool $lock = false): ?object
+    private function findCart(string $column, int|string $owner, string $instance, bool $lock = false): ?stdClass
     {
         $cart = $this->cartQuery($column, $owner, $instance)
             ->when($lock, fn (Builder $query) => $query->lockForUpdate())
             ->first();
 
-        if ($cart !== null && ! empty($cart->expires_at) && now()->greaterThan(Carbon::parse($cart->expires_at))) {
-            $this->deleteCart((int) $cart->id);
+        if ($cart === null) {
+            return null;
+        }
+
+        $expiresAt = $this->expiresAt($cart);
+
+        if ($expiresAt !== null && now()->greaterThan($expiresAt)) {
+            $this->deleteCart($this->cartId($cart));
             unset($this->cache[$this->cacheKey($column, $owner, $instance)]);
 
             return null;
@@ -258,12 +273,24 @@ class DatabaseStorage implements CartStorage
         return $cart;
     }
 
+    private function cartId(stdClass $cart): int
+    {
+        return Coerce::int($cart->id);
+    }
+
+    private function expiresAt(stdClass $cart): ?Carbon
+    {
+        $expiresAt = Coerce::nullableString($cart->expires_at);
+
+        return $expiresAt === null || $expiresAt === '' ? null : Carbon::parse($expiresAt);
+    }
+
     /**
      * Return the locked cart row, creating it when missing. The unique
      * (owner, instance) index plus insertOrIgnore make concurrent creation safe:
      * whoever loses the race re-reads the row the winner inserted.
      */
-    private function lockOrCreateCart(string $column, int|string $owner, string $instance): object
+    private function lockOrCreateCart(string $column, int|string $owner, string $instance): stdClass
     {
         $cart = $this->findCart($column, $owner, $instance, lock: true);
 
@@ -271,7 +298,7 @@ class DatabaseStorage implements CartStorage
             return $cart;
         }
 
-        $ttl = config('cart.ttl');
+        $ttl = CartConfig::nullableNumber('cart.ttl');
 
         $this->connection->table($this->cartsTable)->insertOrIgnore([
             $column => $owner,
@@ -296,11 +323,11 @@ class DatabaseStorage implements CartStorage
     {
         if ($suffix === '_global_coupons') {
             return $value instanceof Collection && $value->isNotEmpty()
-                ? (string) json_encode($value->map(fn ($c) => method_exists($c, 'toArray') ? $c->toArray() : $c)->values()->all())
+                ? json_encode($value->map(fn (mixed $c): mixed => $c instanceof Couponable || $c instanceof Arrayable ? $c->toArray() : $c)->values()->all(), JSON_THROW_ON_ERROR)
                 : null;
         }
 
-        return ! empty($value) ? (string) json_encode($value) : null;
+        return ! empty($value) ? json_encode($value, JSON_THROW_ON_ERROR) : null;
     }
 
     /**
@@ -336,20 +363,26 @@ class DatabaseStorage implements CartStorage
     /**
      * Replace the cart lines. Must run inside the caller's transaction.
      *
-     * @param  Collection<string, CartItem>  $content
+     * @param  Collection<array-key, mixed>  $content
      */
     private function syncCartItems(int $cartId, Collection $content): void
     {
+        $items = CartContentCodec::cartItems($content);
+
+        if ($items === null) {
+            throw new CartStorageException('The cart content to store must only contain cart items.');
+        }
+
         $this->connection->table($this->cartItemsTable)
             ->where('cart_id', $cartId)
             ->delete();
 
-        $rows = $content->map(fn (CartItem $item): array => [
+        $rows = $items->map(fn (CartItem $item): array => [
             'cart_id' => $cartId,
             'row_id' => $item->rowId,
             'item_id' => (string) $item->id,
             'name' => $item->name,
-            'subtitle' => $item->subtitle ?? '',
+            'subtitle' => $item->subtitle,
             'original_price' => $item->originalPrice,
             'original_total_price' => $item->originalTotalPrice,
             'original_vat' => $item->originalVat,
@@ -357,13 +390,13 @@ class DatabaseStorage implements CartStorage
             'total_price' => $item->totalPrice,
             'vat' => $item->vat,
             'vat_rate' => $item->vatRate,
-            'vat_fc_code' => $item->vatFcCode ?? '',
-            'product_fc_code' => $item->productFcCode ?? '',
-            'url_img' => $item->urlImg ?? '',
+            'vat_fc_code' => $item->vatFcCode,
+            'product_fc_code' => $item->productFcCode,
+            'url_img' => $item->urlImg,
             'qty' => $item->qty,
-            'options' => json_encode($item->options->toArray(), JSON_PRESERVE_ZERO_FRACTION),
-            'applied_coupons' => ! empty($item->appliedCoupons) ? json_encode($item->appliedCoupons, JSON_PRESERVE_ZERO_FRACTION) : null,
-            'discount_value' => $item->discountValue ?? 0.0,
+            'options' => json_encode($item->options->toArray(), JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR),
+            'applied_coupons' => ! empty($item->appliedCoupons) ? json_encode($item->appliedCoupons, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR) : null,
+            'discount_value' => $item->discountValue,
             'associated_model' => $item->associatedModel,
             'created_at' => $item->createdAt,
             'updated_at' => $item->updatedAt,
@@ -378,52 +411,73 @@ class DatabaseStorage implements CartStorage
             ->update(['updated_at' => now()]);
     }
 
-    private function hydrateCartItem(object $row): CartItem
+    private function hydrateCartItem(stdClass $row): CartItem
     {
-        $options = ! empty($row->options) ? json_decode($row->options, true) : [];
-
         // Build from the original amounts so construction-time derived values
         // (vat label, tax) match, then restore the current (discounted) state.
         $cartItem = new CartItem(
-            id: $row->item_id,
-            name: $row->name,
-            subtitle: $row->subtitle ?? '',
-            qty: $this->castQuantity($row->qty),
-            price: (float) $row->original_price,
-            totalPrice: (float) $row->original_total_price,
-            vatFcCode: $row->vat_fc_code ?? '',
-            productFcCode: $row->product_fc_code ?? '',
-            vat: (float) $row->original_vat,
-            urlImg: $row->url_img ?? '',
-            createdAt: Carbon::parse($row->created_at),
-            updatedAt: Carbon::parse($row->updated_at),
-            options: is_array($options) ? $options : [],
+            id: Coerce::key($row->item_id),
+            name: Coerce::string($row->name),
+            subtitle: Coerce::nullableString($row->subtitle) ?? '',
+            qty: $this->castQuantity(Coerce::float($row->qty)),
+            price: Coerce::float($row->original_price),
+            totalPrice: Coerce::float($row->original_total_price),
+            vatFcCode: Coerce::nullableString($row->vat_fc_code) ?? '',
+            productFcCode: Coerce::nullableString($row->product_fc_code) ?? '',
+            vat: Coerce::float($row->original_vat),
+            urlImg: Coerce::nullableString($row->url_img) ?? '',
+            createdAt: Carbon::parse(Coerce::string($row->created_at)),
+            updatedAt: Carbon::parse(Coerce::string($row->updated_at)),
+            options: $this->decodeArray(Coerce::nullableString($row->options)),
         );
 
-        $cartItem->rowId = $row->row_id;
-        $cartItem->price = (float) $row->price;
-        $cartItem->totalPrice = (float) $row->total_price;
-        $cartItem->vat = (float) $row->vat;
-        $cartItem->vatRate = (float) $row->vat_rate;
+        $cartItem->rowId = Coerce::string($row->row_id);
+        $cartItem->price = Coerce::float($row->price);
+        $cartItem->totalPrice = Coerce::float($row->total_price);
+        $cartItem->vat = Coerce::float($row->vat);
+        $cartItem->vatRate = Coerce::float($row->vat_rate);
         $cartItem->taxRate = $cartItem->vatRate;
         $cartItem->tax = $cartItem->formatFloat($cartItem->originalPrice * ($cartItem->taxRate / 100));
-        $cartItem->discountValue = (float) ($row->discount_value ?? 0.0);
+        $cartItem->discountValue = Coerce::float($row->discount_value ?? 0.0);
 
-        if (! empty($row->associated_model)) {
-            $cartItem->associate($row->associated_model);
+        $associatedModel = Coerce::nullableString($row->associated_model);
+
+        if ($associatedModel !== null && $associatedModel !== '') {
+            $cartItem->associate($associatedModel);
         }
 
-        // Applied coupons are objects (see CartItem::applyCoupon()).
-        $coupons = ! empty($row->applied_coupons) ? json_decode($row->applied_coupons) : null;
-        $cartItem->appliedCoupons = $coupons instanceof stdClass ? get_object_vars($coupons) : [];
+        $cartItem->appliedCoupons = $this->appliedCoupons(Coerce::nullableString($row->applied_coupons));
 
         return $cartItem;
     }
 
-    private function castQuantity(mixed $qty): int|float
+    /**
+     * Applied coupons are stored as a JSON object keyed by coupon code; they
+     * are restored as the objects CartItem::applyCoupon() creates.
+     *
+     * @return array<string, object{couponCode: string, couponType: string, couponValue: float, discountValue: float}>
+     */
+    private function appliedCoupons(?string $json): array
     {
-        $qty = (float) $qty;
+        $coupons = [];
 
+        foreach ($this->decodeArray($json) as $coupon) {
+            $coupon = is_array($coupon) ? $coupon : [];
+            $couponCode = Coerce::string($coupon['couponCode'] ?? null);
+
+            $coupons[$couponCode] = (object) [
+                'couponCode' => $couponCode,
+                'couponType' => Coerce::string($coupon['couponType'] ?? null),
+                'couponValue' => Coerce::float($coupon['couponValue'] ?? null),
+                'discountValue' => Coerce::float($coupon['discountValue'] ?? 0.0),
+            ];
+        }
+
+        return $coupons;
+    }
+
+    private function castQuantity(float $qty): int|float
+    {
         return floor($qty) === $qty ? (int) $qty : $qty;
     }
 
@@ -432,24 +486,6 @@ class DatabaseStorage implements CartStorage
      */
     private function deserializeCoupons(?string $json): Collection
     {
-        $data = ! empty($json) ? json_decode($json, true) : null;
-        if (! is_array($data)) {
-            return collect();
-        }
-
-        return collect($data)->mapWithKeys(function (array $c) {
-            $coupon = new CartCoupon(
-                hash: $c['hash'],
-                code: $c['code'],
-                type: $c['type'],
-                value: (float) $c['value'],
-                isGlobal: $c['isGlobal'] ?? false,
-                expiresAt: isset($c['expiresAt']) ? Carbon::parse($c['expiresAt']) : null,
-                usageLimit: $c['usageLimit'] ?? null,
-                minCartAmount: isset($c['minCartAmount']) ? (float) $c['minCartAmount'] : null,
-            );
-
-            return [$coupon->hash => $coupon];
-        });
+        return new Collection(CouponData::decodeList($json, isGlobalDefault: false));
     }
 }

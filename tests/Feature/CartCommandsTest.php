@@ -3,10 +3,15 @@
 declare(strict_types=1);
 
 use Carbon\Carbon;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
+/**
+ * @param  list<array{id: int|string, name: string, price: float, subtitle?: string, qty?: int|float, totalPrice?: float|null, vat?: float}>  $items
+ * @param  list<array<string, mixed>>|null  $coupons
+ */
 function seedCartRow(
     string $identifier,
     string $instance = 'default',
@@ -45,7 +50,7 @@ function seedCartRow(
 beforeEach(function (): void {
     $this->artisan('migrate', ['--database' => 'testing']);
 
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -261,7 +266,7 @@ it('cart:prune deletes old carts', function (): void {
         ->assertExitCode(0);
 
     expect(DB::connection('testing')->table('cart')->count())->toBe(1);
-    expect(DB::connection('testing')->table('cart')->first()->identifier)->toBe('new-user');
+    expect(DB::connection('testing')->table('cart')->first()?->identifier)->toBe('new-user');
 });
 
 it('cart:prune --dry-run does not delete', function (): void {
@@ -281,7 +286,7 @@ it('cart:prune --instance only prunes that instance', function (): void {
         ->assertExitCode(0);
 
     expect(DB::connection('testing')->table('cart')->count())->toBe(1);
-    expect(DB::connection('testing')->table('cart')->first()->instance)->toBe('wishlist');
+    expect(DB::connection('testing')->table('cart')->first()?->instance)->toBe('wishlist');
 });
 
 it('cart:prune returns success with zero matching carts', function (): void {
@@ -307,13 +312,13 @@ it('cart:export creates a valid JSON file', function (): void {
 
     expect(file_exists($path))->toBeTrue();
 
-    $data = json_decode(file_get_contents($path), true);
+    $data = decodeJson(file_get_contents($path));
     expect($data)->toHaveKey('exported_at')
         ->toHaveKey('total_carts')
         ->toHaveKey('carts');
     expect($data['total_carts'])->toBe(1);
     expect($data['carts'])->toHaveCount(1);
-    expect($data['carts'][0]['identifier'])->toBe('user-1');
+    expect(data_get($data, 'carts.0.identifier'))->toBe('user-1');
 
     @unlink($path);
 });
@@ -327,9 +332,9 @@ it('cart:export --instance filters correctly', function (): void {
     $this->artisan('cart:export', ['--path' => $path, '--instance' => 'wishlist'])
         ->assertExitCode(0);
 
-    $data = json_decode(file_get_contents($path), true);
+    $data = decodeJson(file_get_contents($path));
     expect($data['total_carts'])->toBe(1);
-    expect($data['carts'][0]['identifier'])->toBe('user-2');
+    expect(data_get($data, 'carts.0.identifier'))->toBe('user-2');
 
     @unlink($path);
 });
@@ -343,9 +348,9 @@ it('cart:export --since filters by date', function (): void {
     $this->artisan('cart:export', ['--path' => $path, '--since' => '2026-01-01'])
         ->assertExitCode(0);
 
-    $data = json_decode(file_get_contents($path), true);
+    $data = decodeJson(file_get_contents($path));
     expect($data['total_carts'])->toBe(1);
-    expect($data['carts'][0]['identifier'])->toBe('new-user');
+    expect(data_get($data, 'carts.0.identifier'))->toBe('new-user');
 
     @unlink($path);
 });
@@ -379,9 +384,9 @@ it('cart:export includes corrupted carts with error flag', function (): void {
     $this->artisan('cart:export', ['--path' => $path])
         ->assertExitCode(0);
 
-    $data = json_decode(file_get_contents($path), true);
+    $data = decodeJson(file_get_contents($path));
     expect($data['carts'])->toHaveCount(1);
-    expect($data['carts'][0])->toHaveKey('error');
+    expect(data_get($data, 'carts.0'))->toHaveKey('error');
 
     @unlink($path);
 });
@@ -418,7 +423,7 @@ it('cart:migrate-driver --dry-run with database session driver does not write', 
     config(['session.connection' => 'testing']);
 
     // Create a sessions table for the test
-    DB::connection('testing')->getSchemaBuilder()->create('sessions', function ($table): void {
+    DB::connection('testing')->getSchemaBuilder()->create('sessions', function (Blueprint $table): void {
         $table->string('id')->primary();
         $table->text('payload');
         $table->integer('last_activity');
