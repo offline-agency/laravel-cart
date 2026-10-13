@@ -53,6 +53,7 @@ See [UPGRADE.md](UPGRADE.md) for the migration guide from 3.x.
 
 - Supported platforms: PHP `~8.4.0 || ~8.5.0` and Laravel 12/13. This reverses the earlier lowering of the PHP floor to `^8.2` on `develop`, which was never released. Compared with 3.x, the PHP floor is unchanged at 8.4.
 - Every `illuminate/*` component, `nesbot/carbon` and `nunomaduro/termwind` used by `src/` is now a declared dependency
+- `symfony/translation` below 7.2 conflicts: those releases (pulled in through Carbon's wide constraint) emit PHP 8.4 deprecations; Laravel 12/13 apps already use 7.x
 - `Cart` class now depends on `CartStorage` interface instead of `SessionManager`
 - `cart` and `CartStorage` container bindings are scoped (one instance per request / queued job) instead of singletons
 - `Buyable` interface is now getter-only (setters remain in `CanBeBought` trait)

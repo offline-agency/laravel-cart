@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -14,34 +13,14 @@ use OfflineAgency\LaravelCart\Exceptions\CartStorageException;
 use OfflineAgency\LaravelCart\Support\CartContentCodec;
 use OfflineAgency\LaravelCart\Support\Coerce;
 use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
+use OfflineAgency\LaravelCart\Tests\Fixtures\Codec\CodecModel;
+use OfflineAgency\LaravelCart\Tests\Fixtures\Codec\ExplodingBuyable;
+use OfflineAgency\LaravelCart\Tests\Fixtures\Codec\WakeupGadget;
 
 /**
  * Defect 1: the legacy `cart` table stored raw serialize() output (with NUL
  * bytes) in a text column, which PostgreSQL cannot round-trip.
  */
-final class RegCodecGadget
-{
-    public static bool $wokenUp = false;
-
-    public function __wakeup(): void
-    {
-        self::$wokenUp = true;
-    }
-}
-
-final class RegCodecModel extends Model
-{
-    protected $guarded = [];
-}
-
-class RegCodecExplodingBuyable extends BuyableProduct
-{
-    public function __wakeup(): void
-    {
-        throw new RuntimeException('boom');
-    }
-}
-
 function regCodecUsesPostgres(): bool
 {
     return DB::connection('testing')->getDriverName() === 'pgsql';
@@ -54,7 +33,7 @@ function regCodecCart(): Cart
 
 beforeEach(function (): void {
     $this->artisan('migrate', ['--database' => 'testing']);
-    RegCodecGadget::$wokenUp = false;
+    WakeupGadget::$wokenUp = false;
 });
 
 it('stores the legacy cart content without NUL bytes', function (): void {
@@ -132,7 +111,7 @@ it('throws a storage exception instead of a PHP warning for malformed content', 
 
 it('does not instantiate classes outside the allow-list', function (): void {
     $item = new CartItem(id: '1', name: 'Gadget carrier', subtitle: '', qty: 1, price: 1.0, totalPrice: 1.0, vat: 0.0);
-    $item->model = new RegCodecGadget;
+    $item->model = new WakeupGadget;
 
     DB::table('cart')->insert([
         'identifier' => 'gadget',
@@ -144,7 +123,7 @@ it('does not instantiate classes outside the allow-list', function (): void {
 
     regCodecCart()->restore('gadget');
 
-    expect(RegCodecGadget::$wokenUp)->toBeFalse()
+    expect(WakeupGadget::$wokenUp)->toBeFalse()
         ->and(regCodecCart()->get($item->rowId)->model)->toBeInstanceOf(__PHP_Incomplete_Class::class);
 });
 
@@ -229,21 +208,21 @@ it('decodes an empty payload as an empty cart', function (?string $payload): voi
 
 it('round-trips the values a cart legitimately holds', function (): void {
     $item = new CartItem(id: '1', name: 'Typed', subtitle: '', qty: 1, price: 1.0, totalPrice: 1.0, vat: 0.0);
-    $item->model = new RegCodecModel(['name' => 'Model']);
+    $item->model = new CodecModel(['name' => 'Model']);
     $item->options = new CartItemOptions(['type' => CouponType::Fixed]);
 
     $decoded = CartContentCodec::decode(CartContentCodec::encode(collect([$item->rowId => $item])));
     $restored = $decoded?->first();
 
-    expect($restored?->model)->toBeInstanceOf(RegCodecModel::class)
-        ->and($restored?->model instanceof RegCodecModel ? $restored->model->getAttribute('name') : null)->toBe('Model')
+    expect($restored?->model)->toBeInstanceOf(CodecModel::class)
+        ->and($restored?->model instanceof CodecModel ? $restored->model->getAttribute('name') : null)->toBe('Model')
         ->and($restored?->options->get('type'))->toBe(CouponType::Fixed)
         ->and($restored?->createdAt->equalTo($item->createdAt))->toBeTrue();
 });
 
 it('returns null for payloads naming unknown classes or failing to wake up', function (): void {
     $unknown = CartContentCodec::PREFIX.base64_encode('O:13:"Missing\\Klass":0:{}');
-    $exploding = CartContentCodec::encode(collect([new RegCodecExplodingBuyable]));
+    $exploding = CartContentCodec::encode(collect([new ExplodingBuyable]));
 
     expect(CartContentCodec::decode($unknown))->toBeNull()
         ->and(CartContentCodec::decode($exploding))->toBeNull();
