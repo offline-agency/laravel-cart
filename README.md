@@ -9,8 +9,6 @@
 [![codecov](https://codecov.io/gh/offline-agency/laravel-cart/branch/main/graph/badge.svg)](https://app.codecov.io/gh/offline-agency/laravel-cart)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-> The Packagist badges show the latest **published** tag. Until 4.0.0 is released they show the 3.x line, while this README describes 4.x.
-
 ---
 
 ## Overview
