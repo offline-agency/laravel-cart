@@ -5,6 +5,7 @@
 [![PHP](https://img.shields.io/badge/php-8.4%20%7C%208.5-777bb4?style=flat-square)](composer.json)
 [![Laravel](https://img.shields.io/badge/laravel-12%20%7C%2013-ff2d20?style=flat-square)](composer.json)
 [![CI](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml?query=branch%3Amain)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%20max-brightgreen?style=flat-square)](phpstan.neon)
 [![codecov](https://codecov.io/gh/offline-agency/laravel-cart/branch/main/graph/badge.svg)](https://app.codecov.io/gh/offline-agency/laravel-cart)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
