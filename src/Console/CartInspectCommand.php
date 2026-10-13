@@ -7,7 +7,7 @@ namespace OfflineAgency\LaravelCart\Console;
 use Illuminate\Console\Command;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
 
-use function Termwind\{render};
+use function Termwind\render;
 
 class CartInspectCommand extends Command
 {

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace OfflineAgency\LaravelCart\Storage;
 
+use Carbon\Carbon;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Collection;
+use OfflineAgency\LaravelCart\CartCoupon;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Contracts\CartStorage;
 
@@ -317,13 +319,13 @@ class DatabaseStorage implements CartStorage
         }
 
         return collect($data)->mapWithKeys(function (array $c) {
-            $coupon = new \OfflineAgency\LaravelCart\CartCoupon(
+            $coupon = new CartCoupon(
                 hash: $c['hash'],
                 code: $c['code'],
                 type: $c['type'],
                 value: (float) $c['value'],
                 isGlobal: $c['isGlobal'] ?? false,
-                expiresAt: isset($c['expiresAt']) ? \Carbon\Carbon::parse($c['expiresAt']) : null,
+                expiresAt: isset($c['expiresAt']) ? Carbon::parse($c['expiresAt']) : null,
                 usageLimit: $c['usageLimit'] ?? null,
                 minCartAmount: isset($c['minCartAmount']) ? (float) $c['minCartAmount'] : null,
             );

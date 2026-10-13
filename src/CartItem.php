@@ -78,8 +78,6 @@ class CartItem implements Arrayable, Jsonable
      * CartItem constructor.
      *
      * @param  int|string  $id
-     * @param  Carbon|null  $createdAt
-     * @param  Carbon|null  $updatedAt
      */
     public function __construct(
         $id,
@@ -337,9 +335,6 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Create a new instance from the given attributes.
-     *
-     * @param  Carbon|null  $createdAt
-     * @param  Carbon|null  $updatedAt
      */
     public static function fromAttributes(
         $id,

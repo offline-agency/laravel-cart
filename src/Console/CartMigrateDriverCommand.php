@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
 
-use function Termwind\{render};
+use function Termwind\render;
 
 class CartMigrateDriverCommand extends Command
 {

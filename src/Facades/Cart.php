@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Facade;
 use OfflineAgency\LaravelCart\CartCoupon;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Contracts\Couponable;
+use OfflineAgency\LaravelCart\Storage\SessionStorage;
+use OfflineAgency\LaravelCart\Testing\CartFake;
 
 /**
  * @method static \OfflineAgency\LaravelCart\Cart instance(?string $instance = null)
@@ -99,13 +101,10 @@ class Cart extends Facade
      *
      * @return \OfflineAgency\LaravelCart\Cart
      */
-    /**
-     * @return \OfflineAgency\LaravelCart\Testing\CartFake
-     */
-    public static function fake(): \OfflineAgency\LaravelCart\Testing\CartFake
+    public static function fake(): CartFake
     {
-        $fake = new \OfflineAgency\LaravelCart\Testing\CartFake(
-            new \OfflineAgency\LaravelCart\Storage\SessionStorage(app('session')),
+        $fake = new CartFake(
+            new SessionStorage(app('session')),
             app('events'),
         );
 

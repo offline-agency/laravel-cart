@@ -6,9 +6,10 @@ namespace OfflineAgency\LaravelCart\Console;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
 
-use function Termwind\{render};
+use function Termwind\render;
 
 class CartPruneCommand extends Command
 {
@@ -85,7 +86,7 @@ class CartPruneCommand extends Command
     {
         $cartsTable = (string) config('cart.database.carts_table', 'carts');
         $cartItemsTable = (string) config('cart.database.cart_items_table', 'cart_items');
-        $connection = \Illuminate\Support\Facades\DB::connection($this->connectionName());
+        $connection = DB::connection($this->connectionName());
 
         $query = $connection->table($cartsTable)
             ->whereNotNull('expires_at')

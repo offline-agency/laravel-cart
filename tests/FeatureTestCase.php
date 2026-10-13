@@ -27,7 +27,7 @@ abstract class FeatureTestCase extends Orchestra
         $app['config']->set('cart.database.connection', 'testing');
         $app['config']->set('session.driver', 'array');
         $app['config']->set('database.default', 'testing');
-        $app['config']->set('database.connections.testing', self::testingConnection());
+        $app['config']->set('database.connections.testing', self::connectionConfig());
     }
 
     protected function setUp(): void
@@ -50,7 +50,7 @@ abstract class FeatureTestCase extends Orchestra
      *
      * @return array<string, mixed>
      */
-    private static function testing_connection(): array
+    private static function connectionConfig(): array
     {
         if (! self::usesServerDatabase()) {
             return ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''];

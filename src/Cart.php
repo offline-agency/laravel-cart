@@ -11,11 +11,11 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Traits\Macroable;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
 use OfflineAgency\LaravelCart\Contracts\CartStorage;
 use OfflineAgency\LaravelCart\Contracts\Couponable;
-use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
 use OfflineAgency\LaravelCart\Events\CartItemAdded;
 use OfflineAgency\LaravelCart\Events\CartItemRemoved;
 use OfflineAgency\LaravelCart\Events\CartItemUpdated;
@@ -269,9 +269,7 @@ class Cart
     /**
      * Determine whether an item with the given id and model class is already in the cart.
      *
-     * @param  string|int  $id
      * @param  string  $model  Fully-qualified class name of the associated model
-     * @return bool
      */
     public function isAlreadyAdded(string|int $id, string $model): bool
     {
@@ -284,9 +282,7 @@ class Cart
     /**
      * Find the first CartItem in the cart matching the given id and model class.
      *
-     * @param  string|int  $id
      * @param  string  $model  Fully-qualified class name of the associated model
-     * @return ?CartItem
      */
     public function searchById(string|int $id, string $model): ?CartItem
     {
@@ -516,7 +512,7 @@ class Cart
 
         $this->instance($stored->instance);
 
-        $content = $mergeOnRestore ? $this->getContent() : new Collection();
+        $content = $mergeOnRestore ? $this->getContent() : new Collection;
 
         foreach ($storedContent as $cartItem) {
             if ($mergeOnRestore && $content->has($cartItem->rowId)) {
@@ -708,7 +704,7 @@ class Cart
     {
         return $this->storage->has($this->getCartInstance())
             ? $this->storage->get($this->getCartInstance())
-            : new Collection();
+            : new Collection;
     }
 
     private function createCartItem(
@@ -782,7 +778,7 @@ class Cart
     private function hasMetaColumn(): bool
     {
         try {
-            return \Illuminate\Support\Facades\Schema::connection($this->getConnectionName())
+            return Schema::connection($this->getConnectionName())
                 ->hasColumn($this->getTableName(), 'meta');
         } catch (\Throwable) {
             return false;
@@ -1013,11 +1009,9 @@ class Cart
     /**
      * Attach a coupon to the current cart instance (cart-level, not item-level).
      *
-     * @param  string|CartCoupon|Couponable  $coupon
-     * @return static
      *
      * @throws CouponAlreadyAppliedException If the same hash is already present.
-     * @throws InvalidCouponException        If validation fails (expired, min cart amount not met).
+     * @throws InvalidCouponException If validation fails (expired, min cart amount not met).
      */
     public function addCoupon(string|CartCoupon|Couponable $coupon): static
     {
@@ -1072,7 +1066,6 @@ class Cart
     /**
      * Remove a cart-level coupon by its hash or code.
      *
-     * @return static
      *
      * @throws CouponNotFoundException If the coupon is not in the cart.
      */
