@@ -6,6 +6,4 @@ namespace OfflineAgency\LaravelCart\Exceptions;
 
 use RuntimeException;
 
-abstract class CartException extends RuntimeException
-{
-}
+abstract class CartException extends RuntimeException {}

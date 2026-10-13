@@ -33,6 +33,7 @@ return [
     */
 
     'cart_already_stored' => 'A cart with identifier ":identifier" was already stored.',
+    'stored_cart_undecodable' => 'The stored cart with identifier ":identifier" could not be decoded.',
     'cart_expired' => 'The cart has expired.',
     'cart_empty' => 'The cart is empty.',
 

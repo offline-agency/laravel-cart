@@ -13,12 +13,13 @@ use OfflineAgency\LaravelCart\Cart;
  */
 class CartResource extends JsonResource
 {
-    /**
-     * @param  Cart  $resource
-     */
-    public function __construct($resource)
+    private readonly Cart $cart;
+
+    public function __construct(Cart $resource)
     {
         parent::__construct($resource);
+
+        $this->cart = $resource;
     }
 
     /**
@@ -26,9 +27,6 @@ class CartResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        /** @var Cart $cart */
-        $cart = $this->resource;
-
-        return $cart->toArray();
+        return $this->cart->toArray();
     }
 }

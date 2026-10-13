@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace OfflineAgency\LaravelCart\Traits;
 
 use Carbon\Carbon;
+use DateTimeInterface;
 use OfflineAgency\LaravelCart\Enums\CouponType;
+use OfflineAgency\LaravelCart\Support\Coerce;
+use ReflectionMethod;
 
 /**
  * Eloquent model trait that provides a default implementation of the Couponable
@@ -26,7 +29,7 @@ trait HasDiscount
      */
     public function getHash(): string
     {
-        return (string) $this->getKey();
+        return Coerce::string($this->getKey() ?? '');
     }
 
     /**
@@ -34,7 +37,7 @@ trait HasDiscount
      */
     public function getCode(): string
     {
-        return (string) ($this->coupon_code ?? '');
+        return Coerce::string($this->coupon_code ?? '');
     }
 
     /**
@@ -42,7 +45,7 @@ trait HasDiscount
      */
     public function getCouponType(): CouponType
     {
-        return CouponType::from((string) ($this->coupon_type ?? 'fixed'));
+        return CouponType::from(Coerce::string($this->coupon_type ?? 'fixed'));
     }
 
     /**
@@ -50,7 +53,7 @@ trait HasDiscount
      */
     public function getCouponValue(): float
     {
-        return (float) ($this->coupon_value ?? 0.0);
+        return Coerce::float($this->coupon_value ?? 0.0);
     }
 
     /**
@@ -64,7 +67,11 @@ trait HasDiscount
             return null;
         }
 
-        return $value instanceof Carbon ? $value : Carbon::parse($value);
+        if ($value instanceof Carbon) {
+            return $value;
+        }
+
+        return $value instanceof DateTimeInterface ? Carbon::instance($value) : Carbon::parse(Coerce::string($value));
     }
 
     /**
@@ -74,7 +81,7 @@ trait HasDiscount
     {
         $value = $this->coupon_usage_limit ?? null;
 
-        return $value !== null ? (int) $value : null;
+        return $value !== null ? Coerce::int($value) : null;
     }
 
     /**
@@ -84,7 +91,7 @@ trait HasDiscount
     {
         $value = $this->coupon_min_cart_amount ?? null;
 
-        return $value !== null ? (float) $value : null;
+        return $value !== null ? Coerce::float($value) : null;
     }
 
     /**
@@ -112,18 +119,14 @@ trait HasDiscount
     }
 
     /**
-     * Return the coupon data as an array.
+     * Return the coupon data as an array, merged onto the parent class's
+     * toArray() (e.g. the Eloquent attributes) when there is one.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function toArray(): array
     {
-        /** @var array<string, mixed> $baseArray */
-        $baseArray = method_exists(get_parent_class($this) ?: '', 'toArray')
-            ? parent::toArray()
-            : [];
-
-        return array_merge($baseArray, [
+        return array_merge($this->parentToArray(), [
             'hash' => $this->getHash(),
             'code' => $this->getCode(),
             'type' => $this->getCouponType()->value,
@@ -132,5 +135,25 @@ trait HasDiscount
             'usageLimit' => $this->getCouponUsageLimit(),
             'minCartAmount' => $this->getMinCartAmount(),
         ]);
+    }
+
+    /**
+     * The parent class's toArray(), which this trait's toArray() overrides.
+     * Called through reflection because the trait is also used by classes
+     * without a parent.
+     *
+     * @return array<array-key, mixed>
+     */
+    private function parentToArray(): array
+    {
+        $parent = get_parent_class($this);
+
+        if ($parent === false || ! method_exists($parent, 'toArray')) {
+            return [];
+        }
+
+        $array = (new ReflectionMethod($parent, 'toArray'))->invoke($this);
+
+        return is_array($array) ? $array : [];
     }
 }

@@ -11,91 +11,42 @@ use PHPUnit\Framework\Assert as PHPUnit;
 
 class CartFake extends Cart
 {
-    /** @var array<class-string, list<object>> */
-    private array $dispatched = [];
+    private readonly RecordingDispatcher $recorder;
 
     public function __construct(CartStorage $storage, Dispatcher $events)
     {
-        // Create a recording wrapper
-        $recorder = new class($events, $this->dispatched) implements Dispatcher
-        {
-            /** @var array<class-string, list<object>> */
-            private array $dispatched; // @phpstan-ignore property.onlyWritten
+        $this->recorder = new RecordingDispatcher($events);
 
-            public function __construct(
-                private readonly Dispatcher $inner,
-                array &$dispatched,
-            ) {
-                $this->dispatched = &$dispatched;
-            }
+        parent::__construct($storage, $this->recorder);
+    }
 
-            public function dispatch($event, $payload = [], $halt = false)
-            {
-                if (is_object($event)) {
-                    $this->dispatched[get_class($event)][] = $event;
-                }
-
-                return $this->inner->dispatch($event, $payload, $halt);
-            }
-
-            public function listen($events, $listener = null): void
-            {
-                $this->inner->listen($events, $listener);
-            }
-
-            public function hasListeners($eventName): bool
-            {
-                return $this->inner->hasListeners($eventName);
-            }
-
-            public function subscribe($subscriber): void
-            {
-                $this->inner->subscribe($subscriber);
-            }
-
-            public function until($event, $payload = [])
-            {
-                return $this->inner->until($event, $payload);
-            }
-
-            public function push($event, $payload = []): void
-            {
-                $this->inner->push($event, $payload);
-            }
-
-            public function flush($event): void
-            {
-                $this->inner->flush($event);
-            }
-
-            public function forget($event): void
-            {
-                $this->inner->forget($event);
-            }
-
-            public function forgetPushed(): void
-            {
-                $this->inner->forgetPushed();
-            }
-        };
-
-        parent::__construct($storage, $recorder);
+    /**
+     * The dispatcher recording the events this cart dispatches.
+     */
+    public function recorder(): RecordingDispatcher
+    {
+        return $this->recorder;
     }
 
     /**
      * Assert that the given event was dispatched.
      *
-     * @param  class-string  $eventClass
+     * @template TEvent of object
+     *
+     * @param  class-string<TEvent>  $eventClass
+     * @param  (callable(TEvent): bool)|null  $callback
      */
     public function assertDispatched(string $eventClass, ?callable $callback = null): void
     {
+        $recorded = $this->recorder->recorded($eventClass);
+
         PHPUnit::assertTrue(
-            isset($this->dispatched[$eventClass]) && count($this->dispatched[$eventClass]) > 0,
+            count($recorded) > 0,
             "The expected [{$eventClass}] event was not dispatched."
         );
 
         if ($callback !== null) {
-            $matching = array_filter($this->dispatched[$eventClass], $callback);
+            $matching = array_filter($recorded, $callback);
             PHPUnit::assertNotEmpty(
                 $matching,
                 "The expected [{$eventClass}] event was dispatched, but no matching callback was found."
@@ -111,7 +62,7 @@ class CartFake extends Cart
     public function assertNotDispatched(string $eventClass): void
     {
         PHPUnit::assertFalse(
-            isset($this->dispatched[$eventClass]) && count($this->dispatched[$eventClass]) > 0,
+            count($this->recorder->recorded($eventClass)) > 0,
             "The unexpected [{$eventClass}] event was dispatched."
         );
     }
@@ -123,7 +74,7 @@ class CartFake extends Cart
      */
     public function assertDispatchedTimes(string $eventClass, int $times = 1): void
     {
-        $actual = count($this->dispatched[$eventClass] ?? []);
+        $actual = count($this->recorder->recorded($eventClass));
 
         PHPUnit::assertSame(
             $times,

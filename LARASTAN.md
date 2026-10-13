@@ -1,113 +1,36 @@
-# Larastan Integration Guide
+# Static Analysis (PHPStan + Larastan)
 
-## Overview
-
-Larastan has been successfully installed and configured for the laravel-cart package. It found **20 errors** in the codebase that have been baselined for now.
+The package is analysed with [PHPStan](https://phpstan.org) and the [Larastan](https://github.com/larastan/larastan) extension at **`level: max`**, with no baseline and no ignored errors.
 
 ## Configuration
 
-- **Configuration file**: `phpstan.neon`
-- **Baseline file**: `phpstan-baseline.neon`
-- **Analysis level**: 5 (out of 9)
-- **Analyzed paths**: `src/`, `config/`, `database/`
+`phpstan.neon`:
+
+| Setting | Value | Why |
+|---|---|---|
+| `level` | `max` | The strictest rule level (currently 10). |
+| `phpVersion` | `80400` | The minimum supported runtime (PHP 8.4), so code that needs 8.5 is reported. |
+| `paths` | `src`, `config`, `database`, `tests` | Shipped code, the published config and migrations, and the test suite including `tests/Fixtures`. |
+| `configDirectories` | the package's `config/` | Tells Larastan where the package's config files live, so `env()` calls in `config/cart.php` are recognised as config. |
+| `stubFiles` | `tests/phpstan/pest-functions.stub` | Pest declares `$this` in `it()` / `beforeEach()` closures as `TestCall`; at runtime it is the test case. `tests/Pest.php` applies `FeatureTestCase` to the whole suite, and the stub states that type. |
+
+There is no `phpstan-baseline.neon` and no `ignoreErrors`. The exported traits (`CanBeBought`, `HasDiscount`, `HasFiscalCodes`) are analysed through the consumer classes in `tests/Fixtures`, not ignored as unused.
+
+Analysis runs in CI on every PHP 8.4/8.5 × Laravel 12/13 job (highest and lowest dependencies), so the same configuration is verified against Larastan with both framework lines.
 
 ## Commands
 
-### Run static analysis
 ```bash
-composer phpstan
-```
-
-### Regenerate baseline
-After fixing errors, update the baseline:
-```bash
-composer phpstan:baseline
-```
-
-### Run with different options
-```bash
-# Show progress
-vendor/bin/phpstan analyse --memory-limit=2G -v
-
-# Clear cache
+composer analyse                          # same as `composer stan`
+vendor/bin/phpstan analyse --memory-limit=1G -v
 vendor/bin/phpstan clear-result-cache
 ```
 
-## Current Issues Found (Baselined)
+`composer check` runs Composer validation, Pint, PHPStan and the test suite in one go.
 
-The baseline contains 20 errors across the following categories:
+## Rules for contributions
 
-### 1. **Unused Code** (2 errors)
-- `CanBeBought` trait is unused
-- `Cart::numberFormat()` method is unused
-
-### 2. **Type Mismatches** (10 errors)
-PHPDoc types don't match native types for parameters in `Cart::add()`:
-- `$name`, `$qty`, `$price`, `$vat`, `$totalPrice`, `$subtitle`, `$urlImg`, `$productFcCode`, `$vatFcCode`
-
-### 3. **Property Issues** (2 errors)
-- `Cart::$options` property is only written, never read
-- `CartItem::$priceTax` property is undefined
-
-### 4. **Logic Issues** (5 errors in CartItem.php)
-- Redundant `is_numeric()` checks on float/int types
-- Impossible comparison (`int<1,max> < 0` is always false)
-- Type error: passing float to `strlen()` which expects string
-- Always false boolean OR operation
-
-### 5. **Documentation Issues** (1 error)
-- Invalid PHPDoc `@var` tag in `Cart.php`
-
-## Recommended Next Steps
-
-### 1. Increase Analysis Level Gradually
-Start at level 5, fix issues, then increase:
-```neon
-parameters:
-    level: 6  # Increase gradually to 9
-```
-
-### 2. Fix Type Mismatches
-Update method signatures to match PHPDoc or vice versa:
-```php
-// Before
-public function add(string $name, int $qty, float $price, ...)
-
-// If parameters can be null, update signature:
-public function add(string $name, ?int $qty = null, ?float $price = null, ...)
-```
-
-### 3. Remove Unused Code
-- Remove `CanBeBought` trait if not used
-- Remove `numberFormat()` method if not needed
-
-### 4. Fix Property Issues
-- Add `$priceTax` property to `CartItem` class
-- Use `$options` property or remove it
-
-### 5. Fix Logic Issues in CartItem
-- Remove redundant `is_numeric()` checks
-- Fix type issues with `strlen()`
-- Review boolean logic
-
-## CI/CD Integration
-
-Add to your GitHub Actions workflow:
-
-```yaml
-- name: Run Larastan
-  run: composer phpstan
-```
-
-## Tips
-
-1. **Don't commit the baseline to production** - Use it as a temporary measure
-2. **Fix errors incrementally** - Don't try to fix everything at once
-3. **Run before commits** - Add to pre-commit hooks
-4. **Update regularly** - Keep Larastan updated for new checks
-
-## Resources
-
-- [Larastan Documentation](https://github.com/larastan/larastan)
-- [PHPStan Documentation](https://phpstan.org/user-guide/getting-started)
-- [PHPStan Rule Levels](https://phpstan.org/user-guide/rule-levels)
+- Fix the types instead of hiding errors. Do not add a baseline, `ignoreErrors`, `@phpstan-ignore`, inline `@var` overrides or `assert()` calls, and do not add casts only to make an error go away.
+- Use native types where PHP allows them, and generics / array shapes (`Collection<string, CartItem>`, `array{rate: float, ...}`) where it does not.
+- Keep `mixed` only at real input boundaries (config values, database rows, decoded JSON, console options, request data) and narrow it right after validation. `OfflineAgency\LaravelCart\Support\Coerce` and `Support\CartConfig` hold the shared narrowing helpers.
+- If a genuine PHPStan or Larastan defect blocks a change, add one narrowly scoped `ignoreErrors` entry (identifier, path and message) with a comment linking the upstream issue, and mention it in the pull request.

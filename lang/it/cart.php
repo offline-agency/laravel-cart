@@ -15,6 +15,7 @@ return [
     'coupon_invalid' => 'Il coupon ":code" non è valido.',
 
     'cart_already_stored' => 'Un carrello con identificativo ":identifier" è già salvato.',
+    'stored_cart_undecodable' => 'Il carrello salvato con identificativo ":identifier" non può essere decodificato.',
     'cart_expired' => 'Il carrello è scaduto.',
     'cart_empty' => 'Il carrello è vuoto.',
 

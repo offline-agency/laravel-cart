@@ -1,42 +1,49 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart\Tests\Fixtures;
 
 use OfflineAgency\LaravelCart\CanBeBought;
 use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
 use OfflineAgency\LaravelCart\Traits\HasFiscalCodes;
 
+/**
+ * FiscalBuyable implemented through the CanBeBought and HasFiscalCodes traits,
+ * with a getKey() method like an Eloquent model.
+ */
 class ProductWithTrait implements FiscalBuyable
 {
     use CanBeBought, HasFiscalCodes;
 
-    public $id;
+    public int|string|null $id;
 
-    public $name;
+    public ?string $name;
 
-    public $title;
+    public ?string $title;
 
-    public $description;
+    public ?string $description;
 
-    public $price;
+    public ?float $price;
 
-    public $subtitle;
+    public ?string $subtitle = null;
 
-    public $qty;
+    public ?int $qty = null;
 
-    public $totalPrice;
+    public ?float $totalPrice = null;
 
-    public $vat;
+    public ?float $vat = null;
 
-    public $vatFcCode;
+    public ?string $vatFcCode = null;
 
-    public $productFcCode;
+    public ?string $productFcCode = null;
 
-    public $urlImg;
+    public ?string $urlImg = null;
 
-    public $cartOptions = [];
+    /** @var array<array-key, mixed> */
+    public array $cartOptions = [];
 
-    public function __construct($id = null, $name = null, $title = null, $description = null, $price = null)
+    public function __construct(int|string|null $id = null, ?string $name = null, ?string $title = null, ?string $description = null, ?float $price = null)
     {
         $this->id = $id;
         $this->name = $name;
@@ -45,7 +52,7 @@ class ProductWithTrait implements FiscalBuyable
         $this->price = $price;
     }
 
-    public function getKey()
+    public function getKey(): int|string|null
     {
         return $this->id;
     }

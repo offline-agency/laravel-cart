@@ -6,7 +6,7 @@ use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\Facades\Cart as CartFacade;
 
 beforeEach(function (): void {
-    $this->app->make('cart')->destroy();
+    resolveCart()->destroy();
 });
 
 it('Cart::fake() returns a Cart instance', function (): void {

@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\CartItem;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 function covExportSerializedContent(): string
 {
     $item = new CartItem(id: '1', name: 'Exported product', subtitle: '', qty: 1, price: 10.0, totalPrice: 12.2, vat: 2.2);
 
-    return serialize(collect([$item->rowId => $item]));
+    return CartContentCodec::encode(collect([$item->rowId => $item]));
 }
 
 beforeEach(function (): void {
@@ -35,9 +36,9 @@ it('cart:export resolves a relative path against base_path', function (): void {
 
         expect(file_exists($absolute))->toBeTrue();
 
-        $data = json_decode((string) file_get_contents($absolute), true);
+        $data = decodeJson(file_get_contents($absolute));
         expect($data['total_carts'])->toBe(1)
-            ->and($data['carts'][0]['identifier'])->toBe('rel-user');
+            ->and(data_get($data, 'carts.0.identifier'))->toBe('rel-user');
     } finally {
         @unlink($absolute);
     }
@@ -87,7 +88,7 @@ it('cart:export warns for more than 5000 carts and reports size in MB', function
 
         expect(filesize($path))->toBeGreaterThanOrEqual(1048576);
 
-        $data = json_decode((string) file_get_contents($path), true);
+        $data = decodeJson(file_get_contents($path));
         expect($data['total_carts'])->toBe(5001)
             ->and($data['carts'])->toHaveCount(5001);
     } finally {

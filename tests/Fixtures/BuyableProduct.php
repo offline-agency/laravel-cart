@@ -1,40 +1,43 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart\Tests\Fixtures;
 
 use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
 
 class BuyableProduct implements FiscalBuyable
 {
-    private $id;
+    private int|string $id;
 
-    private $name;
+    private string $name;
 
-    private $subtitle;
+    private string $subtitle;
 
-    private $qty;
+    private int $qty;
 
-    private $price;
+    private float $price;
 
-    private $totalPrice;
+    private float $totalPrice;
 
-    private $vat;
+    private float $vat;
 
-    private $vatFcCode;
+    private string $vatFcCode;
 
-    private $productFcCode;
+    private string $productFcCode;
 
-    private $urlImg;
+    private string $urlImg;
 
-    private $options;
+    /** @var array<array-key, mixed> */
+    private array $options;
 
     /**
      * BuyableProduct constructor.
      *
-     * @param  int|string  $id
+     * @param  array<array-key, mixed>  $options
      */
     public function __construct(
-        $id = 1,
+        int|string $id = 1,
         string $name = 'Item name',
         string $subtitle = 'Item description',
         int $qty = 1,
@@ -59,18 +62,12 @@ class BuyableProduct implements FiscalBuyable
         $this->setOptions($options);
     }
 
-    /**
-     * @return int|string
-     */
-    public function getId()
+    public function getId(): int|string
     {
         return $this->id;
     }
 
-    /**
-     * @param  int|string  $id
-     */
-    public function setId($id): void
+    public function setId(int|string $id): void
     {
         $this->id = $id;
     }
@@ -160,19 +157,22 @@ class BuyableProduct implements FiscalBuyable
         return $this->urlImg;
     }
 
-    /**
-     * @param  mixed  $urlImg
-     */
-    public function setUrlImg($urlImg): void
+    public function setUrlImg(string $urlImg): void
     {
         $this->urlImg = $urlImg;
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function getOptions(): array
     {
         return $this->options;
     }
 
+    /**
+     * @param  array<array-key, mixed>  $options
+     */
     public function setOptions(array $options): void
     {
         $this->options = $options;

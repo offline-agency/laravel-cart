@@ -43,6 +43,11 @@ return [
     |--------------------------------------------------------------------------
     | User foreign key configuration
     |--------------------------------------------------------------------------
+    |
+    | Column (and its type) holding the authenticated owner of a cart in the
+    | "carts" table used by the database storage driver. Guest carts are
+    | stored under the nullable "session_id" column instead.
+    |
     */
 
     'users' => [
@@ -66,6 +71,19 @@ return [
     */
 
     'destroy_on_logout' => false,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Legacy string events
+    |--------------------------------------------------------------------------
+    |
+    | Besides the typed event classes (CartItemAdded, CartStored, ...) the cart
+    | dispatches the v3 string events ('cart.added', 'cart.stored', ...).
+    | Set this to 'false' to dispatch only the typed events.
+    |
+    */
+
+    'use_legacy_events' => true,
 
     /*
     |--------------------------------------------------------------------------

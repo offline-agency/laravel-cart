@@ -10,7 +10,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $table = config('cart.database.table', 'cart');
+        $table = config()->string('cart.database.table', 'cart');
 
         if (Schema::hasTable($table) && ! Schema::hasColumn($table, 'meta')) {
             Schema::table($table, function (Blueprint $table) {
@@ -21,7 +21,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        $table = config('cart.database.table', 'cart');
+        $table = config()->string('cart.database.table', 'cart');
 
         if (Schema::hasTable($table) && Schema::hasColumn($table, 'meta')) {
             Schema::table($table, function (Blueprint $table) {

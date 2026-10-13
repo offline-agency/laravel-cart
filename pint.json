@@ -1,8 +1,3 @@
 {
-    "preset": "laravel",
-    "exclude": [
-        "src",
-        "config",
-        "database"
-    ]
+    "preset": "laravel"
 }

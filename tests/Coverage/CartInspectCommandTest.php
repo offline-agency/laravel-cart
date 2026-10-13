@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\CartItem;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 beforeEach(function (): void {
     $this->artisan('migrate', ['--database' => 'testing']);
@@ -30,7 +31,7 @@ it('cart:inspect renders non-percentage coupons with a formatted value', functio
     DB::connection('testing')->table('cart')->insert([
         'identifier' => 'coupon-user',
         'instance' => 'default',
-        'content' => serialize(collect([$item->rowId => $item])),
+        'content' => CartContentCodec::encode(collect([$item->rowId => $item])),
         'coupons' => json_encode([
             ['code' => 'FIXED5', 'type' => 'fixed', 'value' => 5, 'isGlobal' => false],
             [],
@@ -49,7 +50,7 @@ it('cart:inspect --json ignores coupons stored as invalid JSON', function (): vo
     DB::connection('testing')->table('cart')->insert([
         'identifier' => 'bad-coupon-user',
         'instance' => 'default',
-        'content' => serialize(collect([$item->rowId => $item])),
+        'content' => CartContentCodec::encode(collect([$item->rowId => $item])),
         'coupons' => '{not valid json',
         'created_at' => now()->toDateTimeString(),
         'updated_at' => now()->toDateTimeString(),
@@ -58,4 +59,7 @@ it('cart:inspect --json ignores coupons stored as invalid JSON', function (): vo
     $this->artisan('cart:inspect', ['identifier' => 'bad-coupon-user', '--json' => true])
         ->assertExitCode(0)
         ->expectsOutputToContain('"coupons": []');
-});
+})->skip(
+    fn (): bool => DB::connection('testing')->getDriverName() === 'pgsql',
+    'PostgreSQL json columns reject invalid JSON, so such a row cannot exist there.',
+);

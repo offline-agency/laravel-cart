@@ -25,6 +25,9 @@ interface Buyable
 
     public function getUrlImg(): string;
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function getOptions(): array;
 
     public function getWeight(): float;

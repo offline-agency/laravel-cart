@@ -1,0 +1,59 @@
+<?php
+
+// PHPStan stub, never loaded at runtime.
+//
+// Pest declares `@param-closure-this TestCall` on its hook and test functions,
+// but at runtime every such closure is bound to the generated test case
+// instance. tests/Pest.php applies FeatureTestCase to the whole suite, so that
+// is the real type of `$this` inside the closures in tests/. The function
+// signatures otherwise mirror vendor/pestphp/pest/src/Functions.php.
+//
+// The empty class declarations below only make the referenced classes known to
+// PHPStan's stub validator (which sees stub files in isolation); they add no
+// PHPDoc, so the real class definitions are used unchanged.
+
+namespace OfflineAgency\LaravelCart\Tests {
+    abstract class FeatureTestCase {}
+}
+
+namespace Pest\PendingCalls {
+    class AfterEachCall {}
+
+    class BeforeEachCall {}
+
+    class TestCall {}
+}
+
+namespace Pest\Support {
+    class HigherOrderTapProxy {}
+}
+
+namespace {
+    use OfflineAgency\LaravelCart\Tests\FeatureTestCase;
+    use Pest\PendingCalls\AfterEachCall;
+    use Pest\PendingCalls\BeforeEachCall;
+    use Pest\PendingCalls\TestCall;
+    use Pest\Support\HigherOrderTapProxy;
+
+    /**
+     * @param-closure-this FeatureTestCase  $closure
+     */
+    function beforeEach(?Closure $closure = null): BeforeEachCall {}
+
+    /**
+     * @param-closure-this FeatureTestCase  $closure
+     */
+    function afterEach(?Closure $closure = null): AfterEachCall {}
+
+    /**
+     * @param-closure-this FeatureTestCase  $closure
+     *
+     * @return ($description is string ? TestCall : HigherOrderTapProxy|TestCall)
+     */
+    function test(?string $description = null, ?Closure $closure = null): HigherOrderTapProxy|TestCall {}
+
+    /**
+     * @param-closure-this FeatureTestCase  $closure
+     */
+    function it(string $description, ?Closure $closure = null): TestCall {}
+}

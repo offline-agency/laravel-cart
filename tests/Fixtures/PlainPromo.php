@@ -15,17 +15,17 @@ class PlainPromo implements Couponable
 {
     use HasDiscount;
 
-    public $coupon_code = 'PLAIN10';
+    public string $coupon_code = 'PLAIN10';
 
-    public $coupon_type = 'percentage';
+    public string $coupon_type = 'percentage';
 
-    public $coupon_value = 10.0;
+    public float $coupon_value = 10.0;
 
-    public $coupon_expires_at = null;
+    public ?string $coupon_expires_at = null;
 
-    public $coupon_usage_limit = null;
+    public ?int $coupon_usage_limit = null;
 
-    public $coupon_min_cart_amount = null;
+    public ?float $coupon_min_cart_amount = null;
 
     public function getKey(): string
     {

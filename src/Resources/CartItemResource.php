@@ -13,14 +13,20 @@ use OfflineAgency\LaravelCart\CartItem;
  */
 class CartItemResource extends JsonResource
 {
+    private readonly CartItem $cartItem;
+
+    public function __construct(CartItem $resource)
+    {
+        parent::__construct($resource);
+
+        $this->cartItem = $resource;
+    }
+
     /**
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
-        /** @var CartItem $item */
-        $item = $this->resource;
-
-        return $item->toArray();
+        return $this->cartItem->toArray();
     }
 }

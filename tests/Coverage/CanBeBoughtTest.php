@@ -2,49 +2,11 @@
 
 declare(strict_types=1);
 
-use OfflineAgency\LaravelCart\CanBeBought;
-use OfflineAgency\LaravelCart\Traits\HasFiscalCodes;
+use OfflineAgency\LaravelCart\Tests\Fixtures\BareBuyable;
 
-function covBareBuyable(): object
+function covBareBuyable(): BareBuyable
 {
-    return new class
-    {
-        use CanBeBought, HasFiscalCodes;
-
-        public $id = 7;
-
-        public $name;
-
-        public $title;
-
-        public $subtitle;
-
-        public $description;
-
-        public $qty;
-
-        public $price;
-
-        public $vat;
-
-        public $totalPrice;
-
-        public $url_img;
-
-        public $urlImg;
-
-        public $image;
-
-        public $weight;
-
-        public $vat_fc_code;
-
-        public $vatFcCode;
-
-        public $product_fc_code;
-
-        public $productFcCode;
-    };
+    return new BareBuyable;
 }
 
 it('falls back to the id property when getKey is not available', function () {
@@ -130,12 +92,8 @@ it('stores values through setters', function () {
 });
 
 it('returns options only when cartOptions is an array', function () {
-    $item = new class
-    {
-        use CanBeBought;
-
-        public $cartOptions = 'not-an-array';
-    };
+    $item = covBareBuyable();
+    $item->cartOptions = 'not-an-array';
 
     expect($item->getOptions())->toBe([]);
 

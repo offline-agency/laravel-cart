@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Collection;
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -39,7 +39,7 @@ it('vatBreakdown with different VAT rates produces separate entries', function (
 it('vatBreakdown entry has rate, net, vat, gross keys', function (): void {
     $this->cart->add('1', 'Product', '', 1, 100.0, 122.0, 22.0);
 
-    $entry = $this->cart->vatBreakdown()->first();
+    $entry = $this->cart->vatBreakdown()->firstOrFail();
 
     expect($entry)->toHaveKeys(['rate', 'net', 'vat', 'gross']);
 });
@@ -47,7 +47,7 @@ it('vatBreakdown entry has rate, net, vat, gross keys', function (): void {
 it('vatBreakdown gross equals net plus vat', function (): void {
     $this->cart->add('1', 'Product', '', 1, 100.0, 122.0, 22.0);
 
-    $entry = $this->cart->vatBreakdown()->first();
+    $entry = $this->cart->vatBreakdown()->firstOrFail();
 
     $net = (float) str_replace(',', '', $entry['net']);
     $vat = (float) str_replace(',', '', $entry['vat']);
@@ -76,11 +76,12 @@ it('vatBreakdown excludes discountCartItem phantom entries', function (): void {
 });
 
 it('rounding_mode config is respected in vatBreakdown', function (): void {
-    $this->app['config']->set('cart.rounding_mode', PHP_ROUND_HALF_DOWN);
-    $this->cart->add('1', 'Product', '', 1, 100.0, 122.0, 22.0);
+    config()->set('cart.format.rounding_mode', PHP_ROUND_HALF_DOWN);
+    $this->cart->add('1', 'Product', '', 1, 10.125, 10.125, 0.0);
 
-    // Should not throw and should return valid data
-    $breakdown = $this->cart->vatBreakdown();
+    expect($this->cart->vatBreakdown()->firstOrFail()['net'])->toBe('10.12');
 
-    expect($breakdown)->not->toBeEmpty();
+    config()->set('cart.format.rounding_mode', PHP_ROUND_HALF_UP);
+
+    expect($this->cart->vatBreakdown()->firstOrFail()['net'])->toBe('10.13');
 });

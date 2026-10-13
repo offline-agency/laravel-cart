@@ -4,15 +4,48 @@ declare(strict_types=1);
 
 namespace OfflineAgency\LaravelCart\Storage;
 
+use Carbon\Carbon;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
+use OfflineAgency\LaravelCart\CartCoupon;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Contracts\CartStorage;
+use OfflineAgency\LaravelCart\Contracts\Couponable;
+use OfflineAgency\LaravelCart\Exceptions\CartStorageException;
+use OfflineAgency\LaravelCart\Support\CartConfig;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
+use OfflineAgency\LaravelCart\Support\Coerce;
+use OfflineAgency\LaravelCart\Support\CouponData;
+use stdClass;
 
+/**
+ * Stores carts in the normalized `carts` / `cart_items` tables.
+ *
+ * A cart is owned either by the authenticated user (configured
+ * `cart.users.foreign_key` column) or, for guests, by the session id
+ * (`session_id` column). Every write runs in a transaction that locks the
+ * cart row, so concurrent writers to the same cart are serialized and the
+ * last committed write wins; a failed write leaves the previous cart intact.
+ */
 class DatabaseStorage implements CartStorage
 {
-    /** @var array<string, mixed> */
+    public const string GUEST_COLUMN = 'session_id';
+
+    /** Storage key suffix => carts table column. */
+    private const array SUFFIX_COLUMNS = [
+        '_global_coupons' => 'coupons',
+        '_cart_info' => 'options',
+        '_meta' => 'meta',
+    ];
+
+    /**
+     * Read-through cache, grouped by owner and cart instance.
+     *
+     * @var array<string, array{expires_at: ?Carbon, values: array<string, mixed>}>
+     */
     private array $cache = [];
 
     private readonly ConnectionInterface $connection;
@@ -21,184 +54,166 @@ class DatabaseStorage implements CartStorage
 
     private readonly string $cartItemsTable;
 
+    private readonly string $ownerColumn;
+
     public function __construct(
         DatabaseManager $database,
     ) {
-        $this->connection = $database->connection(config('cart.database.connection'));
-        $this->cartsTable = (string) config('cart.database.carts_table', 'carts');
-        $this->cartItemsTable = (string) config('cart.database.cart_items_table', 'cart_items');
+        $this->connection = $database->connection(CartConfig::connection());
+        $this->cartsTable = CartConfig::string('cart.database.carts_table', 'carts');
+        $this->cartItemsTable = CartConfig::string('cart.database.cart_items_table', 'cart_items');
+        $this->ownerColumn = CartConfig::string('cart.users.foreign_key', 'user_id');
     }
 
     public function get(string $key, mixed $default = null): mixed
     {
-        if (array_key_exists($key, $this->cache)) {
-            return $this->cache[$key];
+        [$column, $owner] = $this->resolveOwner();
+        $instance = $this->parseInstance($key);
+        $cacheKey = $this->cacheKey($column, $owner, $instance);
+
+        if ($this->freshCacheGroup($cacheKey) && array_key_exists($key, $this->cache[$cacheKey]['values'])) {
+            return $this->cache[$cacheKey]['values'][$key];
         }
 
-        $userId = $this->resolveUserId();
-        $instance = $this->parseInstance($key);
-
-        $cart = $this->connection->table($this->cartsTable)
-            ->where('user_id', $userId)
-            ->where('instance', $instance)
-            ->first();
+        $cart = $this->findCart($column, $owner, $instance);
 
         if ($cart === null) {
             return $default;
         }
 
-        // Check TTL expiration
-        if (! empty($cart->expires_at) && now()->greaterThan($cart->expires_at)) {
-            $this->connection->table($this->cartItemsTable)->where('cart_id', $cart->id)->delete();
-            $this->connection->table($this->cartsTable)->where('id', $cart->id)->delete();
+        $result = match ($this->suffixOf($key)) {
+            '_global_coupons' => $this->deserializeCoupons(Coerce::nullableString($cart->coupons)),
+            '_cart_info' => $this->decodeArray(Coerce::nullableString($cart->options)),
+            '_meta' => $this->decodeArray(Coerce::nullableString($cart->meta)),
+            default => $this->loadItems($this->cartId($cart)),
+        };
 
-            return $default;
-        }
+        $this->remember($cacheKey, $cart, $key, $result);
 
-        // Determine what type of data is requested
-        if (str_ends_with($key, '_global_coupons')) {
-            $result = ! empty($cart->coupons)
-                ? $this->deserializeCoupons($cart->coupons)
-                : collect();
-            $this->cache[$key] = $result;
-
-            return $result;
-        }
-
-        if (str_ends_with($key, '_cart_info')) {
-            $result = ! empty($cart->options) ? json_decode($cart->options, true) : [];
-            $this->cache[$key] = $result;
-
-            return $result;
-        }
-
-        if (str_ends_with($key, '_meta')) {
-            $result = ! empty($cart->meta) ? json_decode($cart->meta, true) : [];
-            $this->cache[$key] = $result;
-
-            return $result;
-        }
-
-        // Default: cart content (Collection of CartItems)
-        $items = $this->connection->table($this->cartItemsTable)
-            ->where('cart_id', $cart->id)
-            ->get();
-
-        $content = new Collection;
-        foreach ($items as $row) {
-            $cartItem = $this->hydrateCartItem($row);
-            $content->put($cartItem->rowId, $cartItem);
-        }
-
-        $this->cache[$key] = $content;
-
-        return $content;
+        return $result;
     }
 
     public function put(string $key, mixed $value): void
     {
-        $this->cache[$key] = $value;
-
-        $userId = $this->resolveUserId();
+        [$column, $owner] = $this->resolveOwner();
         $instance = $this->parseInstance($key);
+        $suffix = $this->suffixOf($key);
 
-        $cartId = $this->ensureCartExists($userId, $instance);
+        $cart = $this->connection->transaction(function () use ($column, $owner, $instance, $suffix, $value): stdClass {
+            $cart = $this->lockOrCreateCart($column, $owner, $instance);
 
-        if (str_ends_with($key, '_global_coupons')) {
-            $this->connection->table($this->cartsTable)
-                ->where('id', $cartId)
-                ->update([
-                    'coupons' => $value instanceof Collection && $value->isNotEmpty()
-                        ? json_encode($value->map(fn ($c) => method_exists($c, 'toArray') ? $c->toArray() : $c)->values()->all())
-                        : null,
-                    'updated_at' => now(),
-                ]);
+            if ($suffix !== null) {
+                $this->connection->table($this->cartsTable)
+                    ->where('id', $this->cartId($cart))
+                    ->update([
+                        self::SUFFIX_COLUMNS[$suffix] => $this->encodeCartColumn($suffix, $value),
+                        'updated_at' => now(),
+                    ]);
+            } elseif ($value instanceof Collection) {
+                $this->syncCartItems($this->cartId($cart), $value);
+            }
 
-            return;
-        }
+            return $cart;
+        });
 
-        if (str_ends_with($key, '_cart_info')) {
-            $this->connection->table($this->cartsTable)
-                ->where('id', $cartId)
-                ->update([
-                    'options' => ! empty($value) ? json_encode($value) : null,
-                    'updated_at' => now(),
-                ]);
+        $cacheKey = $this->cacheKey($column, $owner, $instance);
 
-            return;
-        }
-
-        if (str_ends_with($key, '_meta')) {
-            $this->connection->table($this->cartsTable)
-                ->where('id', $cartId)
-                ->update([
-                    'meta' => ! empty($value) ? json_encode($value) : null,
-                    'updated_at' => now(),
-                ]);
-
-            return;
-        }
-
-        // Default: cart content (Collection of CartItems)
-        if ($value instanceof Collection) {
-            $this->syncCartItems($cartId, $value);
+        if ($suffix !== null || $value instanceof Collection) {
+            $this->remember($cacheKey, $cart, $key, $value);
+        } else {
+            unset($this->cache[$cacheKey]['values'][$key]);
         }
     }
 
     public function has(string $key): bool
     {
-        if (array_key_exists($key, $this->cache)) {
+        [$column, $owner] = $this->resolveOwner();
+        $instance = $this->parseInstance($key);
+
+        if ($this->freshCacheGroup($this->cacheKey($column, $owner, $instance))) {
             return true;
         }
 
-        $userId = $this->resolveUserId();
-        $instance = $this->parseInstance($key);
-
-        return $this->connection->table($this->cartsTable)
-            ->where('user_id', $userId)
-            ->where('instance', $instance)
-            ->exists();
+        return $this->findCart($column, $owner, $instance) !== null;
     }
 
     public function remove(string $key): void
     {
-        unset($this->cache[$key]);
-
-        $userId = $this->resolveUserId();
+        [$column, $owner] = $this->resolveOwner();
         $instance = $this->parseInstance($key);
+        $cacheKey = $this->cacheKey($column, $owner, $instance);
+        $suffix = $this->suffixOf($key);
 
-        $cart = $this->connection->table($this->cartsTable)
-            ->where('user_id', $userId)
-            ->where('instance', $instance)
-            ->first();
+        if ($suffix === null) {
+            unset($this->cache[$cacheKey]);
+        } else {
+            unset($this->cache[$cacheKey]['values'][$key]);
+        }
+
+        $cart = $this->findCart($column, $owner, $instance);
 
         if ($cart === null) {
             return;
         }
 
-        $this->connection->table($this->cartItemsTable)
-            ->where('cart_id', $cart->id)
-            ->delete();
-
-        if (str_ends_with($key, '_global_coupons')) {
-            $this->connection->table($this->cartsTable)
-                ->where('id', $cart->id)
-                ->update(['coupons' => null, 'updated_at' => now()]);
+        if ($suffix === null) {
+            $this->deleteCart($this->cartId($cart));
 
             return;
         }
 
+        // Suffix keys only clear their own column; items and the other columns stay.
         $this->connection->table($this->cartsTable)
-            ->where('id', $cart->id)
-            ->delete();
+            ->where('id', $this->cartId($cart))
+            ->update([self::SUFFIX_COLUMNS[$suffix] => null, 'updated_at' => now()]);
     }
 
-    private function resolveUserId(): string
+    /**
+     * Authenticated carts are keyed by the configured user column, guest carts
+     * by the session id. A session id is never written to the user column.
+     *
+     * @return array{0: string, 1: int|string}
+     */
+    private function resolveOwner(): array
     {
-        /** @var string|int|null $authId */
         $authId = auth()->id();
 
-        return (string) ($authId ?? session()->getId());
+        if ($authId !== null) {
+            return [$this->ownerColumn, $authId];
+        }
+
+        return [self::GUEST_COLUMN, session()->getId()];
+    }
+
+    private function cacheKey(string $column, int|string $owner, string $instance): string
+    {
+        return $column."\0".$owner."\0".$instance;
+    }
+
+    /**
+     * Whether a cached group exists and its cart has not expired since it was cached.
+     */
+    private function freshCacheGroup(string $cacheKey): bool
+    {
+        if (! isset($this->cache[$cacheKey])) {
+            return false;
+        }
+
+        $expiresAt = $this->cache[$cacheKey]['expires_at'];
+
+        if ($expiresAt !== null && now()->greaterThan($expiresAt)) {
+            unset($this->cache[$cacheKey]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private function remember(string $cacheKey, stdClass $cart, string $key, mixed $value): void
+    {
+        $this->cache[$cacheKey]['expires_at'] = $this->expiresAt($cart);
+        $this->cache[$cacheKey]['values'][$key] = $value;
     }
 
     /**
@@ -207,70 +222,188 @@ class DatabaseStorage implements CartStorage
      */
     private function parseInstance(string $key): string
     {
-        foreach (['_global_coupons', '_cart_info', '_meta'] as $suffix) {
-            if (str_ends_with($key, $suffix)) {
-                return substr($key, 0, -strlen($suffix));
-            }
-        }
+        $suffix = $this->suffixOf($key);
 
-        return $key;
-    }
-
-    private function ensureCartExists(string $userId, string $instance): int
-    {
-        $cart = $this->connection->table($this->cartsTable)
-            ->where('user_id', $userId)
-            ->where('instance', $instance)
-            ->first();
-
-        if ($cart !== null) {
-            return (int) $cart->id;
-        }
-
-        $ttl = config('cart.ttl');
-        $expiresAt = $ttl !== null ? now()->addMinutes((int) $ttl) : null;
-
-        return (int) $this->connection->table($this->cartsTable)->insertGetId([
-            'user_id' => $userId,
-            'instance' => $instance,
-            'expires_at' => $expiresAt,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        return $suffix === null ? $key : substr($key, 0, -strlen($suffix));
     }
 
     /**
-     * @param  Collection<string, CartItem>  $content
+     * @return key-of<self::SUFFIX_COLUMNS>|null
+     */
+    private function suffixOf(string $key): ?string
+    {
+        foreach (array_keys(self::SUFFIX_COLUMNS) as $suffix) {
+            if (str_ends_with($key, $suffix)) {
+                return $suffix;
+            }
+        }
+
+        return null;
+    }
+
+    private function cartQuery(string $column, int|string $owner, string $instance): Builder
+    {
+        return $this->connection->table($this->cartsTable)
+            ->where($column, $owner)
+            ->where('instance', $instance);
+    }
+
+    /**
+     * Find the owner's cart, purging it when its TTL has elapsed.
+     */
+    private function findCart(string $column, int|string $owner, string $instance, bool $lock = false): ?stdClass
+    {
+        $cart = $this->cartQuery($column, $owner, $instance)
+            ->when($lock, fn (Builder $query) => $query->lockForUpdate())
+            ->first();
+
+        if ($cart === null) {
+            return null;
+        }
+
+        $expiresAt = $this->expiresAt($cart);
+
+        if ($expiresAt !== null && now()->greaterThan($expiresAt)) {
+            $this->deleteCart($this->cartId($cart));
+            unset($this->cache[$this->cacheKey($column, $owner, $instance)]);
+
+            return null;
+        }
+
+        return $cart;
+    }
+
+    private function cartId(stdClass $cart): int
+    {
+        return Coerce::int($cart->id);
+    }
+
+    private function expiresAt(stdClass $cart): ?Carbon
+    {
+        $expiresAt = Coerce::nullableString($cart->expires_at);
+
+        return $expiresAt === null || $expiresAt === '' ? null : Carbon::parse($expiresAt);
+    }
+
+    /**
+     * Return the locked cart row, creating it when missing. The unique
+     * (owner, instance) index plus insertOrIgnore make concurrent creation safe:
+     * whoever loses the race re-reads the row the winner inserted.
+     */
+    private function lockOrCreateCart(string $column, int|string $owner, string $instance): stdClass
+    {
+        $cart = $this->findCart($column, $owner, $instance, lock: true);
+
+        if ($cart !== null) {
+            return $cart;
+        }
+
+        $ttl = CartConfig::nullableNumber('cart.ttl');
+
+        $this->connection->table($this->cartsTable)->insertOrIgnore([
+            $column => $owner,
+            'instance' => $instance,
+            'expires_at' => $ttl !== null ? now()->addMinutes((int) $ttl) : null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $this->cartQuery($column, $owner, $instance)->lockForUpdate()->firstOrFail();
+    }
+
+    private function deleteCart(int $cartId): void
+    {
+        $this->connection->transaction(function () use ($cartId): void {
+            $this->connection->table($this->cartItemsTable)->where('cart_id', $cartId)->delete();
+            $this->connection->table($this->cartsTable)->where('id', $cartId)->delete();
+        });
+    }
+
+    private function encodeCartColumn(string $suffix, mixed $value): ?string
+    {
+        if ($suffix === '_global_coupons') {
+            return $value instanceof Collection && $value->isNotEmpty()
+                ? json_encode($value->map(fn (mixed $c): mixed => $c instanceof Couponable || $c instanceof Arrayable ? $c->toArray() : $c)->values()->all(), JSON_THROW_ON_ERROR)
+                : null;
+        }
+
+        return ! empty($value) ? json_encode($value, JSON_THROW_ON_ERROR) : null;
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function decodeArray(?string $json): array
+    {
+        $decoded = ! empty($json) ? json_decode($json, true) : null;
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @return Collection<string, CartItem>
+     */
+    private function loadItems(int $cartId): Collection
+    {
+        $content = new Collection;
+
+        $rows = $this->connection->table($this->cartItemsTable)
+            ->where('cart_id', $cartId)
+            ->orderBy('id')
+            ->get();
+
+        foreach ($rows as $row) {
+            $cartItem = $this->hydrateCartItem($row);
+            $content->put($cartItem->rowId, $cartItem);
+        }
+
+        return $content;
+    }
+
+    /**
+     * Replace the cart lines. Must run inside the caller's transaction.
+     *
+     * @param  Collection<array-key, mixed>  $content
      */
     private function syncCartItems(int $cartId, Collection $content): void
     {
-        // Delete existing items and re-insert
+        $items = CartContentCodec::cartItems($content);
+
+        if ($items === null) {
+            throw new CartStorageException('The cart content to store must only contain cart items.');
+        }
+
         $this->connection->table($this->cartItemsTable)
             ->where('cart_id', $cartId)
             ->delete();
 
-        foreach ($content as $item) {
-            $this->connection->table($this->cartItemsTable)->insert([
-                'cart_id' => $cartId,
-                'row_id' => $item->rowId,
-                'item_id' => (string) $item->id,
-                'name' => $item->name,
-                'subtitle' => $item->subtitle ?? '',
-                'price' => $item->price,
-                'total_price' => $item->totalPrice,
-                'vat' => $item->vat,
-                'vat_rate' => $item->vatRate,
-                'vat_fc_code' => $item->vatFcCode ?? '',
-                'product_fc_code' => $item->productFcCode ?? '',
-                'url_img' => $item->urlImg ?? '',
-                'qty' => $item->qty,
-                'options' => json_encode($item->options->toArray()),
-                'applied_coupons' => ! empty($item->appliedCoupons) ? json_encode($item->appliedCoupons) : null,
-                'discount_value' => $item->discountValue ?? 0.0,
-                'associated_model' => $item->associatedModel,
-                'created_at' => $item->createdAt,
-                'updated_at' => $item->updatedAt,
-            ]);
+        $rows = $items->map(fn (CartItem $item): array => [
+            'cart_id' => $cartId,
+            'row_id' => $item->rowId,
+            'item_id' => (string) $item->id,
+            'name' => $item->name,
+            'subtitle' => $item->subtitle,
+            'original_price' => $item->originalPrice,
+            'original_total_price' => $item->originalTotalPrice,
+            'original_vat' => $item->originalVat,
+            'price' => $item->price,
+            'total_price' => $item->totalPrice,
+            'vat' => $item->vat,
+            'vat_rate' => $item->vatRate,
+            'vat_fc_code' => $item->vatFcCode,
+            'product_fc_code' => $item->productFcCode,
+            'url_img' => $item->urlImg,
+            'qty' => $item->qty,
+            'options' => json_encode($item->options->toArray(), JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR),
+            'applied_coupons' => ! empty($item->appliedCoupons) ? json_encode($item->appliedCoupons, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR) : null,
+            'discount_value' => $item->discountValue,
+            'associated_model' => $item->associatedModel,
+            'created_at' => $item->createdAt,
+            'updated_at' => $item->updatedAt,
+        ])->values()->all();
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            $this->connection->table($this->cartItemsTable)->insert($chunk);
         }
 
         $this->connection->table($this->cartsTable)
@@ -278,57 +411,81 @@ class DatabaseStorage implements CartStorage
             ->update(['updated_at' => now()]);
     }
 
-    private function hydrateCartItem(object $row): CartItem
+    private function hydrateCartItem(stdClass $row): CartItem
     {
-        $options = ! empty($row->options) ? json_decode($row->options, true) : [];
-
+        // Build from the original amounts so construction-time derived values
+        // (vat label, tax) match, then restore the current (discounted) state.
         $cartItem = new CartItem(
-            id: $row->item_id,
-            name: $row->name,
-            subtitle: $row->subtitle ?? '',
-            qty: $row->qty,
-            price: (float) $row->price,
-            totalPrice: (float) $row->total_price,
-            vatFcCode: $row->vat_fc_code ?? '',
-            productFcCode: $row->product_fc_code ?? '',
-            vat: (float) $row->vat,
-            urlImg: $row->url_img ?? '',
-            options: $options ?? [],
+            id: Coerce::key($row->item_id),
+            name: Coerce::string($row->name),
+            subtitle: Coerce::nullableString($row->subtitle) ?? '',
+            qty: $this->castQuantity(Coerce::float($row->qty)),
+            price: Coerce::float($row->original_price),
+            totalPrice: Coerce::float($row->original_total_price),
+            vatFcCode: Coerce::nullableString($row->vat_fc_code) ?? '',
+            productFcCode: Coerce::nullableString($row->product_fc_code) ?? '',
+            vat: Coerce::float($row->original_vat),
+            urlImg: Coerce::nullableString($row->url_img) ?? '',
+            createdAt: Carbon::parse(Coerce::string($row->created_at)),
+            updatedAt: Carbon::parse(Coerce::string($row->updated_at)),
+            options: $this->decodeArray(Coerce::nullableString($row->options)),
         );
 
-        if (! empty($row->associated_model)) {
-            $cartItem->associate($row->associated_model);
+        $cartItem->rowId = Coerce::string($row->row_id);
+        $cartItem->price = Coerce::float($row->price);
+        $cartItem->totalPrice = Coerce::float($row->total_price);
+        $cartItem->vat = Coerce::float($row->vat);
+        $cartItem->vatRate = Coerce::float($row->vat_rate);
+        $cartItem->taxRate = $cartItem->vatRate;
+        $cartItem->tax = $cartItem->formatFloat($cartItem->originalPrice * ($cartItem->taxRate / 100));
+        $cartItem->discountValue = Coerce::float($row->discount_value ?? 0.0);
+
+        $associatedModel = Coerce::nullableString($row->associated_model);
+
+        if ($associatedModel !== null && $associatedModel !== '') {
+            $cartItem->associate($associatedModel);
         }
 
-        if (! empty($row->applied_coupons)) {
-            $cartItem->appliedCoupons = json_decode($row->applied_coupons, true) ?? [];
-        }
-
-        $cartItem->discountValue = (float) ($row->discount_value ?? 0.0);
+        $cartItem->appliedCoupons = $this->appliedCoupons(Coerce::nullableString($row->applied_coupons));
 
         return $cartItem;
     }
 
-    private function deserializeCoupons(string $json): Collection
+    /**
+     * Applied coupons are stored as a JSON object keyed by coupon code; they
+     * are restored as the objects CartItem::applyCoupon() creates.
+     *
+     * @return array<string, object{couponCode: string, couponType: string, couponValue: float, discountValue: float}>
+     */
+    private function appliedCoupons(?string $json): array
     {
-        $data = json_decode($json, true);
-        if (! is_array($data)) {
-            return collect();
+        $coupons = [];
+
+        foreach ($this->decodeArray($json) as $coupon) {
+            $coupon = is_array($coupon) ? $coupon : [];
+            $couponCode = Coerce::string($coupon['couponCode'] ?? null);
+
+            $coupons[$couponCode] = (object) [
+                'couponCode' => $couponCode,
+                'couponType' => Coerce::string($coupon['couponType'] ?? null),
+                'couponValue' => Coerce::float($coupon['couponValue'] ?? null),
+                'discountValue' => Coerce::float($coupon['discountValue'] ?? 0.0),
+            ];
         }
 
-        return collect($data)->mapWithKeys(function (array $c) {
-            $coupon = new \OfflineAgency\LaravelCart\CartCoupon(
-                hash: $c['hash'],
-                code: $c['code'],
-                type: $c['type'],
-                value: (float) $c['value'],
-                isGlobal: $c['isGlobal'] ?? false,
-                expiresAt: isset($c['expiresAt']) ? \Carbon\Carbon::parse($c['expiresAt']) : null,
-                usageLimit: $c['usageLimit'] ?? null,
-                minCartAmount: isset($c['minCartAmount']) ? (float) $c['minCartAmount'] : null,
-            );
+        return $coupons;
+    }
 
-            return [$coupon->hash => $coupon];
-        });
+    private function castQuantity(float $qty): int|float
+    {
+        return floor($qty) === $qty ? (int) $qty : $qty;
+    }
+
+    /**
+     * @return Collection<string, CartCoupon>
+     */
+    private function deserializeCoupons(?string $json): Collection
+    {
+        return new Collection(CouponData::decodeList($json, isGlobalDefault: false));
     }
 }

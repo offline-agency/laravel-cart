@@ -1,0 +1,23 @@
+{
+  "repository": "offline-agency/laravel-cart",
+  "defaultBranch": "main",
+  "tagPattern": "^\\d+\\.\\d+\\.\\d+$",
+  "initialVersion": "0.0.0",
+  "markerName": "laravel-cart-release",
+  "anchor": {
+    "pr": 44
+  },
+  "ci": {
+    "workflowFile": ".github/workflows/ci.yml",
+    "workflowName": "CI",
+    "checkName": "CI passed",
+    "appSlug": "github-actions"
+  },
+  "bumpOverrides": {
+    "44": {
+      "bump": "major",
+      "reason": "v4.0.0 activation release (breaking changes listed in the PR body)"
+    }
+  },
+  "ciWaivers": {}
+}

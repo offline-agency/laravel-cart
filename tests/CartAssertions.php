@@ -11,10 +11,8 @@ trait CartAssertions
 {
     /**
      * Assert that the cart contains the given number of items.
-     *
-     * @param  int|float  $items
      */
-    public function assertItemsInCart($items, Cart $cart)
+    public function assertItemsInCart(int|float $items, Cart $cart): void
     {
         $actual = $cart->count();
 
@@ -24,7 +22,7 @@ trait CartAssertions
     /**
      * Assert that the cart contains the given number of rows.
      */
-    public function assertRowsInCart(int $rows, Cart $cart)
+    public function assertRowsInCart(int $rows, Cart $cart): void
     {
         $actual = $cart->content()->count();
 

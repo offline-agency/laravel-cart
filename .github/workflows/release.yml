@@ -1,44 +1,76 @@
+# Ordered, idempotent per-PR releases. See .github/RELEASING.md.
+#
+# Every trigger runs the same reconcile algorithm over main's first-parent
+# history (.github/scripts/release/cli.mjs). Events only *wake up* the
+# reconciler; they never carry the version, the order or the data used.
+#
+# Security notes:
+# - pull_request_target never checks out or runs PR head code: we check out
+#   the trusted default-branch commit (github.sha) only.
+# - PR title/body/labels are never interpolated into scripts; the script
+#   re-queries the PR through the API and treats it as data.
+# - Tags/releases created with GITHUB_TOKEN do not trigger other workflows.
+
 name: Release
 
 on:
-    pull_request:
-        branches: [main]
+    pull_request_target:
         types: [closed]
+        branches: [main]
+    workflow_run:
+        workflows: [CI]
+        types: [completed]
+        branches: [main]
+    workflow_dispatch:
+        inputs:
+            pr:
+                description: "Merged PR number to reconcile up to (empty = everything pending)"
+                required: false
+                type: string
+                default: ""
+            dry_run:
+                description: "Dry run: report the plan, make no writes"
+                required: false
+                type: boolean
+                default: true
+
+permissions: {}
+
+# A single publisher. GitHub keeps at most one *pending* run per group (newer
+# pending runs replace older ones); that is harmless because every run
+# reconciles the whole history, so a dropped event loses nothing.
+concurrency:
+    group: release
+    cancel-in-progress: false
 
 jobs:
     release:
-        if: github.event.pull_request.merged == true
+        name: Reconcile releases
+        if: >-
+            github.repository == 'offline-agency/laravel-cart' && (
+              (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true) ||
+              (github.event_name == 'workflow_run' &&
+                github.event.workflow_run.event == 'push' &&
+                github.event.workflow_run.head_branch == 'main' &&
+                github.event.workflow_run.head_repository.full_name == github.repository) ||
+              (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+            )
         runs-on: ubuntu-latest
+        timeout-minutes: 15
         permissions:
-            contents: write
-
+            contents: write # annotated tags + releases
+            pull-requests: read # re-query merged PRs
+            checks: read # "CI passed" check run
+            actions: read # CI workflow runs
         steps:
-            - uses: actions/checkout@v4
+            - name: Check out the trusted default-branch commit (no PR code)
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
+                  ref: ${{ github.sha }}
                   fetch-depth: 0
+                  persist-credentials: false
 
-            - name: Get latest tag
-              id: get_tag
-              run: |
-                  TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
-                  echo "latest=${TAG:-0.0.0}" >> $GITHUB_OUTPUT
-
-            - name: Bump patch version
-              id: bump
-              run: |
-                  IFS='.' read -r MAJOR MINOR PATCH <<< "${{ steps.get_tag.outputs.latest }}"
-                  NEW_TAG="${MAJOR}.${MINOR}.$((PATCH + 1))"
-                  echo "new_tag=${NEW_TAG}" >> $GITHUB_OUTPUT
-
-            - name: Create & push tag
-              run: |
-                  git config user.name "github-actions[bot]"
-                  git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git tag ${{ steps.bump.outputs.new_tag }}
-                  git push origin ${{ steps.bump.outputs.new_tag }}
-
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v2
-              with:
-                  tag_name: ${{ steps.bump.outputs.new_tag }}
-                  generate_release_notes: true
+            - name: Reconcile
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+              run: node .github/scripts/release/cli.mjs --event

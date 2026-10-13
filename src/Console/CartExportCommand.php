@@ -6,9 +6,12 @@ namespace OfflineAgency\LaravelCart\Console;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
+use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
+use OfflineAgency\LaravelCart\Support\Coerce;
 
-use function Termwind\{render};
+use function Termwind\render;
 
 class CartExportCommand extends Command
 {
@@ -24,9 +27,9 @@ class CartExportCommand extends Command
 
     public function handle(): int
     {
-        $path = $this->option('path');
+        $path = Coerce::string($this->option('path'));
         $instance = $this->option('instance');
-        $since = $this->option('since');
+        $since = Coerce::nullableString($this->option('since'));
 
         if (! str_starts_with($path, '/')) {
             $path = base_path($path);
@@ -72,22 +75,22 @@ class CartExportCommand extends Command
 
         $carts = [];
 
-        (clone $query)->orderBy('identifier')->chunk(100, function ($rows) use (&$carts): void {
+        (clone $query)->orderBy('identifier')->chunk(100, function (Collection $rows) use (&$carts): void {
             foreach ($rows as $row) {
-                $content = $this->deserializeContent($row->content);
+                $content = $this->decodeContent($row->content);
 
                 $cart = [
                     'identifier' => $row->identifier,
                     'instance' => $row->instance,
-                    'items' => $content->isNotEmpty()
-                        ? $content->map(fn ($item) => $item->toArray())->values()->toArray()
+                    'items' => $content !== null && $content->isNotEmpty()
+                        ? $content->map(fn (CartItem $item): array => $item->toArray())->values()->all()
                         : null,
                     'coupons' => $this->decodeCoupons($row->coupons ?? null),
                     'created_at' => $row->created_at,
                     'updated_at' => $row->updated_at,
                 ];
 
-                if ($cart['items'] === null && $row->content !== '' && $row->content !== serialize(collect())) {
+                if ($content === null) {
                     $cart['error'] = 'Failed to deserialize';
                 }
 

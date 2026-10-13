@@ -5,7 +5,7 @@ declare(strict_types=1);
 use OfflineAgency\LaravelCart\Cart;
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 

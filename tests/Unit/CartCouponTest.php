@@ -267,8 +267,8 @@ it('can be JSON-encoded', function (): void {
 
     expect($json)->toBeString()->toBeJson();
 
-    $decoded = json_decode($json, true);
+    $decoded = decodeJson($json);
     expect($decoded['code'])->toBe('C')
         ->and($decoded['type'])->toBe('fixed')
-        ->and((float) $decoded['value'])->toBe(5.0);
+        ->and($decoded['value'])->toEqual(5.0);
 });

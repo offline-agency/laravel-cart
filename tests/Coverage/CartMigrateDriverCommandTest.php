@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 function covMigrateCreateSessionsTable(): void
 {
-    DB::connection('testing')->getSchemaBuilder()->create('sessions', function ($table): void {
+    DB::connection('testing')->getSchemaBuilder()->create('sessions', function (Blueprint $table): void {
         $table->string('id')->primary();
         $table->text('payload')->nullable();
         $table->integer('last_activity')->default(0);
@@ -32,6 +35,29 @@ function covMigrateEncode(mixed $payload): string
 function covMigrateConfirmQuestion(int $count): string
 {
     return __('laravel-cart::cart.command_migrate_confirm', ['count' => $count]);
+}
+
+/**
+ * Per-process directory for the file session driver tests.
+ */
+function covMigrateSessionPath(): string
+{
+    return sys_get_temp_dir().'/cov-cart-sessions-'.getmypid();
+}
+
+/**
+ * The session content copied into the legacy cart table, as stored (the
+ * fixtures use placeholder values, not cart items).
+ *
+ * @return array<array-key, mixed>
+ */
+function covMigrateStoredItems(string $identifier): array
+{
+    $content = DB::table('cart')->where('identifier', $identifier)->value('content');
+    $payload = is_string($content) ? base64_decode(substr($content, strlen(CartContentCodec::PREFIX)), true) : false;
+    $items = is_string($payload) ? unserialize($payload) : null;
+
+    return $items instanceof Collection ? $items->all() : [];
 }
 
 beforeEach(function (): void {
@@ -100,7 +126,7 @@ describe('database sessions', function (): void {
         DB::table('cart')->insert([
             'identifier' => 'existing',
             'instance' => 'default',
-            'content' => serialize(collect(['original'])),
+            'content' => CartContentCodec::encode(collect(['original'])),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -110,9 +136,9 @@ describe('database sessions', function (): void {
             ->assertExitCode(0);
 
         expect(DB::table('cart')->count())->toBe(3)
-            ->and(unserialize(DB::table('cart')->where('identifier', 'guest-session')->value('content'))->all())->toBe(['item-a'])
-            ->and(unserialize(DB::table('cart')->where('identifier', '7')->value('content'))->all())->toBe(['item-b'])
-            ->and(unserialize(DB::table('cart')->where('identifier', 'existing')->value('content'))->all())->toBe(['original'])
+            ->and(covMigrateStoredItems('guest-session'))->toBe(['item-a'])
+            ->and(covMigrateStoredItems('7'))->toBe(['item-b'])
+            ->and(covMigrateStoredItems('existing'))->toBe(['original'])
             ->and(DB::table('cart')->where('instance', 'wishlist')->exists())->toBeFalse();
     });
 
@@ -130,21 +156,20 @@ describe('database sessions', function (): void {
 
 describe('file sessions', function (): void {
     beforeEach(function (): void {
-        $this->sessionPath = sys_get_temp_dir().'/cov-cart-sessions-'.uniqid('', true);
-        File::ensureDirectoryExists($this->sessionPath);
+        File::ensureDirectoryExists(covMigrateSessionPath());
 
         config([
             'session.driver' => 'file',
-            'session.files' => $this->sessionPath,
+            'session.files' => covMigrateSessionPath(),
         ]);
     });
 
     afterEach(function (): void {
-        File::deleteDirectory($this->sessionPath);
+        File::deleteDirectory(covMigrateSessionPath());
     });
 
     it('fails when the session directory does not exist', function (): void {
-        config(['session.files' => $this->sessionPath.'/missing']);
+        config(['session.files' => covMigrateSessionPath().'/missing']);
 
         $this->artisan('cart:migrate-driver', ['--from' => 'session', '--to' => 'database'])
             ->assertExitCode(1);
@@ -156,7 +181,7 @@ describe('file sessions', function (): void {
     });
 
     it('does not write on dry run', function (): void {
-        file_put_contents($this->sessionPath.'/s1', serialize(['cart.default' => collect(['a'])]));
+        file_put_contents(covMigrateSessionPath().'/s1', serialize(['cart.default' => collect(['a'])]));
 
         $this->artisan('cart:migrate-driver', ['--from' => 'session', '--to' => 'database', '--dry-run' => true])
             ->assertExitCode(0);
@@ -165,7 +190,7 @@ describe('file sessions', function (): void {
     });
 
     it('can be cancelled at the confirmation prompt', function (): void {
-        file_put_contents($this->sessionPath.'/s1', serialize(['cart.default' => collect(['a'])]));
+        file_put_contents(covMigrateSessionPath().'/s1', serialize(['cart.default' => collect(['a'])]));
 
         $this->artisan('cart:migrate-driver', ['--from' => 'session', '--to' => 'database'])
             ->expectsConfirmation(covMigrateConfirmQuestion(1), 'no')
@@ -175,20 +200,20 @@ describe('file sessions', function (): void {
     });
 
     it('migrates cart keys after confirmation and skips unusable files', function (): void {
-        file_put_contents($this->sessionPath.'/migrate-me', serialize([
+        file_put_contents(covMigrateSessionPath().'/migrate-me', serialize([
             'cart.default' => collect(['item-a']),
             'cart.wishlist' => null,
         ]));
-        file_put_contents($this->sessionPath.'/existing', serialize(['cart.default' => collect(['item-c'])]));
-        file_put_contents($this->sessionPath.'/not-array', 'garbage');
-        file_put_contents($this->sessionPath.'/no-cart', serialize(['_token' => 'abc']));
+        file_put_contents(covMigrateSessionPath().'/existing', serialize(['cart.default' => collect(['item-c'])]));
+        file_put_contents(covMigrateSessionPath().'/not-array', 'garbage');
+        file_put_contents(covMigrateSessionPath().'/no-cart', serialize(['_token' => 'abc']));
         // A sub-directory cannot be read as a file and is reported as a failure.
-        mkdir($this->sessionPath.'/a-directory');
+        mkdir(covMigrateSessionPath().'/a-directory');
 
         DB::table('cart')->insert([
             'identifier' => 'existing',
             'instance' => 'default',
-            'content' => serialize(collect(['original'])),
+            'content' => CartContentCodec::encode(collect(['original'])),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -198,12 +223,12 @@ describe('file sessions', function (): void {
             ->assertExitCode(0);
 
         expect(DB::table('cart')->count())->toBe(2)
-            ->and(unserialize(DB::table('cart')->where('identifier', 'migrate-me')->value('content'))->all())->toBe(['item-a'])
-            ->and(unserialize(DB::table('cart')->where('identifier', 'existing')->value('content'))->all())->toBe(['original']);
+            ->and(covMigrateStoredItems('migrate-me'))->toBe(['item-a'])
+            ->and(covMigrateStoredItems('existing'))->toBe(['original']);
     });
 
     it('skips files that cannot be read', function (): void {
-        symlink($this->sessionPath.'/does-not-exist', $this->sessionPath.'/dangling');
+        symlink(covMigrateSessionPath().'/does-not-exist', covMigrateSessionPath().'/dangling');
 
         $previous = error_reporting(E_ALL & ~E_WARNING);
 
@@ -218,7 +243,7 @@ describe('file sessions', function (): void {
     });
 
     it('reports carts that fail to be written', function (): void {
-        file_put_contents($this->sessionPath.'/s1', serialize(['cart.default' => collect(['a'])]));
+        file_put_contents(covMigrateSessionPath().'/s1', serialize(['cart.default' => collect(['a'])]));
 
         DB::connection('testing')->getSchemaBuilder()->drop('cart');
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use OfflineAgency\LaravelCart\CartItem;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 
 function covPruneInsertNormalizedCart(int $userId, string $instance, ?Carbon $expiresAt): int
 {
@@ -42,7 +43,7 @@ it('cart:prune asks for confirmation and cancels when declined', function (): vo
     DB::connection('testing')->table('cart')->insert([
         'identifier' => 'old-user',
         'instance' => 'default',
-        'content' => serialize(collect([$item->rowId => $item])),
+        'content' => CartContentCodec::encode(collect([$item->rowId => $item])),
         'coupons' => null,
         'created_at' => $old,
         'updated_at' => $old,

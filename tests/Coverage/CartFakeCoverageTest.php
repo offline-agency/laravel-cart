@@ -3,20 +3,16 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Events\Dispatcher;
-use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\Events\CartItemAdded;
 use OfflineAgency\LaravelCart\Events\CartItemRemoved;
 use OfflineAgency\LaravelCart\Facades\Cart as CartFacade;
+use OfflineAgency\LaravelCart\Testing\CartFake;
+use OfflineAgency\LaravelCart\Testing\RecordingDispatcher;
 use PHPUnit\Framework\AssertionFailedError;
 
-function cartFakeCovRecorder(Cart $cart): Dispatcher
+function cartFakeCovRecorder(CartFake $cart): RecordingDispatcher
 {
-    $property = new ReflectionProperty(Cart::class, 'events');
-
-    /** @var Dispatcher $recorder */
-    $recorder = $property->getValue($cart);
-
-    return $recorder;
+    return $cart->recorder();
 }
 
 it('records dispatched events and asserts on them', function (): void {

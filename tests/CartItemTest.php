@@ -75,7 +75,7 @@ it('can be cast to json', function (): void {
 
     expect($cartItem->toJson())->toBeJson();
 
-    $decoded = json_decode($cartItem->toJson(), true);
+    $decoded = decodeJson($cartItem->toJson());
     expect($decoded['rowId'])->toBe('07d5da5550494c62daf9993cf954303f');
     expect($decoded['id'])->toBe(1);
     expect($decoded['qty'])->toBe(2);
@@ -274,9 +274,9 @@ it('can return a coupon by its code', function (): void {
     expect($cartItem->appliedCoupons)->toHaveCount(2);
 
     $coupon = $cartItem->getCoupon('BLACK_FRIDAY_FIXED_2021');
-    expect($coupon->couponCode)->toBe('BLACK_FRIDAY_FIXED_2021');
-    expect($coupon->couponType)->toBe('fixed');
-    expect($coupon->couponValue)->toEqual(100);
+    expect($coupon?->couponCode)->toBe('BLACK_FRIDAY_FIXED_2021');
+    expect($coupon?->couponType)->toBe('fixed');
+    expect($coupon?->couponValue)->toEqual(100);
     expect($cartItem->price)->toEqual(416.67);
     expect($cartItem->vat)->toEqual(83.33);
     expect($cartItem->totalPrice)->toEqual(500.00);
@@ -397,7 +397,7 @@ it('can resolve dynamic values through magic accessor', function (): void {
     expect($cartItem->total)->toEqual(360.00);
     expect($cartItem->taxTotal)->toEqual(60.0);
 
-    expect($cartItem->nonExistentProperty)->toBeNull();
+    expect($cartItem->__get('nonExistentProperty'))->toBeNull();
 });
 
 it('can access dynamic properties', function (): void {
@@ -448,8 +448,8 @@ it('can apply a coupon to cart item', function (): void {
     expect($cartItem->discountValue)->toEqual(100);
 
     $coupon = $cartItem->getCoupon('BLACK_FRIDAY_FIXED_2021');
-    expect($coupon->couponCode)->toBe('BLACK_FRIDAY_FIXED_2021');
-    expect($coupon->couponType)->toBe('fixed');
+    expect($coupon?->couponCode)->toBe('BLACK_FRIDAY_FIXED_2021');
+    expect($coupon?->couponType)->toBe('fixed');
     expect($cartItem->hasCoupons())->toBeTrue();
 
     expect($cartItem->appliedCoupons)->toHaveCount(1);

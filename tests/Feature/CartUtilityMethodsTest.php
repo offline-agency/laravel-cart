@@ -6,7 +6,7 @@ use Illuminate\Support\Collection;
 use OfflineAgency\LaravelCart\CartItem;
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -48,7 +48,7 @@ it('first with a closure returns matching item', function (): void {
     $item = $this->cart->first(fn (CartItem $i): bool => $i->name === 'Gadget');
 
     expect($item)->not->toBeNull()
-        ->and($item->name)->toBe('Gadget');
+        ->and($item?->name)->toBe('Gadget');
 });
 
 it('first with a closure returns null when nothing matches', function (): void {
@@ -67,7 +67,7 @@ it('where returns matching items by attribute', function (): void {
 
     expect($results)->toBeInstanceOf(Collection::class)
         ->and($results)->toHaveCount(1)
-        ->and($results->first()->name)->toBe('Widget');
+        ->and($results->first()?->name)->toBe('Widget');
 });
 
 it('where returns empty collection when no items match', function (): void {
