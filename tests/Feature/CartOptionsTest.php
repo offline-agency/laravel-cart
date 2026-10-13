@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -30,7 +30,7 @@ it('setOptions overwrites previously stored options', function (): void {
 it('options persist in the session between cart instances', function (): void {
     $this->cart->setOptions(['shipping' => 'express']);
 
-    $cart2 = $this->app->make('cart');
+    $cart2 = resolveCart();
 
     expect($cart2->getOptions())->toBe(['shipping' => 'express']);
 });

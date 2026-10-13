@@ -4,48 +4,165 @@ on:
     push:
         branches: [main]
     pull_request:
-        branches: [main]
+        branches: [main, develop]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+# Pull requests cancel superseded runs. Every push to main gets its own group (keyed by
+# SHA) and is never cancelled: the release workflow needs a finished `CI passed` check
+# on each merge commit, even when later merges land before it completes.
+concurrency:
+    group: ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+    quality:
+        name: Composer & style
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+              with:
+                  php-version: "8.5"
+                  coverage: none
+
+            - name: Install dependencies
+              run: composer update --prefer-dist --no-interaction --no-progress
+
+            - name: Validate composer.json and PSR-4 autoloading
+              run: composer validate:strict
+
+            - name: Audit dependencies
+              run: composer audit --abandoned=report
+
+            - name: Check code style
+              run: composer lint:check
+
     tests:
-        name: "PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}"
+        name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} (${{ matrix.dependencies }})
         runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
                 php: ["8.4", "8.5"]
-                laravel: ["10.*", "11.*", "12.*", "13.*"]
-                exclude:
+                laravel: ["12", "13"]
+                dependencies: [highest]
+                include:
+                    # Tested floors: the lowest framework and tooling versions composer.json allows.
+                    - php: "8.4"
+                      laravel: "12"
+                      dependencies: lowest
+                    - php: "8.4"
+                      laravel: "13"
+                      dependencies: lowest
+                    # The single job that measures and uploads coverage.
                     - php: "8.5"
-                      laravel: "10.*"
-
+                      laravel: "13"
+                      dependencies: highest
+                      coverage: true
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
 
-            - name: Setup PHP
-              uses: shivammathur/setup-php@v2
+            - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
               with:
                   php-version: ${{ matrix.php }}
-                  extensions: mbstring, dom, fileinfo, sqlite3
-                  coverage: xdebug
+                  extensions: mbstring, dom, fileinfo, pdo_sqlite
+                  coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
 
+            # Testbench, Pest, its Laravel plugin and PHPUnit follow from the framework line:
+            # Laravel 12 resolves Pest 4 / PHPUnit 12, Laravel 13 resolves Pest 5 / PHPUnit 13.
             - name: Install dependencies
+              env:
+                  LARAVEL: ${{ matrix.laravel }}
+                  LOWEST: ${{ matrix.dependencies == 'lowest' && '--prefer-lowest' || '' }}
+              run: composer update --prefer-dist --no-interaction --no-progress --with "laravel/framework:${LARAVEL}.*" ${LOWEST:+"$LOWEST"}
+
+            - name: Installed versions
               run: |
-                  composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
-                  composer update --prefer-dist --no-interaction
+                  php --version | head -n1
+                  composer --version
+                  composer show | grep -E '^(laravel/framework|orchestra/testbench|pestphp/pest|pestphp/pest-plugin-laravel|phpunit/phpunit|larastan/larastan|phpstan/phpstan|nesbot/carbon|nunomaduro/termwind) '
 
-            - name: Run Pint (lint check)
-              run: composer lint:check
-
-            - name: Run Larastan
+            - name: Static analysis
               run: composer analyse
 
-            - name: Run Pest
-              run: composer test -- --coverage-clover=coverage.xml
+            - name: Tests
+              if: ${{ !matrix.coverage }}
+              run: composer test
 
+            - name: Tests with coverage
+              if: ${{ matrix.coverage }}
+              run: composer test:coverage -- --coverage-clover=coverage.xml
+
+            # Informational only: works tokenless for public forks, never fails the build.
             - name: Upload coverage
-              uses: codecov/codecov-action@v4
+              if: ${{ matrix.coverage }}
+              continue-on-error: true
+              uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
               with:
                   files: coverage.xml
+                  fail_ci_if_error: false
               env:
                   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+    postgres:
+        name: PostgreSQL 17 (PHP 8.5 / Laravel 13)
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: laravel_cart_test
+                ports: ["5432:5432"]
+                options: >-
+                    --health-cmd "pg_isready -U postgres"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
+        env:
+            CART_TEST_DB_DRIVER: pgsql
+            CART_TEST_DB_HOST: 127.0.0.1
+            CART_TEST_DB_PORT: "5432"
+            CART_TEST_DB_DATABASE: laravel_cart_test
+            CART_TEST_DB_USERNAME: postgres
+            CART_TEST_DB_PASSWORD: postgres
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+              with:
+                  php-version: "8.5"
+                  extensions: mbstring, dom, fileinfo, pdo_pgsql
+                  coverage: none
+
+            - name: Install dependencies
+              run: composer update --prefer-dist --no-interaction --no-progress --with "laravel/framework:13.*"
+
+            - name: Tests
+              run: composer test
+
+    required:
+        name: CI passed
+        if: ${{ always() }}
+        needs: [quality, tests, postgres]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Require every job to succeed
+              env:
+                  RESULTS: ${{ join(needs.*.result, ' ') }}
+              run: |
+                  echo "Job results: $RESULTS"
+                  for result in $RESULTS; do
+                      [ "$result" = "success" ] || exit 1
+                  done

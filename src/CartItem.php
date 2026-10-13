@@ -7,97 +7,128 @@ namespace OfflineAgency\LaravelCart;
 use Carbon\Carbon;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
-use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
+use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
+use OfflineAgency\LaravelCart\Support\CartConfig;
+use OfflineAgency\LaravelCart\Support\Coerce;
 
 /**
- * @property-read mixed $model
+ * @phpstan-type AppliedCoupon object{couponCode: string, couponType: string, couponValue: float, discountValue: float}
+ *
  * @property-read float $priceTax
  * @property-read float $subtotal
  * @property-read float $total
- * @property-read float $tax
  * @property-read float $taxTotal
+ *
+ * @implements Arrayable<string, mixed>
  */
 class CartItem implements Arrayable, Jsonable
 {
+    /** @var string */
     public $rowId;
 
+    /** @var int|string */
     public $id;
 
+    /** @var int|float */
     public $qty;
 
+    /** @var string */
     public $name;
 
+    /** @var string */
     public $subtitle;
 
+    /** @var float */
     public $originalPrice;
 
+    /** @var float */
     public $originalTotalPrice;
 
+    /** @var float */
     public $originalVat;
 
+    /** @var float */
     public $price;
 
+    /** @var float */
     public $totalPrice;
 
+    /** @var float */
     public $vat;
 
+    /** @var string */
     public $vatLabel;
 
+    /** @var int|float */
     public $vatRate;
 
+    /** @var string */
     public $vatFcCode;
 
+    /** @var float */
     public $discountValue;
 
+    /** @var string */
     public $productFcCode;
 
+    /** @var string */
     public $urlImg;
 
     public Carbon $createdAt;
 
     public Carbon $updatedAt;
 
+    /** @var CartItemOptions */
     public $options;
 
+    /** @var string|null Class name of the associated model. */
     public $associatedModel;
 
+    /** @var mixed The associated model instance, class name or model id. */
     public $model;
 
+    /** @var array<string, AppliedCoupon> */
     public $appliedCoupons;
 
+    /**
+     * @deprecated Use $vat instead. Kept for backward compat with __get computed properties.
+     *
+     * @var int|float
+     */
     public $tax = 0.0;
 
+    /**
+     * @deprecated Use $vatRate instead. Kept for backward compat with __get computed properties.
+     *
+     * @var int|float
+     */
     public $taxRate = 0.0;
 
     /**
-     * CartItem constructor.
-     *
-     * @param  int|string  $id
-     * @param  Carbon|null  $createdAt
-     * @param  Carbon|null  $updatedAt
+     * @param  array<array-key, mixed>  $options
      */
     public function __construct(
-        $id,
+        int|string $id,
         string $name,
         string $subtitle,
-        $qty,
+        int|float $qty,
         float $price,
-        $totalPrice,
-        $vatFcCode,
-        $productFcCode,
-        $vat,
-        $urlImg,
+        ?float $totalPrice,
+        string $vatFcCode = '',
+        string $productFcCode = '',
+        ?float $vat = null,
+        string $urlImg = '',
         ?Carbon $createdAt = null,
         ?Carbon $updatedAt = null,
         array $options = []
     ) {
         if (empty($id)) {
-            throw new InvalidArgumentException('Please supply a valid identifier.');
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_id'));
         }
         if (empty($name)) {
-            throw new InvalidArgumentException('Please supply a valid name.');
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_name'));
         }
 
         $this->rowId = $this->generateRowId((string) $id, $options);
@@ -105,14 +136,42 @@ class CartItem implements Arrayable, Jsonable
         $this->qty = $qty;
         $this->name = $name;
         $this->subtitle = $subtitle;
-        $this->originalPrice = floatval($price);
-        $this->originalTotalPrice = floatval($totalPrice);
-        $this->originalVat = floatval($vat);
-        $this->price = floatval($price);
-        $this->totalPrice = floatval($totalPrice);
-        $this->vat = floatval($vat);
-        $this->vatLabel = $this->vat > 0 ? 'Iva Inclusa' : 'Esente Iva';
-        $this->vatRate = $this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0;
+        $this->originalPrice = $price;
+        $computedTotalPrice = $totalPrice ?? $this->formatFloat($price + (float) $vat);
+        $this->originalTotalPrice = $computedTotalPrice;
+        $this->originalVat = (float) $vat;
+        $this->price = $price;
+        $this->totalPrice = $computedTotalPrice;
+        $this->vat = (float) $vat;
+        $vatRate = null;
+
+        // Auto-apply default tax rate when no explicit VAT is provided
+        if ($this->vat === 0.0 && $this->price > 0 && $vat === null) {
+            $defaultRate = CartConfig::float('cart.tax.default_rate', 0.0);
+            if ($defaultRate > 0) {
+                $behavior = CartConfig::string('cart.tax.tax_behavior', 'inclusive');
+                if ($behavior === 'exclusive') {
+                    $this->vat = $this->formatFloat($this->price * $defaultRate / 100);
+                    $this->totalPrice = $this->formatFloat($this->price + $this->vat);
+                    $this->originalTotalPrice = $this->totalPrice;
+                    $this->originalVat = $this->vat;
+                } else {
+                    $this->vat = $this->formatFloat($this->totalPrice * $defaultRate / (100 + $defaultRate));
+                    $this->price = $this->formatFloat($this->totalPrice - $this->vat);
+                    $this->originalPrice = $this->price;
+                    $this->originalVat = $this->vat;
+                }
+                $vatRate = $defaultRate;
+            }
+        }
+
+        $this->vatLabel = $this->vat > 0
+            ? __('laravel-cart::cart.tax_included')
+            : __('laravel-cart::cart.tax_exempt');
+
+        $this->vatRate = $vatRate ?? ($this->price > 0 ? $this->formatFloat(100 * $this->vat / $this->price) : 0);
+        $this->taxRate = $this->vatRate;
+        $this->tax = $this->formatFloat($this->price * ($this->taxRate / 100));
         $this->vatFcCode = $vatFcCode;
         $this->productFcCode = $productFcCode;
         $this->urlImg = $urlImg;
@@ -127,14 +186,23 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
-     * Set the quantity for this cart item.
-     *
-     * @param  int|float  $qty
+     * Sync taxRate/tax from vatRate on unserialization of old stored carts.
      */
-    public function setQuantity($qty)
+    public function __wakeup(): void
+    {
+        if ($this->taxRate === 0.0 && $this->vatRate > 0) {
+            $this->taxRate = $this->vatRate;
+            $this->tax = $this->formatFloat($this->price * ($this->taxRate / 100));
+        }
+    }
+
+    /**
+     * Set the quantity for this cart item.
+     */
+    public function setQuantity(int|float $qty): void
     {
         if (empty($qty)) {
-            throw new InvalidArgumentException('Please supply a valid quantity. Provided: '.$qty);
+            throw new InvalidArgumentException(__('laravel-cart::cart.invalid_qty', ['qty' => $qty]));
         }
 
         $this->qty = $qty;
@@ -142,12 +210,10 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Update the cart item from a Buyable.
-     *
-     * @return void
      */
-    public function updateFromBuyable(Buyable $item)
+    public function updateFromBuyable(Buyable $item): void
     {
-        $this->id = $item->getId();
+        $this->id = Coerce::key($item->getId());
         $this->name = $item->getName();
         $this->price = $item->getPrice();
         $this->vat = $item->getVat();
@@ -156,45 +222,48 @@ class CartItem implements Arrayable, Jsonable
     /**
      * Update the cart item from an array.
      *
-     * @return void
+     * @param  array<array-key, mixed>  $attributes
      */
-    public function updateFromArray(array $attributes)
+    public function updateFromArray(array $attributes): void
     {
-        $this->id = Arr::get($attributes, 'id', $this->id);
-        $this->qty = Arr::get($attributes, 'qty', $this->qty);
-        $this->name = Arr::get($attributes, 'name', $this->name);
-        $this->price = Arr::get($attributes, 'price', $this->price);
-        $this->options = new CartItemOptions(Arr::get($attributes, 'options', $this->options));
+        $this->id = array_key_exists('id', $attributes) ? Coerce::key($attributes['id']) : $this->id;
+        $this->qty = array_key_exists('qty', $attributes) ? Coerce::number($attributes['qty']) : $this->qty;
+        $this->name = array_key_exists('name', $attributes) ? Coerce::string($attributes['name']) : $this->name;
+        $this->price = array_key_exists('price', $attributes) ? Coerce::float($attributes['price']) : $this->price;
+        $this->options = new CartItemOptions(array_key_exists('options', $attributes) ? self::options($attributes['options']) : $this->options);
 
         $this->rowId = $this->generateRowId((string) $this->id, $this->options->all());
     }
 
     /**
-     * Associate the cart item with a given model or something else.
+     * Associate the cart item with a given model (instance or class name), or,
+     * with $is_model false, with the `associatedModel` / `modelId` pair of an array.
      *
+     * @param  object|string|array<array-key, mixed>  $item
      * @return $this
      */
-    public function associate($item, bool $is_model = true): CartItem
+    public function associate(object|string|array $item, bool $is_model = true): CartItem
     {
-        if ($is_model) {
-            $this->associatedModel = is_string($item) ? $item : get_class($item);
+        if ($is_model && ! is_array($item)) {
+            $this->associatedModel = is_string($item) ? $item : $item::class;
             $this->model = $item;
 
             return $this;
         }
 
-        $this->associatedModel = Arr::has($item, 'associatedModel') ? Arr::get($item, 'associatedModel') : null;
-        $this->model = Arr::has($item, 'modelId') ? Arr::get($item, 'modelId') : null;
+        $attributes = is_array($item) ? $item : [];
+        $associatedModel = $attributes['associatedModel'] ?? null;
+
+        $this->associatedModel = is_string($associatedModel) ? $associatedModel : null;
+        $this->model = $attributes['modelId'] ?? null;
 
         return $this;
     }
 
     /**
      * Get an attribute from the cart item or get the associated model.
-     *
-     * @return mixed
      */
-    public function __get(string $attribute)
+    public function __get(string $attribute): mixed
     {
         $properties = get_object_vars($this);
 
@@ -205,7 +274,9 @@ class CartItem implements Arrayable, Jsonable
                 return null;
             }
 
-            return (new $associatedModel)->find($this->id);
+            $model = new $associatedModel;
+
+            return method_exists($model, 'find') ? $model->find($this->id) : null;
         }
 
         if (array_key_exists($attribute, $properties)) {
@@ -241,14 +312,14 @@ class CartItem implements Arrayable, Jsonable
     public static function fromBuyable(Buyable $item): CartItem
     {
         return new self(
-            $item->getId(),
+            Coerce::key($item->getId()),
             $item->getName(),
             $item->getSubtitle(),
             $item->getQty(),
             $item->getPrice(),
             $item->getTotalPrice(),
-            $item->getVatFcCode(),
-            $item->getProductFcCode(),
+            $item instanceof FiscalBuyable ? $item->getVatFcCode() : '',
+            $item instanceof FiscalBuyable ? $item->getProductFcCode() : '',
             $item->getVat(),
             $item->getUrlImg(),
             Carbon::now(),
@@ -259,11 +330,11 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Create a new instance from the given array.
+     *
+     * @param  array<array-key, mixed>  $attributes
      */
     public static function fromArray(array $attributes): CartItem
     {
-        $options = Arr::get($attributes, 'options', []);
-
         $createdAt = isset($attributes['createdAt']) && $attributes['createdAt'] instanceof Carbon
             ? $attributes['createdAt']
             : Carbon::now();
@@ -273,39 +344,38 @@ class CartItem implements Arrayable, Jsonable
             : Carbon::now();
 
         return new self(
-            $attributes['id'],
-            $attributes['name'],
-            $attributes['subtitle'],
-            $attributes['qty'],
-            $attributes['price'],
-            $attributes['totalPrice'],
-            $attributes['vatFcCode'],
-            $attributes['productFcCode'],
-            $attributes['vat'],
-            $attributes['urlImg'],
+            Coerce::key($attributes['id'] ?? null),
+            Coerce::string($attributes['name'] ?? null),
+            Coerce::string($attributes['subtitle'] ?? ''),
+            Coerce::number($attributes['qty'] ?? null),
+            Coerce::float($attributes['price'] ?? null),
+            isset($attributes['totalPrice']) ? Coerce::float($attributes['totalPrice']) : null,
+            Coerce::string($attributes['vatFcCode'] ?? ''),
+            Coerce::string($attributes['productFcCode'] ?? ''),
+            isset($attributes['vat']) ? Coerce::float($attributes['vat']) : null,
+            Coerce::string($attributes['urlImg'] ?? ''),
             $createdAt,
             $updatedAt,
-            $options
+            self::options($attributes['options'] ?? [])
         );
     }
 
     /**
      * Create a new instance from the given attributes.
      *
-     * @param  Carbon|null  $createdAt
-     * @param  Carbon|null  $updatedAt
+     * @param  array<array-key, mixed>  $options
      */
     public static function fromAttributes(
-        $id,
-        $name,
-        $subtitle,
-        $qty,
-        $price,
-        $totalPrice,
-        $vatFcCode,
-        $productFcCode,
-        $vat,
-        $urlImg,
+        int|string $id,
+        string $name,
+        string $subtitle,
+        int|float $qty,
+        float $price,
+        ?float $totalPrice,
+        string $vatFcCode,
+        string $productFcCode,
+        ?float $vat,
+        string $urlImg,
         ?Carbon $createdAt = null,
         ?Carbon $updatedAt = null,
         array $options = []
@@ -329,6 +399,8 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Generate a unique id for the cart item.
+     *
+     * @param  array<array-key, mixed>  $options
      */
     protected function generateRowId(string $id, array $options): string
     {
@@ -339,6 +411,8 @@ class CartItem implements Arrayable, Jsonable
 
     /**
      * Get the instance as an array.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {
@@ -370,13 +444,22 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
+     * Determine if the cart item represents the given Buyable.
+     */
+    public function is(Buyable $buyable): bool
+    {
+        return $this->id == $buyable->getId()
+            && $this->associatedModel === get_class($buyable);
+    }
+
+    /**
      * Convert the object to its JSON representation.
      *
      * @param  int  $options
      */
     public function toJson($options = 0): string
     {
-        return json_encode($this->toArray(), $options);
+        return json_encode($this->toArray(), $options | JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -388,16 +471,11 @@ class CartItem implements Arrayable, Jsonable
     }
 
     /**
-     * @return array|\ArrayAccess|mixed|null
+     * @return AppliedCoupon|null
      */
-    public function getCoupon(
-        string $couponCode
-    ) {
-        $coupons = $this->appliedCoupons;
-
-        return Arr::has($coupons, $couponCode)
-            ? Arr::get($coupons, $couponCode)
-            : null;
+    public function getCoupon(string $couponCode): ?object
+    {
+        return $this->appliedCoupons[$couponCode] ?? null;
     }
 
     public function applyCoupon(
@@ -405,21 +483,13 @@ class CartItem implements Arrayable, Jsonable
         string $couponType,
         float $couponValue
     ): CartItem {
-        $this->appliedCoupons[$couponCode] = (object) [
-            'couponCode' => $couponCode,
-            'couponType' => $couponType,
-            'couponValue' => $couponValue,
-        ];
-
         switch ($couponType) {
             case 'fixed':
+                $discountValue = $couponValue;
+
                 $this->totalPrice = $this->formatFloat($this->totalPrice - $couponValue);
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
                 $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-
-                $this->discountValue = $this->formatFloat($this->discountValue + $couponValue);
-
-                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
                 break;
             case 'percentage':
                 $discountValue = $this->formatFloat($this->originalTotalPrice * $couponValue / 100);
@@ -427,27 +497,29 @@ class CartItem implements Arrayable, Jsonable
                 $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
                 $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
-
-                $this->discountValue = $this->formatFloat($this->discountValue + $discountValue);
-
-                $this->appliedCoupons[$couponCode]->discountValue = $discountValue;
                 break;
             case 'global':
-                $totalPrice = $couponValue;
-                $price = $this->formatFloat($totalPrice * 100 / (100 + $this->vatRate));
+                $discountValue = $couponValue;
+
+                $price = $this->formatFloat($couponValue * 100 / (100 + $this->vatRate));
                 $vat = $this->formatFloat($price * $this->vatRate / 100);
 
-                $this->totalPrice = $this->formatFloat($totalPrice * -1);
+                $this->totalPrice = $this->formatFloat($couponValue * -1);
                 $this->price = $this->formatFloat($price * -1);
                 $this->vat = $this->formatFloat($vat * -1);
-
-                $this->discountValue = $this->formatFloat($this->discountValue + $couponValue);
-
-                $this->appliedCoupons[$couponCode]->discountValue = $couponValue;
                 break;
             default:
                 throw new InvalidArgumentException('Coupon type not handled. Possible values: fixed and percentage');
         }
+
+        $this->discountValue = $this->formatFloat($this->discountValue + $discountValue);
+
+        $this->appliedCoupons[$couponCode] = (object) [
+            'couponCode' => $couponCode,
+            'couponType' => $couponType,
+            'couponValue' => $couponValue,
+            'discountValue' => $discountValue,
+        ];
 
         return $this;
     }
@@ -458,8 +530,7 @@ class CartItem implements Arrayable, Jsonable
     public function detachCoupon(
         string $couponCode
     ): CartItem {
-        $coupon = $this->appliedCoupons[$couponCode];
-        $discountValue = $coupon->discountValue;
+        $discountValue = $this->appliedCoupons[$couponCode]->discountValue;
 
         unset($this->appliedCoupons[$couponCode]);
 
@@ -479,11 +550,24 @@ class CartItem implements Arrayable, Jsonable
 
     public function formatFloat(float $value): float
     {
-        return (float) number_format(
-            $value, // the number to format
-            2, // how many decimal points
-            '.', // decimal separator
-            '' // thousands separator, set it to blank
-        );
+        return CartConfig::round($value);
+    }
+
+    /**
+     * Options given as an array (or an existing CartItemOptions collection).
+     *
+     * @return array<array-key, mixed>
+     */
+    private static function options(mixed $options): array
+    {
+        if ($options instanceof CartItemOptions) {
+            return $options->all();
+        }
+
+        if (! is_array($options)) {
+            throw new InvalidArgumentException('The cart item options must be an array.');
+        }
+
+        return $options;
     }
 }

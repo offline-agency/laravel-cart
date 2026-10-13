@@ -4,26 +4,29 @@ declare(strict_types=1);
 
 use Carbon\Carbon;
 use Illuminate\Auth\Events\Logout;
-use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Auth\GenericUser;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
-use OfflineAgency\LaravelCart\CanBeBought;
+use Mockery\MockInterface;
 use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Exceptions\CartAlreadyStoredException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidRowIDException;
 use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
+use OfflineAgency\LaravelCart\Storage\SessionStorage;
+use OfflineAgency\LaravelCart\Support\CartContentCodec;
 use OfflineAgency\LaravelCart\Tests\Fixtures;
+use OfflineAgency\LaravelCart\Tests\Fixtures\BareBuyable;
 use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
 use OfflineAgency\LaravelCart\Tests\Fixtures\ProductModel;
 
 function getCart(): Cart
 {
-    $session = app('session');
+    $storage = new SessionStorage(app('session'));
     $events = app('events');
 
-    return new Cart($session, $events);
+    return new Cart($storage, $events);
 }
 
 function setConfigFormat(int $decimals, string $decimalPoint, string $thousandSeparator): void
@@ -205,8 +208,8 @@ it('can add an item with options', function (): void {
     $cartItem = $cart->get('07d5da5550494c62daf9993cf954303f');
 
     expect($cartItem)->toBeInstanceOf(CartItem::class);
-    expect($cartItem->options->size)->toEqual('XL');
-    expect($cartItem->options->color)->toEqual('red');
+    expect($cartItem->options->get('size'))->toEqual('XL');
+    expect($cartItem->options->get('color'))->toEqual('red');
 
     Event::assertDispatched('cart.added');
 });
@@ -304,7 +307,7 @@ it('will throw an exception if a row id was not found', function (): void {
     $cart->add(1, 'Cart item', 'This is a simple description', 1, 10.00, 12.22, 2.22);
 
     expect(fn () => $cart->update('none-existing-row-id', 2))
-        ->toThrow(InvalidRowIDException::class, 'The cart does not contain rowId none-existing-row-id');
+        ->toThrow(InvalidRowIDException::class);
 });
 
 it('will regenerate the row id if the options changed', function (): void {
@@ -319,10 +322,10 @@ it('will regenerate the row id if the options changed', function (): void {
     $this->assertItemsInCart(1, $cart);
     $this->assertRowsInCart(1, $cart);
 
-    $newItem = $cart->content()->first();
+    $newItem = $cart->content()->firstOrFail();
 
     expect($newItem->rowId)->not->toEqual($initialRowId);
-    expect($newItem->options->color)->toEqual('blue');
+    expect($newItem->options->get('color'))->toEqual('blue');
 });
 
 it('will add the item to an existing row if the options changed to an existing row id', function (): void {
@@ -427,7 +430,7 @@ it('will include the tax and subtotal when converted to an array', function (): 
 
     $first = $content->get('07d5da5550494c62daf9993cf954303f');
     expect($first)->not->toBeNull();
-    expect($first->toArray())->toMatchArray([
+    expect($first?->toArray())->toMatchArray([
         'rowId' => '07d5da5550494c62daf9993cf954303f',
         'id' => 1,
         'qty' => 1,
@@ -439,7 +442,7 @@ it('will include the tax and subtotal when converted to an array', function (): 
         'price' => 1000.0,
         'totalPrice' => 1200.00,
         'vat' => 200.00,
-        'vatLabel' => 'Iva Inclusa',
+        'vatLabel' => 'VAT Included',
         'vatRate' => 20.00,
         'vatFcCode' => '0',
         'productFcCode' => '0',
@@ -453,7 +456,7 @@ it('will include the tax and subtotal when converted to an array', function (): 
 
     $second = $content->get('13e04d556bd1d42c1d940962999e405a');
     expect($second)->not->toBeNull();
-    expect($second->toArray())->toMatchArray([
+    expect($second?->toArray())->toMatchArray([
         'rowId' => '13e04d556bd1d42c1d940962999e405a',
         'id' => 2,
         'name' => 'Second Cart item',
@@ -465,7 +468,7 @@ it('will include the tax and subtotal when converted to an array', function (): 
         'price' => 1000.00,
         'totalPrice' => 1200.00,
         'vat' => 200.00,
-        'vatLabel' => 'Iva Inclusa',
+        'vatLabel' => 'VAT Included',
         'vatRate' => 20.00,
         'vatFcCode' => '0',
         'productFcCode' => '0',
@@ -476,7 +479,7 @@ it('will include the tax and subtotal when converted to an array', function (): 
         'model' => null,
         'appliedCoupons' => [],
     ]);
-    expect($cart->totalVatLabel())->toEqual('Iva Inclusa');
+    expect($cart->totalVatLabel())->toEqual('VAT Included');
 });
 
 it('can destroy a cart', function (): void {
@@ -546,7 +549,7 @@ it('can search the cart for a specific item', function (): void {
     expect($cartItem)->toBeInstanceOf(Collection::class);
     expect($cartItem)->toHaveCount(1);
     expect($cartItem->first())->toBeInstanceOf(CartItem::class);
-    expect($cartItem->first()->id)->toEqual(2);
+    expect($cartItem->first()?->id)->toEqual(2);
 });
 
 it('can search the cart for a specific item with options', function (): void {
@@ -556,13 +559,13 @@ it('can search the cart for a specific item with options', function (): void {
     $cart->add(2, 'Second Cart item', 'This is a simple description', 2, 1000.00, 1200.00, 200.00, '', '', '', null, null, ['color' => 'red']);
 
     $cartItem = $cart->search(function ($cartItem, $rowId): bool {
-        return $cartItem->options->color == 'red';
+        return $cartItem->options->get('color') == 'red';
     });
 
     expect($cartItem)->toBeInstanceOf(Collection::class);
     expect($cartItem)->toHaveCount(1);
     expect($cartItem->first())->toBeInstanceOf(CartItem::class);
-    expect($cartItem->first()->id)->toEqual(2);
+    expect($cartItem->first()?->id)->toEqual(2);
 });
 
 it('will associate the cart item with a model when you add a buyable', function (): void {
@@ -594,7 +597,7 @@ it('will throw an exception when a non existing model is being associated', func
     $cart->add(1, 'First Cart item', 'This is a simple description', 1, 1000.00, 1200.00, 200.00);
 
     expect(fn () => $cart->associate('027c91341fd5cf4d2579b49c4b6a90da', 'SomeModel'))
-        ->toThrow(UnknownModelException::class, 'The supplied model SomeModel does not exist.');
+        ->toThrow(UnknownModelException::class);
 });
 
 it('can get the associated model of a cart item', function (): void {
@@ -607,7 +610,7 @@ it('can get the associated model of a cart item', function (): void {
     $cartItem = $cart->get('027c91341fd5cf4d2579b49c4b6a90da');
 
     expect($cartItem->model)->toBeInstanceOf(ProductModel::class);
-    expect($cartItem->model->someValue)->toEqual('Some value');
+    expect($cartItem->model instanceof ProductModel ? $cartItem->model->someValue : null)->toEqual('Some value');
 });
 
 it('can calculate the subtotal of a cart item', function (): void {
@@ -705,7 +708,7 @@ it('can return cart item formatted numbers by config values', function (): void 
 
     $cart->add(new BuyableProduct(1, 'Some title', 'This is a simple description', 2, 10.00, 12.22, 2.22), 2);
 
-    $cartItem = $cart->content()->first();
+    $cartItem = $cart->content()->firstOrFail();
 
     // CartItem exposes properties, not methods; format them with numberFormat()
     expect($cartItem->numberFormat($cartItem->price, 2, ',', ''))->toEqual('10,00');
@@ -714,7 +717,7 @@ it('can return cart item formatted numbers by config values', function (): void 
 
     // Computed magic getters
     expect($cartItem->numberFormat($cartItem->subtotal, 2, ',', ''))->toEqual('20,00');
-    expect($cartItem->numberFormat($cartItem->total, 2, ',', ''))->toEqual('20,00');
+    expect($cartItem->numberFormat($cartItem->total, 2, ',', ''))->toEqual('24,44');
 });
 
 it('can store the cart in a database', function (): void {
@@ -728,7 +731,7 @@ it('can store the cart in a database', function (): void {
 
     $cart->store($identifier = 123);
 
-    $serialized = serialize($cart->content());
+    $serialized = CartContentCodec::encode($cart->content());
 
     $this->assertDatabaseHas('cart', ['identifier' => $identifier, 'instance' => 'default', 'content' => $serialized]);
 
@@ -746,8 +749,8 @@ it('will throw an exception when a cart was already stored using the specified i
 
     $cart->store($identifier = 123);
 
-    expect(fn () => $cart->store($identifier))
-        ->toThrow(CartAlreadyStoredException::class, 'A cart with identifier 123 was already stored.');
+    expect(fn () => $cart->store($identifier, overwrite: false))
+        ->toThrow(CartAlreadyStoredException::class);
 
     Event::assertDispatched('cart.stored');
 });
@@ -812,13 +815,13 @@ it('can calculate all values', function (): void {
 });
 
 it('will destroy the cart when the user logs out and the config setting was set to true', function (): void {
-    $this->app['config']->set('cart.destroy_on_logout', true);
+    config()->set('cart.destroy_on_logout', true);
 
-    $this->app->instance(SessionManager::class, Mockery::mock(SessionManager::class, function ($mock): void {
+    app()->instance(SessionManager::class, Mockery::mock(SessionManager::class, function (MockInterface $mock): void {
         $mock->shouldReceive('forget')->once()->with('cart');
     }));
 
-    $user = Mockery::mock(Authenticatable::class);
+    $user = new GenericUser(['id' => 1]);
 
     event(new Logout('', $user));
 });
@@ -1011,9 +1014,9 @@ it('can return a coupon by its code', function (): void {
     ]);
 
     $coupon = $cart->getCoupon('BLACK_FRIDAY_PERCENTAGE_2021');
-    expect($coupon->couponCode)->toEqual('BLACK_FRIDAY_PERCENTAGE_2021');
-    expect($coupon->couponType)->toEqual('percentage');
-    expect($coupon->couponValue)->toEqual(50);
+    expect($coupon?->couponCode)->toEqual('BLACK_FRIDAY_PERCENTAGE_2021');
+    expect($coupon?->couponType)->toEqual('percentage');
+    expect($coupon?->couponValue)->toEqual(50);
 });
 
 it('can calculate cart totals after applied item coupon', function (): void {
@@ -1119,12 +1122,8 @@ it('can be bought trait returns identifier using get key', function (): void {
 });
 
 it('can be bought trait returns identifier using id property', function (): void {
-    $product = new class
-    {
-        use CanBeBought;
-
-        public $id = 456;
-    };
+    $product = new BareBuyable;
+    $product->id = 456;
 
     $identifier = $product->getBuyableIdentifier();
 
@@ -1140,14 +1139,9 @@ it('can be bought trait returns description from name property', function (): vo
 });
 
 it('can be bought trait returns description from title property', function (): void {
-    $product = new class
-    {
-        use CanBeBought;
-
-        public $id = 1;
-
-        public $title = 'Product Title';
-    };
+    $product = new BareBuyable;
+    $product->id = 1;
+    $product->title = 'Product Title';
 
     $description = $product->getBuyableDescription();
 
@@ -1155,14 +1149,9 @@ it('can be bought trait returns description from title property', function (): v
 });
 
 it('can be bought trait returns description from description property', function (): void {
-    $product = new class
-    {
-        use CanBeBought;
-
-        public $id = 1;
-
-        public $description = 'Product Description';
-    };
+    $product = new BareBuyable;
+    $product->id = 1;
+    $product->description = 'Product Description';
 
     $description = $product->getBuyableDescription();
 
@@ -1170,16 +1159,12 @@ it('can be bought trait returns description from description property', function
 });
 
 it('can be bought trait returns null when no description property exists', function (): void {
-    $product = new class
-    {
-        use CanBeBought;
-
-        public $id = 1;
-    };
+    $product = new BareBuyable;
+    $product->id = 1;
 
     $description = $product->getBuyableDescription();
 
-    expect($description)->toBeNull();
+    expect($description)->toEqual('');
 });
 
 it('can be bought trait returns price from price property', function (): void {
@@ -1190,17 +1175,13 @@ it('can be bought trait returns price from price property', function (): void {
     expect($price)->toEqual(99.99);
 });
 
-it('can be bought trait returns null when no price property exists', function (): void {
-    $product = new class
-    {
-        use CanBeBought;
-
-        public $id = 1;
-    };
+it('can be bought trait returns zero when no price property exists', function (): void {
+    $product = new BareBuyable;
+    $product->id = 1;
 
     $price = $product->getBuyablePrice();
 
-    expect($price)->toBeNull();
+    expect($price)->toEqual(0.0);
 });
 
 it('cart item number format formats value correctly', function (): void {
@@ -1313,7 +1294,7 @@ it('can access totals via magic properties', function (): void {
     expect($cart->subtotal)->toEqual($cart->subtotal());
     expect($cart->subtotal)->toEqual(100.00);
 
-    expect($cart->nonExistentProperty)->toBeNull();
+    expect($cart->__get('nonExistentProperty'))->toBeNull();
 });
 
 it('can add a buyable item with quantity', function (): void {
@@ -1338,7 +1319,7 @@ it('removes discount cart item when detaching global coupon', function (): void 
 
     $discountItem = $cart->search(function ($item): bool {
         return $item->name === 'discountCartItem';
-    })->first();
+    })->firstOrFail();
 
     expect($discountItem)->not->toBeNull();
     expect($discountItem->appliedCoupons)->toHaveKey('GLOBAL_COUPON');
@@ -1368,7 +1349,7 @@ it('stores createdAt and updatedAt on a cart item', function (): void {
     $before = Carbon::now()->subSecond();
     $cart = getCart();
     $cart->add('1', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
-    $item = $cart->content()->first();
+    $item = $cart->content()->firstOrFail();
 
     expect($item->createdAt)->toBeInstanceOf(Carbon::class);
     expect($item->updatedAt)->toBeInstanceOf(Carbon::class);
@@ -1380,7 +1361,7 @@ it('accepts explicit createdAt and updatedAt on add', function (): void {
     $updatedAt = Carbon::parse('2024-06-01 12:00:00');
     $cart = getCart();
     $cart->add('1', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg', $createdAt, $updatedAt);
-    $item = $cart->content()->first();
+    $item = $cart->content()->firstOrFail();
 
     expect($item->createdAt->eq($createdAt))->toBeTrue();
     expect($item->updatedAt->eq($updatedAt))->toBeTrue();
@@ -1389,7 +1370,7 @@ it('accepts explicit createdAt and updatedAt on add', function (): void {
 it('isAlreadyAdded returns true when item with matching id and model is in cart', function (): void {
     $cart = getCart();
     $cart->add('42', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
-    $rowId = $cart->content()->keys()->first();
+    $rowId = $cart->content()->keys()->firstOrFail();
     $cart->associate($rowId, ProductModel::class);
 
     expect($cart->isAlreadyAdded('42', ProductModel::class))->toBeTrue();
@@ -1405,13 +1386,13 @@ it('isAlreadyAdded returns false for empty cart', function (): void {
 it('searchById returns the CartItem when found', function (): void {
     $cart = getCart();
     $cart->add('10', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
-    $rowId = $cart->content()->keys()->first();
+    $rowId = $cart->content()->keys()->firstOrFail();
     $cart->associate($rowId, ProductModel::class);
 
     $found = $cart->searchById('10', ProductModel::class);
 
     expect($found)->toBeInstanceOf(CartItem::class);
-    expect($found->id)->toEqual('10');
+    expect($found?->id)->toEqual('10');
 });
 
 it('searchById returns null when model does not match', function (): void {
@@ -1425,4 +1406,45 @@ it('searchById returns null for empty cart', function (): void {
     $cart = getCart();
 
     expect($cart->searchById('999', ProductModel::class))->toBeNull();
+});
+
+it('isAlreadyAdded coerces int and string ids', function (): void {
+    $cart = getCart();
+    $cart->add('42', 'Product', 'Subtitle', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $rowId = $cart->content()->keys()->firstOrFail();
+    $cart->associate($rowId, ProductModel::class);
+
+    expect($cart->isAlreadyAdded(42, ProductModel::class))->toBeTrue();
+    expect($cart->isAlreadyAdded('42', ProductModel::class))->toBeTrue();
+});
+
+it('searchById finds the correct item in a multi-item cart', function (): void {
+    $cart = getCart();
+    $cart->add('10', 'Product A', 'Sub A', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $cart->add('20', 'Product B', 'Sub B', 1, 20.00, 20.00, 1, 'FC2', 'PC2', 'img2.jpg');
+
+    $rowId1 = $cart->content()->values()->firstOrFail()->rowId;
+    $rowId2 = $cart->content()->values()->skip(1)->firstOrFail()->rowId;
+
+    $cart->associate($rowId1, ProductModel::class);
+    $cart->associate($rowId2, ProductModel::class);
+
+    $found = $cart->searchById('20', ProductModel::class);
+
+    expect($found)->toBeInstanceOf(CartItem::class);
+    expect($found?->id)->toEqual('20');
+    expect($found?->name)->toBe('Product B');
+});
+
+it('searchById distinguishes items with same id but different associated models', function (): void {
+    $cart = getCart();
+    $cart->add('5', 'Product', 'Sub', 1, 10.00, 10.00, 1, 'FC1', 'PC1', 'img.jpg');
+    $cart->add('5', 'Service', 'Sub', 1, 50.00, 50.00, 1, 'FC2', 'PC2', 'img2.jpg', null, null, ['type' => 'service']);
+
+    $items = $cart->content()->values();
+    $cart->associate($items->firstOrFail()->rowId, ProductModel::class);
+
+    expect($cart->searchById('5', ProductModel::class))->not->toBeNull();
+    expect($cart->searchById('5', ProductModel::class)?->name)->toBe('Product');
+    expect($cart->searchById('5', 'App\\Models\\Other'))->toBeNull();
 });

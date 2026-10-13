@@ -1,9 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OfflineAgency\LaravelCart\Exceptions;
 
-use RuntimeException;
-
-class InvalidRowIDException extends RuntimeException
-{
-}
+final class InvalidRowIDException extends CartException {}

@@ -7,7 +7,7 @@ use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
 use OfflineAgency\LaravelCart\Tests\Fixtures\BuyableProduct;
 
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -35,7 +35,7 @@ it('addItemCoupon produces the same result as applyCoupon', function (): void {
     $itemA = $this->cart->add('1', 'Product A', '', 1, 100.0, 122.0, 22.0);
 
     $this->cart->instance('copy')->add('1', 'Product A', '', 1, 100.0, 122.0, 22.0);
-    $rowIdB = $this->cart->instance('copy')->content()->keys()->first();
+    $rowIdB = $this->cart->instance('copy')->content()->keys()->firstOrFail();
 
     $this->cart->instance()->addItemCoupon($itemA->rowId, 'SAVE5', 'fixed', 5.0);
     $this->cart->instance('copy')->applyCoupon($rowIdB, 'SAVE5', 'fixed', 5.0);
@@ -68,7 +68,7 @@ it('addCoupon string coupon defaults to fixed type with zero value', function ()
 
     $this->cart->addCoupon('ZEROCOUPON');
 
-    $coupon = $this->cart->listCoupons()->first();
+    $coupon = $this->cart->listCoupons()->firstOrFail();
     expect($coupon->type)->toBe('fixed')
         ->and($coupon->value)->toBe(0.0);
 });
@@ -102,20 +102,20 @@ it('originalTotalPrice reflects pre-coupon prices after coupon is applied', func
 
 // ── Cart::totalVatLabel ────────────────────────────────────────────────────────
 
-it('totalVatLabel returns Iva Inclusa when VAT is present', function (): void {
+it('totalVatLabel returns VAT Included when VAT is present', function (): void {
     $this->cart->add('1', 'Taxed Item', '', 1, 100.0, 122.0, 22.0);
 
-    expect($this->cart->totalVatLabel())->toBe('Iva Inclusa');
+    expect($this->cart->totalVatLabel())->toBe('VAT Included');
 });
 
-it('totalVatLabel returns Esente Iva when VAT is zero', function (): void {
+it('totalVatLabel returns Tax Exempt when VAT is zero', function (): void {
     $this->cart->add('1', 'Exempt Item', '', 1, 10.0, 10.0, 0.0);
 
-    expect($this->cart->totalVatLabel())->toBe('Esente Iva');
+    expect($this->cart->totalVatLabel())->toBe('Tax Exempt');
 });
 
-it('totalVatLabel returns Esente Iva on an empty cart', function (): void {
-    expect($this->cart->totalVatLabel())->toBe('Esente Iva');
+it('totalVatLabel returns Tax Exempt on an empty cart', function (): void {
+    expect($this->cart->totalVatLabel())->toBe('Tax Exempt');
 });
 
 // ── Cart::getCoupon (item-level lookup) ────────────────────────────────────────
@@ -127,7 +127,7 @@ it('getCoupon returns the coupon object when it exists', function (): void {
     $coupon = $this->cart->getCoupon('SAVE5');
 
     expect($coupon)->not->toBeNull()
-        ->and($coupon->couponCode)->toBe('SAVE5');
+        ->and($coupon?->couponCode)->toBe('SAVE5');
 });
 
 it('getCoupon returns null when the coupon does not exist', function (): void {
@@ -186,8 +186,8 @@ it('update with a Buyable refreshes name and price on the item', function (): vo
 
     $updated = $this->cart->update($item->rowId, $buyable);
 
-    expect($updated->name)->toBe('New Name')
-        ->and($updated->price)->toBe(80.0);
+    expect($updated?->name)->toBe('New Name')
+        ->and($updated?->price)->toBe(80.0);
 });
 
 // ── Cart::update with array ───────────────────────────────────────────────────
@@ -197,8 +197,8 @@ it('update with an array modifies the specified attributes', function (): void {
 
     $updated = $this->cart->update($item->rowId, ['qty' => 3, 'name' => 'Updated Shirt']);
 
-    expect($updated->qty)->toBe(3)
-        ->and($updated->name)->toBe('Updated Shirt');
+    expect($updated?->qty)->toBe(3)
+        ->and($updated?->name)->toBe('Updated Shirt');
 });
 
 it('update with zero qty removes the item and returns null', function (): void {

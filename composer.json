@@ -2,7 +2,11 @@
     "name": "offline-agency/laravel-cart",
     "description": "Laravel shopping cart with fiscal support",
     "type": "library",
-    "keywords": ["laravel", "shoppingcart", "cart"],
+    "keywords": [
+        "laravel",
+        "shoppingcart",
+        "cart"
+    ],
     "license": "MIT",
     "authors": [
         {
@@ -10,53 +14,67 @@
             "email": "info@offlineagency.it"
         }
     ],
-
     "require": {
-        "php": "^8.4",
-        "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
-        "illuminate/events":   "^10.0|^11.0|^12.0|^13.0",
-        "illuminate/session":  "^10.0|^11.0|^12.0|^13.0",
-        "illuminate/support":  "^10.0|^11.0|^12.0|^13.0"
+        "php": "~8.4.0 || ~8.5.0",
+        "illuminate/auth": "^12.69.2 || ^13.32",
+        "illuminate/console": "^12.69.2 || ^13.32",
+        "illuminate/contracts": "^12.69.2 || ^13.32",
+        "illuminate/database": "^12.69.2 || ^13.32",
+        "illuminate/events": "^12.69.2 || ^13.32",
+        "illuminate/http": "^12.69.2 || ^13.32",
+        "illuminate/session": "^12.69.2 || ^13.32",
+        "illuminate/support": "^12.69.2 || ^13.32",
+        "nesbot/carbon": "^3.8",
+        "nunomaduro/termwind": "^2.3"
     },
-
     "require-dev": {
-        "larastan/larastan": "^3.8",
-        "laravel/pint": "^1.26",
-        "mockery/mockery": "^1.6",
-        "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
-        "pestphp/pest": "^3.0|^4.0",
-        "pestphp/pest-plugin-laravel": "^3.0|^4.0",
-        "php-coveralls/php-coveralls": "^2.7"
+        "larastan/larastan": "^3.13",
+        "laravel/pint": "^1.32",
+        "mockery/mockery": "^1.6.15",
+        "orchestra/testbench": "^10.12 || ^11.3",
+        "pestphp/pest": "^4.7.8 || ^5.3.2",
+        "pestphp/pest-plugin-laravel": "^4.1 || ^5.0.1",
+        "phpstan/phpstan": "^2.3.1"
     },
-
+    "conflict": {
+        "symfony/translation": "<7.2"
+    },
     "autoload": {
         "psr-4": {
             "OfflineAgency\\LaravelCart\\": "src/"
         }
     },
-
     "autoload-dev": {
         "psr-4": {
             "OfflineAgency\\LaravelCart\\Tests\\": "tests/"
         }
     },
-
     "scripts": {
         "test": "pest",
         "test:parallel": "pest --parallel",
+        "test:coverage": "pest --coverage --min=100",
         "lint": "pint",
         "lint:check": "pint --test",
-        "analyse": "phpstan analyse --memory-limit=256M",
-        "stan": "phpstan analyse --memory-limit=256M"
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "stan": "@analyse",
+        "validate:strict": [
+            "@composer validate --strict",
+            "@composer dump-autoload --optimize --strict-psr --strict-ambiguous --dry-run"
+        ],
+        "check": [
+            "@validate:strict",
+            "@lint:check",
+            "@analyse",
+            "@test"
+        ]
     },
-
     "config": {
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true
-        }
+        },
+        "preferred-install": "dist"
     },
-
     "extra": {
         "laravel": {
             "providers": [
@@ -66,5 +84,7 @@
                 "Cart": "OfflineAgency\\LaravelCart\\Facades\\Cart"
             }
         }
-    }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace OfflineAgency\LaravelCart\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
+use OfflineAgency\LaravelCart\Console\Concerns\InteractsWithCartDatabase;
+use OfflineAgency\LaravelCart\Support\Coerce;
+
+use function Termwind\render;
 
 class CartClearCommand extends Command
 {
@@ -25,22 +28,23 @@ class CartClearCommand extends Command
      */
     protected $description = 'Clear all stored cart records from the database';
 
+    use InteractsWithCartDatabase;
+
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
-        $table = config('cart.database.table', 'cart');
-        $instance = $this->option('instance');
+        $table = $this->tableName();
+        $instance = Coerce::nullableString($this->option('instance'));
 
         if (! $this->option('force') && ! $this->confirmAction($instance)) {
-            $this->info('Operation cancelled.');
+            $this->renderCancelled();
 
             return self::SUCCESS;
         }
 
-        $query = DB::connection(config('cart.database.connection') ?? config('database.default'))
-            ->table($table);
+        $query = $this->cartQuery();
 
         if ($instance !== null) {
             $query->where('instance', $instance);
@@ -48,10 +52,7 @@ class CartClearCommand extends Command
 
         $deleted = $query->delete();
 
-        $this->info($instance !== null
-            ? "Cleared {$deleted} cart record(s) for instance '{$instance}'."
-            : "Cleared {$deleted} cart record(s) from the '{$table}' table."
-        );
+        $this->renderCleared($deleted, $table, $instance);
 
         return self::SUCCESS;
     }
@@ -59,9 +60,34 @@ class CartClearCommand extends Command
     private function confirmAction(?string $instance): bool
     {
         $message = $instance !== null
-            ? "This will delete all stored cart records for instance '{$instance}'. Continue?"
-            : 'This will delete ALL stored cart records from the database. Continue?';
+            ? __('laravel-cart::cart.command_clear_instance', ['instance' => $instance])
+            : __('laravel-cart::cart.command_clear_confirm');
 
         return $this->confirm($message);
+    }
+
+    private function renderCancelled(): void
+    {
+        $message = e(__('laravel-cart::cart.command_clear_cancelled'));
+        render(<<<HTML
+            <div class="mx-2 my-1">
+                <span class="px-1 bg-yellow-500 text-black font-bold"> CANCELLED </span>
+                <span class="ml-1 text-yellow-400">{$message}</span>
+            </div>
+        HTML);
+    }
+
+    private function renderCleared(int $deleted, string $table, ?string $instance): void
+    {
+        $message = $instance !== null
+            ? e(__('laravel-cart::cart.command_clear_instance_done', ['count' => $deleted, 'instance' => $instance]))
+            : e(__('laravel-cart::cart.command_clear_done', ['count' => $deleted, 'table' => $table]));
+
+        render(<<<HTML
+            <div class="mx-2 my-1">
+                <span class="px-1 bg-green-500 text-black font-bold"> CLEARED </span>
+                <span class="ml-1">{$message}</span>
+            </div>
+        HTML);
     }
 }

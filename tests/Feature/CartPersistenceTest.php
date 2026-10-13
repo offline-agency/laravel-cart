@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
 beforeEach(function (): void {
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 
     $this->artisan('migrate', ['--database' => 'testing']);
@@ -29,7 +32,7 @@ it('does not lose variant options on restore', function (): void {
     $this->cart->destroy();
     $this->cart->restore('user-opts');
 
-    $item = $this->cart->content()->first();
+    $item = $this->cart->content()->firstOrFail();
     expect($item->options['color'])->toBe('red')
         ->and($item->options['size'])->toBe('L');
 });
@@ -50,10 +53,10 @@ it('stores and restores cart — global coupons persist in session', function ()
     $this->cart->addGlobalCoupon('gh1', 'GLOBAL10', 'fixed', 10.0);
 
     // Global coupons are session-based, not DB-stored — check session persistence
-    $cart2 = $this->app->make('cart');
+    $cart2 = resolveCart();
 
     expect($cart2->getGlobalCoupons())->toHaveCount(1)
-        ->and($cart2->getGlobalCoupons()->first()->code)->toBe('GLOBAL10');
+        ->and($cart2->getGlobalCoupons()->first()?->code)->toBe('GLOBAL10');
 });
 
 it('mergeOnRestore merges restored items with existing session cart', function (): void {
@@ -84,7 +87,7 @@ it('restore without mergeOnRestore replaces current session cart', function (): 
 
     // Should have only the restored item
     expect($this->cart->uniqueCount())->toBe(1)
-        ->and($this->cart->content()->first()->id)->toBe('1');
+        ->and($this->cart->content()->first()?->id)->toBe('1');
 });
 
 it('store and restore roundtrip for cart-level coupons via DB', function (): void {
@@ -101,5 +104,61 @@ it('store and restore roundtrip for cart-level coupons via DB', function (): voi
     $this->cart->restore('user-coupon-db');
 
     expect($this->cart->getGlobalCoupons())->toHaveCount(1)
-        ->and($this->cart->getGlobalCoupons()->first()->code)->toBe('DB_COUPON');
+        ->and($this->cart->getGlobalCoupons()->first()?->code)->toBe('DB_COUPON');
+});
+
+it('mergeOnRestore keeps the session item when the same rowId is stored', function (): void {
+    $stored = $this->cart->add('1', 'Stored name', '', 5, 10.0, 12.2, 2.2);
+    $rowId = $stored->rowId;
+
+    $this->cart->store('user-merge-conflict');
+    $this->cart->destroy();
+
+    // Same id and options produce the same rowId, with a different quantity
+    $this->cart->add('1', 'Session name', '', 1, 10.0, 12.2, 2.2);
+
+    $this->cart->restore('user-merge-conflict', mergeOnRestore: true);
+
+    expect($this->cart->content())->toHaveCount(1)
+        ->and($this->cart->get($rowId)->qty)->toBe(1)
+        ->and($this->cart->get($rowId)->name)->toBe('Session name');
+});
+
+it('stores a null coupons column when the cart has no cart-level coupons', function (): void {
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
+    $this->cart->store('user-no-coupons');
+
+    $row = DB::connection('testing')->table('cart')
+        ->where('identifier', 'user-no-coupons')->first();
+
+    expect($row?->coupons)->toBeNull();
+});
+
+it('restore is a no-op for an unknown identifier', function (): void {
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
+
+    $this->cart->restore('never-stored');
+
+    expect($this->cart->content())->toHaveCount(1);
+});
+
+it('preserves createdAt and updatedAt through store and restore', function (): void {
+    $createdAt = Carbon::parse('2024-01-15 09:00:00');
+    $updatedAt = Carbon::parse('2024-06-20 18:30:00');
+
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2, '', '', '', $createdAt, $updatedAt);
+
+    $this->cart->store('user-timestamps');
+    $this->cart->destroy();
+
+    expect($this->cart->count())->toBe(0);
+
+    $this->cart->restore('user-timestamps');
+
+    $item = $this->cart->content()->firstOrFail();
+
+    expect($item->createdAt)->toBeInstanceOf(Carbon::class);
+    expect($item->updatedAt)->toBeInstanceOf(Carbon::class);
+    expect($item->createdAt->eq($createdAt))->toBeTrue();
+    expect($item->updatedAt->eq($updatedAt))->toBeTrue();
 });

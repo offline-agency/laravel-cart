@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 beforeEach(function (): void {
     $this->artisan('migrate', ['--database' => 'testing']);
 
-    $this->cart = $this->app->make('cart');
+    $this->cart = resolveCart();
     $this->cart->destroy();
 });
 
@@ -47,4 +47,37 @@ it('cart:clear with --instance option only removes that instance', function (): 
         ->table('cart')->count();
 
     expect($remaining)->toBe(1);
+});
+
+it('cart:clear aborts when the confirmation is declined', function (): void {
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
+    $this->cart->store('user-declined');
+
+    $this->artisan('cart:clear')
+        ->expectsConfirmation('This will delete ALL stored cart records from the database. Continue?', 'no')
+        ->assertExitCode(0);
+
+    expect(DB::connection('testing')->table('cart')->count())->toBe(1);
+});
+
+it('cart:clear deletes the records when the confirmation is accepted', function (): void {
+    $this->cart->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
+    $this->cart->store('user-accepted');
+
+    $this->artisan('cart:clear')
+        ->expectsConfirmation('This will delete ALL stored cart records from the database. Continue?', 'yes')
+        ->assertExitCode(0);
+
+    expect(DB::connection('testing')->table('cart')->count())->toBe(0);
+});
+
+it('cart:clear scopes the confirmation prompt to the given instance', function (): void {
+    $this->cart->instance('wishlist')->add('1', 'Product', '', 1, 10.0, 12.2, 2.2);
+    $this->cart->store('user-wishlist-confirm');
+
+    $this->artisan('cart:clear', ['--instance' => 'wishlist'])
+        ->expectsConfirmation('This will delete all stored cart records for instance "wishlist". Continue?', 'yes')
+        ->assertExitCode(0);
+
+    expect(DB::connection('testing')->table('cart')->count())->toBe(0);
 });

@@ -4,16 +4,20 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddCouponsColumnToCartTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::table(config('cart.database.table', 'cart'), function (Blueprint $table): void {
-            $table->json('coupons')->nullable()->after('content');
-        });
+        $table = config()->string('cart.database.table', 'cart');
+
+        if (Schema::hasTable($table) && ! Schema::hasColumn($table, 'coupons')) {
+            Schema::table($table, function (Blueprint $table): void {
+                $table->json('coupons')->nullable()->after('content');
+            });
+        }
     }
 
     /**
@@ -21,8 +25,12 @@ class AddCouponsColumnToCartTable extends Migration
      */
     public function down(): void
     {
-        Schema::table(config('cart.database.table', 'cart'), function (Blueprint $table): void {
-            $table->dropColumn('coupons');
-        });
+        $table = config()->string('cart.database.table', 'cart');
+
+        if (Schema::hasTable($table) && Schema::hasColumn($table, 'coupons')) {
+            Schema::table($table, function (Blueprint $table): void {
+                $table->dropColumn('coupons');
+            });
+        }
     }
-}
+};
