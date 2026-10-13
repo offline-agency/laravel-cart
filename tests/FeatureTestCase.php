@@ -27,11 +27,7 @@ abstract class FeatureTestCase extends Orchestra
         $app['config']->set('cart.database.connection', 'testing');
         $app['config']->set('session.driver', 'array');
         $app['config']->set('database.default', 'testing');
-        $app['config']->set('database.connections.testing', [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-        ]);
+        $app['config']->set('database.connections.testing', self::testingConnection());
     }
 
     protected function setUp(): void
@@ -41,5 +37,41 @@ abstract class FeatureTestCase extends Orchestra
         $this->app->afterResolving('migrator', function ($migrator): void {
             $migrator->path(realpath(__DIR__.'/../database/migrations'));
         });
+
+        // A server database outlives the test, unlike SQLite :memory:, so start every test empty.
+        if (self::usesServerDatabase()) {
+            $this->artisan('db:wipe', ['--database' => 'testing']);
+        }
+    }
+
+    /**
+     * SQLite in memory by default; set CART_TEST_DB_DRIVER=pgsql (plus the
+     * CART_TEST_DB_* variables) to run the suite against PostgreSQL.
+     *
+     * @return array<string, mixed>
+     */
+    private static function testing_connection(): array
+    {
+        if (! self::usesServerDatabase()) {
+            return ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''];
+        }
+
+        return [
+            'driver' => (string) getenv('CART_TEST_DB_DRIVER'),
+            'host' => getenv('CART_TEST_DB_HOST') ?: '127.0.0.1',
+            'port' => getenv('CART_TEST_DB_PORT') ?: '5432',
+            'database' => getenv('CART_TEST_DB_DATABASE') ?: 'laravel_cart_test',
+            'username' => getenv('CART_TEST_DB_USERNAME') ?: 'postgres',
+            'password' => getenv('CART_TEST_DB_PASSWORD') ?: '',
+            'charset' => 'utf8',
+            'prefix' => '',
+            'search_path' => 'public',
+            'sslmode' => 'prefer',
+        ];
+    }
+
+    private static function usesServerDatabase(): bool
+    {
+        return in_array(getenv('CART_TEST_DB_DRIVER'), ['pgsql'], true);
     }
 }
