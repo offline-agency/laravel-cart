@@ -96,8 +96,9 @@ class CartPruneCommand extends Command
             ->where('expires_at', '<', now());
 
         $instance = $this->option('instance');
-        if ($instance !== null) {
-            $query->where('instance', $instance);
+        if (is_string($instance)) {
+            // The database driver keys carts by the storage key ("cart.<name>").
+            $query->whereIn('instance', [$instance, 'cart.'.$instance]);
         }
 
         $count = (clone $query)->count();

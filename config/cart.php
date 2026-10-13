@@ -74,6 +74,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Legacy string events
+    |--------------------------------------------------------------------------
+    |
+    | Besides the typed event classes (CartItemAdded, CartStored, ...) the cart
+    | dispatches the v3 string events ('cart.added', 'cart.stored', ...).
+    | Set this to 'false' to dispatch only the typed events.
+    |
+    */
+
+    'use_legacy_events' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Cart TTL (time to live)
     |--------------------------------------------------------------------------
     |

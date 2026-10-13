@@ -9,6 +9,7 @@ use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Connection;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -509,7 +510,7 @@ class Cart
     public function store(int|string $identifier, bool $overwrite = true): void
     {
         $content = $this->getContent();
-        $exists = $this->storedCartWithIdentifierExists($identifier);
+        $exists = $this->storedCart($identifier, $this->currentInstance())->exists();
 
         if ($exists && ! $overwrite) {
             throw new CartAlreadyStoredException(__('laravel-cart::cart.cart_already_stored', ['identifier' => $identifier]));
@@ -534,10 +535,7 @@ class Cart
         }
 
         if ($exists) {
-            $this->getConnection()->table($this->getTableName())
-                ->where('identifier', $identifier)
-                ->where('instance', $this->currentInstance())
-                ->update($data);
+            $this->storedCart($identifier, $this->currentInstance())->update($data);
         } else {
             $this->getConnection()->table($this->getTableName())->insert(array_merge([
                 'identifier' => $identifier,
@@ -558,8 +556,10 @@ class Cart
      */
     public function restore(int|string $identifier, bool $mergeOnRestore = false, bool $keepStored = false): void
     {
-        $stored = $this->getConnection()->table($this->getTableName())
-            ->where('identifier', $identifier)->first();
+        // Prefer the row stored for the current instance; fall back to any
+        // instance stored under the identifier (single-instance behaviour).
+        $stored = $this->storedCart($identifier, $this->currentInstance())->first()
+            ?? $this->storedCart($identifier)->first();
 
         if ($stored === null) {
             return;
@@ -613,8 +613,7 @@ class Cart
         $this->instance($currentInstance);
 
         if (! $keepStored) {
-            $this->getConnection()->table($this->getTableName())
-                ->where('identifier', $identifier)->delete();
+            $this->storedCart($identifier, Coerce::string($stored->instance))->delete();
         }
     }
 
@@ -828,10 +827,11 @@ class Cart
         return is_array(head($item)) || head($item) instanceof Buyable;
     }
 
-    private function storedCartWithIdentifierExists(int|string $identifier): bool
+    private function storedCart(int|string $identifier, ?string $instance = null): Builder
     {
-        return $this->getConnection()
-            ->table($this->getTableName())->where('identifier', $identifier)->exists();
+        return $this->getConnection()->table($this->getTableName())
+            ->where('identifier', $identifier)
+            ->when($instance !== null, fn (Builder $query) => $query->where('instance', $instance));
     }
 
     private function getConnection(): Connection
@@ -940,7 +940,7 @@ class Cart
      *
      * @deprecated Use addItemCoupon() for item-level coupons or addCoupon() for cart-level coupons.
      */
-    #[\Deprecated('Use addItemCoupon() for item-level coupons or addCoupon() for cart-level coupons.', since: '4.1')]
+    #[\Deprecated('Use addItemCoupon() for item-level coupons or addCoupon() for cart-level coupons.', since: '4.0')]
     public function applyCoupon(
         ?string $rowId,
         string $couponCode,
