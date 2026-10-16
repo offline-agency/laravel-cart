@@ -491,7 +491,7 @@ class CartItem implements Arrayable, Jsonable
      */
     public function is(Buyable $buyable): bool
     {
-        return $this->id == $buyable->getId()
+        return (string) $this->id === (string) $buyable->getId()
             && $this->associatedModel === get_class($buyable);
     }
 

@@ -356,7 +356,7 @@ class Cart
     public function isAlreadyAdded(string|int $id, string $model): bool
     {
         return $this->getContent()->contains(function (CartItem $cartItem) use ($id, $model) {
-            return (int) $cartItem->id === (int) $id
+            return (string) $cartItem->id === (string) $id
                 && $cartItem->associatedModel === $model;
         });
     }
@@ -370,7 +370,7 @@ class Cart
     {
         return $this->getContent()
             ->first(function (CartItem $cartItem) use ($id, $model) {
-                return (int) $cartItem->id === (int) $id
+                return (string) $cartItem->id === (string) $id
                     && $cartItem->associatedModel === $model;
             });
     }
