@@ -14,5 +14,5 @@ shipping or a redemption ledger. No production adoption or comparative performan
 - [Testing](testing.md), [upgrading](upgrading.md), [troubleshooting](troubleshooting.md)
 - [Agent integration](agents.md), [dated alternatives](alternatives.md)
 
-Latest published tag is 4.0.3; PR #50 and this follow-up are unreleased.
+Latest published tag is 4.1.0, including PR #50. New allocation/recipes in this follow-up are unreleased.
 See the capability map for per-feature availability. Public website deployment is pending.

@@ -1,8 +1,8 @@
 # Website source handoff — offline-agency/oa-doc-osp
 
 Prepared 16 October 2026. This package task does not edit or deploy the VuePress site.
-PR #50 remains open at 131f2e6; this local follow-up depends on it. Latest actual tag
-is 4.0.3. Label all #50/follow-up features **unreleased**, never a guessed next version.
+PR #50 merged at b89d321 and shipped as **4.1.0** on 16 October 2026. This follow-up
+extends that release. Label its new allocation/recipes **unreleased**, never a guessed next version.
 At publication, map them to the actual accepted package tag and CI-verified merge SHA.
 
 Consume these package sources instead of implementing PHP behavior in VuePress:

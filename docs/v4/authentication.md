@@ -1,7 +1,7 @@
 # Authentication and guest transfer
 
-Development documentation: stable **4.0.3** excludes features marked unreleased in
-the [capability map](capabilities.md).
+Development documentation: see the [capability map](capabilities.md) for released
+features and unreleased additions.
 
 Legacy CartMergeMiddleware restores the saved `cart` snapshot; its defaults remain
 unchanged. Live database guest transfer is a separate, disabled-by-default feature.

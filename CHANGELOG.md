@@ -2,11 +2,15 @@
 
 ## Unreleased
 
-Not published in 4.0.3. Includes pending PR #50 and its follow-up; no next version allocated.
+Changes below extend released 4.1.0; no next version is allocated.
 
 - Add read-only payableTaxBreakdown() with row/rate decimal allocation and explicit residuals.
 - Add executed adoption service and variants/wishlist, Livewire, Inertia, API and Redis-session recipes.
 - Clarify released/unreleased capabilities and preserve legacy before-cart-coupon tax methods.
+
+## [4.1.0] - 2026-10-16
+
+Released through PR #50.
 
 - Declare ext-bcmath and honor configured cart-coupon precision.
 - Recalculate base/current price, VAT and gross on array/Buyable updates, retaining row coupons.

@@ -15,8 +15,8 @@ API resources and testing helpers. Useful when your application owns its catalog
 checkout. For inventory, payments, shipping and order management, evaluate a full commerce framework.
 
 Requires **PHP 8.4/8.5**, **BCMath** and **Laravel components ^12.69.2 or ^13.32**.
-Latest published tag verified 16 October 2026: **4.0.3**. The examples and docs on this
-development branch include **unreleased** PR #50/follow-up features; see the
+Latest published tag verified 16 October 2026: **4.1.0**. This development branch
+adds **unreleased** tax allocation and recipe examples; see the
 [capability/availability map](docs/v4/capabilities.md). No next version is assigned.
 
 Composer enforces the exact requirements; PHP prereleases and Laravel 10/11 are excluded.

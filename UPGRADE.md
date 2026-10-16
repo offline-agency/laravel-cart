@@ -1,9 +1,15 @@
 # Upgrading Laravel Cart
 
-## From 4.0.x to the next release (unreleased)
+## From 4.1.0 to the next release (unreleased)
 
-Latest verified stable tag is 4.0.3; the following changes are pending PR #50 and
-this follow-up, not a guessed numbered release.
+- payableTaxBreakdown() is additive: legacy subtotal/vat/vatBreakdown remain before
+  cart coupons. Read [allocation domains and residual rules](docs/v4/post-discount-tax.md).
+- Use the [capability map](docs/v4/capabilities.md) and [tested recipe service](docs/v4/recipes/index.md).
+- These additions are not in the 4.1.0 tag. No next version is allocated.
+
+## From 4.0.x to released 4.1.0
+
+Released 16 October 2026 through PR #50.
 
 - Install ext-bcmath before upgrading.
 - Price updates now change coherent base net/VAT/gross and reapply retained row coupons;
@@ -13,9 +19,6 @@ this follow-up, not a guessed numbered release.
   See [storage guarantees](docs/v4/storage.md) for custom-driver/raw-write/session limits.
 - Live guest transfer is opt-in and distinct from saved snapshots. Register the
   [middleware around login after StartSession](docs/v4/authentication.md).
-- payableTaxBreakdown() is additive: legacy subtotal/vat/vatBreakdown remain before
-  cart coupons. Read [allocation domains and residual rules](docs/v4/post-discount-tax.md).
-- Use the [capability map](docs/v4/capabilities.md) and [tested recipe service](docs/v4/recipes/index.md).
 
 ## From v3 to released 4.0.0
 
@@ -420,8 +423,8 @@ Behavior of the database driver in 4.0.0:
 
 - **Owner.** Authenticated carts are keyed by `auth()->id()` in the `cart.users.foreign_key` column (the configured name is honored). Guest carts are keyed by the session id in `session_id`. A session id is never written to the user column.
 - **Guest to login.** Laravel regenerates the session id on login, so a guest's database cart is not carried over to the user automatically. `CartMergeMiddleware` merges the user's `store()` snapshot. It does not move the guest cart.
-- **Writes.** Every write runs in one transaction with a row lock, and cart creation tolerates races. In released 4.0.0, the last committed write wins. The unreleased
-  follow-up changes package-managed mutations to lock before reading; see the
+- **Writes.** Every write runs in one transaction with a row lock, and cart creation tolerates races. In released 4.0.0, the last committed write wins. Released 4.1.0
+  changes package-managed mutations to lock before reading; see the
   [current concurrency boundary](docs/v4/storage.md).
 - **TTL.** `expires_at` is set when the cart row is created. Expired carts are purged when read, and the read cache re-checks the TTL.
 - **Round trip.** Timestamps, original prices, applied item coupons and row ids now survive a save and reload, so item coupons and discounts are no longer lost or recomputed.

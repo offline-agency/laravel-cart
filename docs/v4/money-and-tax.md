@@ -1,7 +1,7 @@
 # Money and tax
 
-Development documentation: stable **4.0.3** excludes features marked unreleased in
-the [capability map](capabilities.md).
+Development documentation: see the [capability map](capabilities.md) for released
+features and unreleased additions.
 
 The normalized database schema uses DECIMAL(12,4); keep persisted unit amounts within
 that range and use at most four decimal places. Public amounts remain floats, rounded using `cart.format.decimals` (default 2)

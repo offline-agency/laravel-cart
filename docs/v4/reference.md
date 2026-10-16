@@ -1,7 +1,7 @@
 # Full API reference
 
-Development documentation: stable **4.0.3** excludes features marked unreleased in
-the [capability map](capabilities.md).
+Development documentation: see the [capability map](capabilities.md) for released
+features and unreleased additions.
 
 This is the expanded v4 reference retained from the README. For updated guarantees,
 read [money and tax](money-and-tax.md), [storage](storage.md), and

@@ -1,7 +1,7 @@
 # Adoption recipes (unreleased source)
 
-These recipes target the current development checkout, including PR #50. Stable
-4.0.3 does not include the new atomicity/transfer/allocation behavior. See the
+These recipes target the current development checkout based on released 4.1.0.
+The new recipe sources and allocation API are unreleased additions. See the
 [capability map](../capabilities.md) before selecting a released package version.
 
 - [Variants, wishlist and models](variants-wishlist.md)

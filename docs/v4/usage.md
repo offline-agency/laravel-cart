@@ -1,7 +1,7 @@
 # Usage
 
-Development documentation: stable **4.0.3** excludes features marked unreleased in
-the [capability map](capabilities.md).
+Development documentation: see the [capability map](capabilities.md) for released
+features and unreleased additions.
 
 Use trusted server catalog data for amounts. Authorize the current owner and
 revalidate catalog prices, tax eligibility and availability before checkout.
