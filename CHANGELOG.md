@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+Not published in 4.0.3. Includes pending PR #50 and its follow-up; no next version allocated.
+
+- Add read-only payableTaxBreakdown() with row/rate decimal allocation and explicit residuals.
+- Add executed adoption service and variants/wishlist, Livewire, Inertia, API and Redis-session recipes.
+- Clarify released/unreleased capabilities and preserve legacy before-cart-coupon tax methods.
+
 - Declare ext-bcmath and honor configured cart-coupon precision.
 - Recalculate base/current price, VAT and gross on array/Buyable updates, retaining row coupons.
 - Stage live mutations, make batches/sync atomic, preserve option variants and publish successful events after commit.
@@ -16,7 +22,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.0] - Unreleased
+## [4.0.0] - 2026-10-13
 
 See [UPGRADE.md](UPGRADE.md) for the migration guide from 3.x.
 

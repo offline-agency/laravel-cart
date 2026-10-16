@@ -5,6 +5,8 @@ resources and testing helpers. It fits applications that own their catalog and c
 Choose a full commerce framework when you also need inventory, orders, payments,
 shipping or a redemption ledger. No production adoption or comparative performance is claimed.
 
+- [Capabilities and release availability](capabilities.md), [adoption recipes](recipes/index.md)
+- [Post-discount tax allocation](post-discount-tax.md) (unreleased)
 - [Installation](installation.md) and [configuration](configuration.md)
 - [Usage and executable example](usage.md), [full API reference](reference.md)
 - [Money and tax](money-and-tax.md), [coupons](coupons.md)
@@ -12,4 +14,5 @@ shipping or a redemption ledger. No production adoption or comparative performan
 - [Testing](testing.md), [upgrading](upgrading.md), [troubleshooting](troubleshooting.md)
 - [Agent integration](agents.md), [dated alternatives](alternatives.md)
 
-These sources describe the proposed next v4 release. Public website deployment is pending.
+Latest published tag is 4.0.3; PR #50 and this follow-up are unreleased.
+See the capability map for per-feature availability. Public website deployment is pending.

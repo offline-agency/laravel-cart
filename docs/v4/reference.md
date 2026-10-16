@@ -1,5 +1,8 @@
 # Full API reference
 
+Development documentation: stable **4.0.3** excludes features marked unreleased in
+the [capability map](capabilities.md).
+
 This is the expanded v4 reference retained from the README. For updated guarantees,
 read [money and tax](money-and-tax.md), [storage](storage.md), and
 [authentication](authentication.md). The runnable [usage example](usage.md) is canonical.
@@ -349,7 +352,12 @@ Every amount is rounded with `format.decimals` and `format.rounding_mode`. The t
 Cart::numberFormat(Cart::total(), null, null, null); // "1,234.50" with the configured format
 ```
 
-### VAT breakdown (fiscal receipts)
+### VAT breakdown (before cart coupons)
+
+This legacy method is not a final fiscal receipt calculation after cart coupons.
+Use the additive [payableTaxBreakdown()](post-discount-tax.md) for the documented
+post-discount allocation (unreleased).
+
 
 ```php
 Cart::vatBreakdown();
@@ -532,6 +540,8 @@ The user column is nullable and indexed. Its schema type comes from `cart.users.
 
 ### Custom drivers
 
+The following RedisCartStorage is **illustrative custom-driver code**, not a shipped Redis
+driver. Redis-backed sessions are a separate [recipe](recipes/redis-sessions.md).
 Implement `OfflineAgency\LaravelCart\Contracts\CartStorage`:
 
 ```php

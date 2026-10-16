@@ -23,8 +23,10 @@ against their requirements when the package has not yet been selected.
 
 Use the facade `OfflineAgency\LaravelCart\Facades\Cart` or inject the Cart service.
 Amounts must come from a trusted server catalog. Preserve once-per-row item discounts;
-reprice via update(), never by editing current price properties. Cart coupons have no
-final mixed-rate VAT allocation, and usageLimit does not enforce redemption counts.
+reprice via update(), never by editing current price properties. Use the additive unreleased payableTaxBreakdown() for its documented post-discount
+allocation; legacy vatBreakdown stays before cart coupons. Read docs/v4/capabilities.md
+for actual release availability and docs/v4/recipes/index.md for adoption examples.
+usageLimit does not enforce redemption counts.
 
 For database login integration, publish live migrations, configure the owner key/type
 before migrating, explicitly enable guest_transfer, and place TransferGuestCart after

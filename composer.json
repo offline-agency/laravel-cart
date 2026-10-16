@@ -69,7 +69,7 @@
             "@test"
         ],
         "docs:check": "node scripts/docs.mjs",
-        "examples:check": "pest tests/Feature/DocumentationExamplesTest.php",
+        "examples:check": "pest tests/Feature/DocumentationExamplesTest.php tests/Feature/AdoptionRecipesTest.php",
         "consumer:check": "node scripts/consumer-smoke.mjs"
     },
     "config": {

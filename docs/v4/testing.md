@@ -29,3 +29,8 @@ Use [testing helpers](reference.md) for facade fakes, typed event assertions and
 CartAssertions. Fakes do not prove transaction/concurrency behavior; use real drivers
 for those contracts. The workflow tests PHP 8.4/8.5 and Laravel 12/13; lowest jobs
 are PHP 8.4 only, with actual versions printed in each job.
+
+The examples command now executes the canonical quick start, payable-tax fixture and
+shared adoption service. Six Node negative checks catch stale quick-start, recipe
+and tax snippets, invalid links/anchors and wrong publish tags. Optional real Redis
+session/lock verification is documented in [the Redis session recipe](recipes/redis-sessions.md).

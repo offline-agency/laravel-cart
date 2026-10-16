@@ -18,7 +18,9 @@ Cart::total(); // 48.80
 @endverbatim
 
 Item coupons apply once per row. Price updates change base amounts and reapply
-retained coupons. Cart coupons reduce payable total without allocating final VAT;
+retained coupons. Unreleased payableTaxBreakdown() provides an explicit post-discount allocation;
+legacy vatBreakdown() remains before cart coupons. Check docs/v4/capabilities.md
+for release availability.
 usageLimit is metadata. Revalidate catalog prices/availability and authorize owners
 at checkout. Do not accept payable amounts from browser input.
 

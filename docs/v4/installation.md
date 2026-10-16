@@ -1,5 +1,8 @@
 # Installation
 
+Development documentation: stable **4.0.3** excludes features marked unreleased in
+the [capability map](capabilities.md).
+
 Requirements: PHP `~8.4.0 || ~8.5.0`, BCMath (`ext-bcmath`), and the declared
 Illuminate components `^12.69.2 || ^13.32`. PHP 8.3 is excluded by package policy,
 not an upstream EOL claim. PHP prereleases are excluded. Composer checks extensions
