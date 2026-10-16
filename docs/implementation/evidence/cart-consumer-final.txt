@@ -1,0 +1,15 @@
+      --guidelines      Install AI guidelines
+      --skills          Install agent skills
+      --mcp             Install MCP server configuration
+  -h, --help            Display help for the given command. When no command is given display help for the list command
+      --silent          Do not output any message
+  -q, --quiet           Only errors are displayed. All other output is suppressed
+  -V, --version         Display this application version
+      --ansi|--no-ansi  Force (or disable --no-ansi) ANSI output
+  -n, --no-interaction  Do not ask any interactive question
+      --env[=ENV]       The environment the command should run under
+  -v|vv|vvv, --verbose  Increase the verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug
+
+Archive/install verified. Boost app ready at /var/folders/dk/8r5ppz290dj18llcqzrbf_kw0000gn/T/laravel-cart-consumer-ES9nBa; rendering/discovery check follows.
+Installed Blade guideline rendering passed.
+Boost v2.10.3: discovered, composed/rendered guidelines and installed skill.

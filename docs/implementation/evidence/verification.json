@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-16",
+  "baseline": "60eb1006c9c2b31ff50cebd7b8b677a1dd16cc16",
+  "branch": "feat/cart-correctness-v4",
+  "final_checks": {
+    "composer validate:strict": 0,
+    "composer audit --abandoned=report": 0,
+    "composer lint:check": 0,
+    "composer analyse": 0,
+    "composer test": 0,
+    "PCOV PHP84 pest --coverage --min=100": 0,
+    "PostgreSQL suite": 0,
+    "MySQL suite": 0,
+    "composer docs:check": 0,
+    "composer examples:check": 0,
+    "node --test scripts/test/*.test.mjs": 0,
+    "node scripts/consumer-smoke.mjs": 0,
+    "node --test .github/scripts/release/test/*.test.mjs": 0,
+    "node scripts/release-dry-run.mjs": 0,
+    "actionlint 1.7.7": 0,
+    "git diff --check": 0
+  },
+  "native_coverage_without_driver": 1,
+  "coverage_percent": 100,
+  "remote_writes": 0,
+  "ci_execution": "not run remotely",
+  "website_deployed": false
+}

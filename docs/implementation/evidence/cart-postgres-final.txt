@@ -1,0 +1,15 @@
+  ✓ it getCouponExpiresAt passes through an existing Carbon instance     0.02s
+  ✓ it getCouponExpiresAt parses a string date into Carbon               0.01s
+  ✓ it getCouponUsageLimit casts the column to int and defaults to null  0.01s
+  ✓ it getMinCartAmount casts the column to float and defaults to null   0.01s
+  ✓ it isExpired returns false when no expiry date is set                0.01s
+  ✓ it isExpired returns false for a future expiry date                  0.01s
+  ✓ it isExpired returns true for a past expiry date                     0.01s
+  ✓ it isApplicableTo returns true when no minimum is set                0.01s
+  ✓ it isApplicableTo compares the cart total against the minimum        0.02s
+  ✓ it toArray merges the coupon fields onto the model attributes        0.02s
+  ✓ it toArray serialises a missing expiry date as null                  0.01s
+  ✓ it toArray returns only the coupon fields when there is no parent i… 0.01s
+
+  Tests:    2 skipped, 636 passed (1814 assertions)
+  Duration: 39.95s

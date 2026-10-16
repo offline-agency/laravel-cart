@@ -1,0 +1,23 @@
+   FAIL  Tests\Regression\MutationCorrectnessTest
+  ⨯ it retains a tiny percentage coefficient when its discount is econo… 0.22s
+  ────────────────────────────────────────────────────────────────────────────
+   FAILED  Tests\Regression\MutationCorrectnessTest > it retains a tiny perc…
+  Failed asserting that two strings are identical.
+  -'1.00'
+  +'0.00'
+
+
+  at tests/Regression/MutationCorrectnessTest.php:382
+    378▕ it('retains a tiny percentage coefficient when its discount is economically significant', function (): void {
+    379▕     $cart = mutationCart('session');
+    380▕     $cart->add(id: 1, name: 'Large order', qty: 1, price: 1000000000.0);
+    381▕     $cart->addCoupon(new CartCoupon(hash: 'tiny', code: 'TINY', type: 'percentage', value: 1.0e-7));
+  ➜ 382▕     expect($cart->globalCouponDiscount('1000000000'))->toBe('1.00');
+    383▕ });
+    384▕
+
+  1   tests/Regression/MutationCorrectnessTest.php:382
+
+
+  Tests:    1 failed (1 assertions)
+  Duration: 0.42s

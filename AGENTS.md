@@ -1,7 +1,7 @@
 # Contributor guidance
 
-The current task's explicit authorization takes precedence over local confirmation
-rules in CLAUDE.md. Preserve unrelated work; use an isolated branch/worktree.
+Follow the user's explicit authorization, preserve unrelated work, and use an
+isolated branch/worktree for feature work.
 
 - Runtime: PHP 8.4/8.5, Illuminate ^12.69.2 / ^13.32, ext-bcmath. Keep PHP 8.4 syntax.
 - src/ contains runtime code, config/ defaults, database/migrations/ published schemas.

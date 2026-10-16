@@ -1,0 +1,61 @@
+   FAIL  Tests\Regression\MutationCorrectnessTest
+  ⨯ it accepts finite scientific-notation coupon values without passing… 0.34s
+  ⨯ it accepts finite scientific-notation coupon values without passing… 0.01s
+  ⨯ it accepts finite scientific-notation coupon values without passing… 0.01s
+  ────────────────────────────────────────────────────────────────────────────
+   FAILED  Tests\Regression\MutationCorrectnessTest > it accepts…  ValueError
+  bccomp(): Argument #1 ($num1) is not well-formed
+
+  at src/Cart.php:1443
+    1439▕
+    1440▕             if ($coupon->isPercentage()) {
+    1441▕                 $discount = bcdiv(bcmul($remaining, (string) $coupon->value, $scale), '100', $scale);
+    1442▕             } else {
+  ➜ 1443▕                 $discount = bccomp((string) $coupon->value, $remaining, $scale) > 0
+    1444▕                     ? $remaining
+    1445▕                     : (string) $coupon->value;
+    1446▕             }
+    1447▕
+
+  1   src/Cart.php:1443
+  2   tests/Regression/MutationCorrectnessTest.php:375
+
+  ────────────────────────────────────────────────────────────────────────────
+   FAILED  Tests\Regression\MutationCorrectnessTest > it accepts…  ValueError
+  bccomp(): Argument #1 ($num1) is not well-formed
+
+  at src/Cart.php:1443
+    1439▕
+    1440▕             if ($coupon->isPercentage()) {
+    1441▕                 $discount = bcdiv(bcmul($remaining, (string) $coupon->value, $scale), '100', $scale);
+    1442▕             } else {
+  ➜ 1443▕                 $discount = bccomp((string) $coupon->value, $remaining, $scale) > 0
+    1444▕                     ? $remaining
+    1445▕                     : (string) $coupon->value;
+    1446▕             }
+    1447▕
+
+  1   src/Cart.php:1443
+  2   tests/Regression/MutationCorrectnessTest.php:375
+
+  ────────────────────────────────────────────────────────────────────────────
+   FAILED  Tests\Regression\MutationCorrectnessTest > it accepts…  ValueError
+  bcmul(): Argument #2 ($num2) is not well-formed
+
+  at src/Cart.php:1441
+    1437▕                 break;
+    1438▕             }
+    1439▕
+    1440▕             if ($coupon->isPercentage()) {
+  ➜ 1441▕                 $discount = bcdiv(bcmul($remaining, (string) $coupon->value, $scale), '100', $scale);
+    1442▕             } else {
+    1443▕                 $discount = bccomp((string) $coupon->value, $remaining, $scale) > 0
+    1444▕                     ? $remaining
+    1445▕                     : (string) $coupon->value;
+
+  1   src/Cart.php:1441
+  2   tests/Regression/MutationCorrectnessTest.php:375
+
+
+  Tests:    3 failed (0 assertions)
+  Duration: 0.97s

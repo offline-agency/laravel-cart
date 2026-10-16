@@ -1,0 +1,16 @@
+  ✔ passes and fails as expected (0.092209ms)
+✔ pre-merge validation (0.115209ms)
+✔ release.yml: no expression interpolation inside run scripts (1.036958ms)
+✔ release.yml: default-deny permissions and pinned actions (0.599292ms)
+✔ release-metadata.yml: no expression interpolation inside run scripts (0.317708ms)
+✔ release-metadata.yml: default-deny permissions and pinned actions (0.112208ms)
+✔ release.yml: single serialized publisher, trusted checkout, no PR head refs (0.355667ms)
+✔ release-metadata.yml: read-only (0.07625ms)
+ℹ tests 65
+ℹ suites 12
+ℹ pass 65
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 216698.042583

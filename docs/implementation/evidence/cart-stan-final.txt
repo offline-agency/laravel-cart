@@ -1,0 +1,6 @@
+Note: Using configuration file /private/tmp/laravel-cart-correctness/phpstan.neon.
+   0/134 [░░░░░░░░░░░░░░░░░░░░░░░░░░░░]   0%
+ 134/134 [▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓] 100%
+
+
+ [OK] No errors
