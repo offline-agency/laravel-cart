@@ -48,11 +48,11 @@ final class Coerce
 
     public static function number(mixed $value): int|float
     {
-        if (is_int($value) || is_float($value)) {
+        if (is_int($value) || (is_float($value) && is_finite($value))) {
             return $value;
         }
 
-        if (is_string($value) && is_numeric($value)) {
+        if (is_string($value) && is_numeric($value) && is_finite((float) $value)) {
             return $value + 0;
         }
 

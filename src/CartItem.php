@@ -10,6 +10,7 @@ use Illuminate\Contracts\Support\Jsonable;
 use InvalidArgumentException;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
 use OfflineAgency\LaravelCart\Contracts\FiscalBuyable;
+use OfflineAgency\LaravelCart\Exceptions\CouponAlreadyAppliedException;
 use OfflineAgency\LaravelCart\Support\CartConfig;
 use OfflineAgency\LaravelCart\Support\Coerce;
 
@@ -124,6 +125,12 @@ class CartItem implements Arrayable, Jsonable
         ?Carbon $updatedAt = null,
         array $options = []
     ) {
+        foreach ([$price, $totalPrice, $vat, $qty] as $amount) {
+            if ($amount !== null && ! is_finite((float) $amount)) {
+                throw new InvalidArgumentException('Cart amounts and quantities must be finite.');
+            }
+        }
+
         if (empty($id)) {
             throw new InvalidArgumentException(__('laravel-cart::cart.invalid_id'));
         }
@@ -213,10 +220,11 @@ class CartItem implements Arrayable, Jsonable
      */
     public function updateFromBuyable(Buyable $item): void
     {
-        $this->id = Coerce::key($item->getId());
-        $this->name = $item->getName();
-        $this->price = $item->getPrice();
-        $this->vat = $item->getVat();
+        $this->updateFromArray([
+            'id' => $item->getId(), 'name' => $item->getName(),
+            'price' => $item->getPrice(), 'totalPrice' => $item->getTotalPrice(),
+            'vat' => $item->getVat(), 'options' => $item->getOptions(),
+        ]);
     }
 
     /**
@@ -229,10 +237,45 @@ class CartItem implements Arrayable, Jsonable
         $this->id = array_key_exists('id', $attributes) ? Coerce::key($attributes['id']) : $this->id;
         $this->qty = array_key_exists('qty', $attributes) ? Coerce::number($attributes['qty']) : $this->qty;
         $this->name = array_key_exists('name', $attributes) ? Coerce::string($attributes['name']) : $this->name;
-        $this->price = array_key_exists('price', $attributes) ? Coerce::float($attributes['price']) : $this->price;
+        $this->reprice($attributes);
         $this->options = new CartItemOptions(array_key_exists('options', $attributes) ? self::options($attributes['options']) : $this->options);
 
         $this->rowId = $this->generateRowId((string) $this->id, $this->options->all());
+    }
+
+    /**
+     * Update base unit amounts, then reapply retained coupons in insertion order.
+     * Price is always net here; a price-only update retains the existing rate.
+     *
+     * @param  array<array-key, mixed>  $attributes
+     */
+    private function reprice(array $attributes): void
+    {
+        if (! array_intersect(['price', 'vat', 'totalPrice'], array_keys($attributes))) {
+            return;
+        }
+
+        $net = array_key_exists('price', $attributes) ? Coerce::float($attributes['price']) : $this->originalPrice;
+        $vat = array_key_exists('vat', $attributes) ? Coerce::float($attributes['vat']) : $this->formatFloat($net * $this->vatRate / 100);
+        $gross = array_key_exists('totalPrice', $attributes) ? Coerce::float($attributes['totalPrice']) : $this->formatFloat($net + $vat);
+        if (! is_finite($net) || ! is_finite($vat) || ! is_finite($gross) || $this->formatFloat($net + $vat) !== $this->formatFloat($gross)) {
+            throw new InvalidArgumentException('Net price plus VAT must equal totalPrice at cart precision.');
+        }
+        $coupons = $this->appliedCoupons;
+        $this->originalPrice = $this->price = $net;
+        $this->originalVat = $this->vat = $vat;
+        $this->originalTotalPrice = $this->totalPrice = $gross;
+        if (array_key_exists('vat', $attributes)) {
+            $this->vatRate = $net != 0.0 ? $this->formatFloat(100 * $vat / $net) : 0.0;
+        }
+        $this->taxRate = $this->vatRate;
+        $this->tax = $vat;
+        $this->vatLabel = $vat > 0 ? __('laravel-cart::cart.tax_included') : __('laravel-cart::cart.tax_exempt');
+        $this->discountValue = 0.0;
+        $this->appliedCoupons = [];
+        foreach ($coupons as $coupon) {
+            $this->applyCoupon($coupon->couponCode, $coupon->couponType, $coupon->couponValue);
+        }
     }
 
     /**
@@ -284,15 +327,15 @@ class CartItem implements Arrayable, Jsonable
         }
 
         if ($attribute === 'priceTax') {
-            return $this->price + $this->tax;
+            return $this->totalPrice;
         }
 
         if ($attribute === 'subtotal') {
-            return $this->qty * $this->price;
+            return $this->formatFloat($this->price + ($this->qty - 1) * $this->originalPrice);
         }
 
         if ($attribute === 'total') {
-            return $this->qty * $this->priceTax;
+            return $this->formatFloat($this->totalPrice + ($this->qty - 1) * $this->originalTotalPrice);
         }
 
         if ($attribute === 'tax') {
@@ -300,7 +343,7 @@ class CartItem implements Arrayable, Jsonable
         }
 
         if ($attribute === 'taxTotal') {
-            return $this->tax * $this->qty;
+            return $this->formatFloat($this->vat + ($this->qty - 1) * $this->originalVat);
         }
 
         return null;
@@ -483,20 +526,26 @@ class CartItem implements Arrayable, Jsonable
         string $couponType,
         float $couponValue
     ): CartItem {
+        if (! is_finite($couponValue) || $couponValue < 0 || ($couponType === 'percentage' && $couponValue > 100)) {
+            throw new InvalidArgumentException('Coupon value must be finite, non-negative, and at most 100 for percentages.');
+        }
+        if (isset($this->appliedCoupons[$couponCode])) {
+            throw new CouponAlreadyAppliedException($couponCode);
+        }
         switch ($couponType) {
             case 'fixed':
                 $discountValue = $couponValue;
 
                 $this->totalPrice = $this->formatFloat($this->totalPrice - $couponValue);
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-                $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+                $this->vat = $this->formatFloat($this->totalPrice - $this->price);
                 break;
             case 'percentage':
                 $discountValue = $this->formatFloat($this->originalTotalPrice * $couponValue / 100);
 
                 $this->totalPrice = $this->formatFloat($this->totalPrice - $discountValue);
                 $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-                $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+                $this->vat = $this->formatFloat($this->totalPrice - $this->price);
                 break;
             case 'global':
                 $discountValue = $couponValue;
@@ -536,7 +585,7 @@ class CartItem implements Arrayable, Jsonable
 
         $this->totalPrice = $this->formatFloat($this->totalPrice + $discountValue);
         $this->price = $this->formatFloat($this->totalPrice * 100 / (100 + $this->vatRate));
-        $this->vat = $this->formatFloat($this->price * $this->vatRate / 100);
+        $this->vat = $this->formatFloat($this->totalPrice - $this->price);
 
         $this->discountValue = $this->formatFloat($this->discountValue - $discountValue);
 

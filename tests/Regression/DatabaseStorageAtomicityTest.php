@@ -39,7 +39,7 @@ it('keeps the previous cart when a write fails midway', function (): void {
 
     // Fail the new rows' insert, after the old rows were deleted in the same transaction.
     DB::connection('testing')->beforeExecuting(function (string $query, array $bindings): void {
-        if (str_starts_with(strtolower($query), 'insert into "cart_items"')) {
+        if (str_starts_with(strtolower($query), 'insert into') && str_contains($query, 'cart_items')) {
             throw new QueryException('testing', $query, $bindings, new RuntimeException('Simulated insert failure.'));
         }
     });

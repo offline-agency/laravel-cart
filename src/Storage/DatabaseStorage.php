@@ -5,16 +5,21 @@ declare(strict_types=1);
 namespace OfflineAgency\LaravelCart\Storage;
 
 use Carbon\Carbon;
+use Closure;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
+use OfflineAgency\LaravelCart\Cart;
 use OfflineAgency\LaravelCart\CartCoupon;
 use OfflineAgency\LaravelCart\CartItem;
-use OfflineAgency\LaravelCart\Contracts\CartStorage;
+use OfflineAgency\LaravelCart\Contracts\AtomicCartStorage;
 use OfflineAgency\LaravelCart\Contracts\Couponable;
 use OfflineAgency\LaravelCart\Exceptions\CartStorageException;
+use OfflineAgency\LaravelCart\Exceptions\GuestCartTransferException;
 use OfflineAgency\LaravelCart\Support\CartConfig;
 use OfflineAgency\LaravelCart\Support\CartContentCodec;
 use OfflineAgency\LaravelCart\Support\Coerce;
@@ -27,10 +32,10 @@ use stdClass;
  * A cart is owned either by the authenticated user (configured
  * `cart.users.foreign_key` column) or, for guests, by the session id
  * (`session_id` column). Every write runs in a transaction that locks the
- * cart row, so concurrent writers to the same cart are serialized and the
- * last committed write wins; a failed write leaves the previous cart intact.
+ * cart row. Package-managed mutations hold this lock from read through write.
+ * Direct put() calls still replace the supplied value (last writer wins).
  */
-class DatabaseStorage implements CartStorage
+class DatabaseStorage implements AtomicCartStorage
 {
     public const string GUEST_COLUMN = 'session_id';
 
@@ -63,6 +68,88 @@ class DatabaseStorage implements CartStorage
         $this->cartsTable = CartConfig::string('cart.database.carts_table', 'carts');
         $this->cartItemsTable = CartConfig::string('cart.database.cart_items_table', 'cart_items');
         $this->ownerColumn = CartConfig::string('cart.users.foreign_key', 'user_id');
+    }
+
+    public function atomic(string $instance, Closure $operation): mixed
+    {
+        try {
+            return $this->connection->transaction(function () use ($instance, $operation): mixed {
+                $this->cache = [];
+                [$column, $owner] = $this->resolveOwner();
+                $this->lockOrCreateCart($column, $owner, $instance);
+
+                return $operation();
+            }, 3);
+        } finally {
+            // Never retain values read in a rolled-back transaction or an outer savepoint.
+            $this->cache = [];
+        }
+    }
+
+    public function afterCommit(Closure $callback): void
+    {
+        if ($this->connection->transactionLevel() > 0) {
+            $this->connection->afterCommit($callback);
+        } else {
+            $callback();
+        }
+    }
+
+    /**
+     * Trusted server-side identity captured before login only. Never use request input.
+     * All allowed instances are transferred in one transaction; deleting the source
+     * makes replay a no-op. Both owners are locked in lexical owner/instance order.
+     *
+     * @param  list<string>  $instances
+     */
+    public function transferGuest(string $guestSession, array $instances): bool
+    {
+        [$column, $owner] = $this->resolveOwner();
+        if ($column === self::GUEST_COLUMN) {
+            throw new GuestCartTransferException('Authenticate before transferring a guest cart.');
+        }
+        try {
+            return $this->connection->transaction(function () use ($guestSession, $instances, $column, $owner): bool {
+                $this->cache = [];
+                $locks = [];
+                foreach (array_unique($instances) as $instance) {
+                    $key = 'cart.'.$instance;
+                    $locks[$this->cacheKey(self::GUEST_COLUMN, $guestSession, $key)] = [self::GUEST_COLUMN, $guestSession, $key];
+                    $locks[$this->cacheKey($column, $owner, $key)] = [$column, $owner, $key];
+                }
+                ksort($locks);
+                foreach ($locks as [$lockColumn, $lockOwner, $key]) {
+                    if ($lockColumn === self::GUEST_COLUMN) {
+                        $this->findCart($lockColumn, $lockOwner, $key, lock: true);
+                    } else {
+                        $this->lockOrCreateCart($lockColumn, $lockOwner, $key);
+                    }
+                }
+                $transferred = false;
+                foreach (array_unique($instances) as $instance) {
+                    $key = 'cart.'.$instance;
+                    $source = $this->findCart(self::GUEST_COLUMN, $guestSession, $key, lock: true);
+                    if ($source === null) {
+                        continue;
+                    }
+                    $cart = new Cart($this, app(Dispatcher::class));
+                    $cart->instance($instance)->mergeGuestState(
+                        $this->loadItems($this->cartId($source)),
+                        $this->deserializeCoupons(Coerce::nullableString($source->coupons)),
+                        $this->decodeArray(Coerce::nullableString($source->options)),
+                        $this->decodeArray(Coerce::nullableString($source->meta)),
+                    );
+                    $this->deleteCart($this->cartId($source));
+                    $transferred = true;
+                }
+
+                return $transferred;
+            }, 3);
+        } catch (QueryException|\OfflineAgency\LaravelCart\Exceptions\CartLimitExceededException|\InvalidArgumentException $exception) {
+            throw new GuestCartTransferException('Cart transfer failed; both original carts were retained. Correct the limits or storage error and retry.', previous: $exception);
+        } finally {
+            $this->cache = [];
+        }
     }
 
     public function get(string $key, mixed $default = null): mixed
@@ -212,6 +299,9 @@ class DatabaseStorage implements CartStorage
 
     private function remember(string $cacheKey, stdClass $cart, string $key, mixed $value): void
     {
+        if ($this->connection->transactionLevel() > 0) {
+            return;
+        }
         $this->cache[$cacheKey]['expires_at'] = $this->expiresAt($cart);
         $this->cache[$cacheKey]['values'][$key] = $value;
     }

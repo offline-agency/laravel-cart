@@ -60,6 +60,6 @@ it('cart:inspect --json ignores coupons stored as invalid JSON', function (): vo
         ->assertExitCode(0)
         ->expectsOutputToContain('"coupons": []');
 })->skip(
-    fn (): bool => DB::connection('testing')->getDriverName() === 'pgsql',
+    fn (): bool => in_array(DB::connection('testing')->getDriverName(), ['pgsql', 'mysql'], true),
     'PostgreSQL json columns reject invalid JSON, so such a row cannot exist there.',
 );
