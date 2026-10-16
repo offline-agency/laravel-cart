@@ -4,7 +4,6 @@ Unreleased recipe; check [release availability](../capabilities.md).
 
 This uses the shipped **SessionStorage** through Laravel sessions. There is no
 shipped dedicated Redis cart driver, per-cart Redis key TTL, CAS or Lua mutation API.
-See the [dedicated Redis proposal](../../design/redis-cart-storage.md) for that scope.
 
 Illustrative application `.env`, using an installed PHP Redis client and a working
 Laravel Redis connection (no Redis client becomes this package's runtime dependency):

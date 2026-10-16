@@ -29,7 +29,7 @@ once-per-row coupon, rowId residual and TaxAllocationException rules together.
 Link README and v4 navigation prominently to recipes and capabilities. Replace old
 fiscal-receipt headings with before-cart-coupon wording. Label RedisCartStorage sample
 as an illustrative custom class, not a built-in driver. Exact Money and dedicated Redis
-remain design proposals; do not promote display precision to multi-currency support.
+remain unimplemented; do not promote display precision to multi-currency support.
 
 Run composer docs:check and examples:check in the package, consume its generated
 snippets, then validate VuePress build, all internal links/anchors, version navigation
