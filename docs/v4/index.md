@@ -11,6 +11,5 @@ shipping or a redemption ledger. No production adoption or comparative performan
 - [Storage and atomic mutations](storage.md), [authentication](authentication.md)
 - [Testing](testing.md), [upgrading](upgrading.md), [troubleshooting](troubleshooting.md)
 - [Agent integration](agents.md), [dated alternatives](alternatives.md)
-- [Website/admin handoff](../implementation/maintainer-handoff.md)
 
 These sources describe the proposed next v4 release. Public website deployment is pending.

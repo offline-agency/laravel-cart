@@ -1,3 +1,0 @@
-./composer.json is valid
-Generating optimized autoload files
-Generated optimized autoload files containing 8567 classes

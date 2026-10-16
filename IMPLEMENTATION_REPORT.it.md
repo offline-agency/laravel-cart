@@ -24,8 +24,7 @@ Il login continua, con eccezione/evento di fallimento osservabile e possibilità
 
 Baseline effettiva: `composer test`, exit 0, 565 test e 1.524 asserzioni.
 Le prime nuove regressioni hanno prodotto 12 fallimenti e 14 asserzioni prima
-delle correzioni. I log essenziali sono conservati in
-[evidence](docs/implementation/evidence/cart-red.txt).
+delle correzioni; gli esiti principali sono riportati nella tabella seguente.
 
 | Riscontro | Prima | Dopo / classificazione |
 | --- | --- | --- |
@@ -40,8 +39,8 @@ delle correzioni. I log essenziali sono conservati in
 | Correzioni v4 preesistenti | Rimozione coupon, owner configurabili, TTL, rollback persistenza, hydration, ordine migrazioni | Conservate e verificate dalle suite precedenti; nessuna riscrittura duplicata |
 | Ipotesi non riprodotte autonomamente | Non tutte le osservazioni storiche sono difetti ancora presenti | Nessuna nuova pretesa di riproduzione per le correzioni già presenti; baseline verde conservata |
 
-I log pre-fix della contesa PostgreSQL/MySQL e della notazione scientifica sono
-nella stessa directory evidence. La revisione indipendente del codice ha segnalato
+Le regressioni coprono anche la contesa PostgreSQL/MySQL e la notazione scientifica.
+La revisione indipendente del codice ha segnalato
 casi aggiuntivi poi corretti; l'ultima revisione snapshot non ha rilevato problemi importanti.
 
 ## Contratti e compatibilità
@@ -75,7 +74,7 @@ contratto di successo, da considerare se un listener dipendeva dal vecchio timin
 
 Esiti locali, non risultati di una nuova esecuzione GitHub Actions. Tutti i controlli
 finali elencati hanno exit 0, salvo il tentativo nativo di coverage senza driver
-descritto sotto. Gli estratti sono in `docs/implementation/evidence/`.
+descritto sotto.
 
 | Comando / ambiente | Esito |
 | --- | --- |
@@ -116,8 +115,7 @@ Matrice supplementare, test completi e PHPStan entrambi exit 0:
 | 8.4.25 | 13.32.0 | lowest | 11.3.0 / 4.7.8 / 4.1.0 / 12.5.33 |
 
 La sesta combinazione highest è la suite principale PHP 8.5/Laravel 13. Nessuna
-pretesa di lowest su PHP 8.5. Composer 2.10.2; le risoluzioni sono quelle effettive
-registrate in [matrix.json](docs/implementation/evidence/matrix.json).
+pretesa di lowest su PHP 8.5. Composer 2.10.2; la tabella riporta le risoluzioni effettive.
 
 ## Dry run del rilascio
 
@@ -127,7 +125,6 @@ Titolo candidato: `feat: make cart mutations atomic and add opt-in guest transfe
 label `release:minor`; precedente reale osservato 4.0.3; previsione **4.1.0**.
 Target fixture esatto `686eeaaf79c0c12f9c8eceeb12e523ddaaca3d01`, check fixture
 `CI passed: success`, run 1027. Tag/release solo pianificati sulla fixture.
-[Piano completo](docs/implementation/evidence/cart-dry-run.txt).
 
 La versione non è prenotata. Un futuro merge reale deve verificare SHA accettato
 dall'API e CI post-merge su quello SHA; pending/failure/skipped/cancelled/missing
@@ -150,10 +147,10 @@ Boost: `resources/boost/guidelines/core.blade.php` e
 
 **Sito esterno non pubblicato e amministrazione non modificata.** Il repository
 non contiene renderer/deployment del sito pubblico; proprietà del progetto esterno
-non accertata. [Handoff preciso](docs/implementation/maintainer-handoff.md): sorgenti,
-URL v4, route corrente, storico da etichettare dopo verifica, esempi obsoleti,
-redirect/navigation/link check, descrizione/homepage/topics suggeriti e protezione
-main/tag da applicare manualmente. Lo snapshot API non dimostra protezioni attive.
+non accertata. Restano da applicare manualmente pubblicazione delle sorgenti v4,
+route corrente e storico verificato, sostituzione degli esempi obsoleti, redirect,
+navigazione e verifica link, oltre alle impostazioni GitHub e alla protezione main/tag.
+Lo snapshot API non dimostra protezioni attive.
 
 Limiti intenzionali: vatBreakdown rimane precedente ai coupon di carrello; usageLimit
 è metadata; nessun ledger riscatti, inventario, pagamento, certificazione fiscale o
@@ -163,8 +160,7 @@ parallele; memoria sessione e rollback SQL esterno successivo non sono una trans
 distribuita. Listener che falliscono dopo commit non annullano la scrittura.
 Il checkout deve autorizzare owner/snapshot e rivalidare prezzi/disponibilità affidabili.
 
-La PR è pronta come testo revisionabile in
-[pr-draft.md](docs/implementation/pr-draft.md); non è stata creata remotamente.
-La [roadmap](docs/implementation/roadmap.md) propone, in ordine: breakdown fiscale
-post-sconto, Money/currency versionato, ledger riscatti, demo/casi reali e benchmark
-riproducibili, con beneficio, API, compatibilità, impegno e criteri verificabili.
+La [PR #50](https://github.com/offline-agency/laravel-cart/pull/50) è stata aperta
+su successiva autorizzazione dell’utente. Le proposte future comprendono breakdown
+fiscale post-sconto, Money/currency versionato, ledger riscatti, demo/casi reali e
+benchmark riproducibili.
