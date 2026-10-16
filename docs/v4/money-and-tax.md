@@ -1,5 +1,8 @@
 # Money and tax
 
+Development documentation: see the [capability map](capabilities.md) for released
+features and unreleased additions.
+
 The normalized database schema uses DECIMAL(12,4); keep persisted unit amounts within
 that range and use at most four decimal places. Public amounts remain floats, rounded using `cart.format.decimals` (default 2)
 and `rounding_mode` (default half up). Use one currency/precision per cart; this
@@ -35,4 +38,5 @@ cart coupons; they are not the final payable tax breakdown. With cart coupons:
 `total() = max(0, subtotal() + vat() - discount())` for normal positive rows,
 subject to configured rounding. Legacy discount rows have separate historical
 subtotal semantics. Do not print vatBreakdown as a final fiscal allocation when
-cart coupons are present. A post-discount mixed-rate allocation API is roadmap work.
+cart coupons are present. The additive, unreleased [payableTaxBreakdown()](post-discount-tax.md) exposes a
+separate deterministic post-discount allocation without changing those methods.

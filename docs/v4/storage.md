@@ -1,5 +1,8 @@
 # Storage and mutation guarantees
 
+Development documentation: see the [capability map](capabilities.md) for released
+features and unreleased additions.
+
 Session carts live under session keys. Database live carts use normalized `carts`
 and `cart_items`, keyed by owner plus instance; guests use `session_id`, users the
 configured owner column. Numeric, UUID and ULID owner types are configurable.

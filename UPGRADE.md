@@ -1,4 +1,26 @@
-# Upgrading from v3 to v4
+# Upgrading Laravel Cart
+
+## From 4.1.0 to the next release (unreleased)
+
+- payableTaxBreakdown() is additive: legacy subtotal/vat/vatBreakdown remain before
+  cart coupons. Read [allocation domains and residual rules](docs/v4/post-discount-tax.md).
+- Use the [capability map](docs/v4/capabilities.md) and [tested recipe service](docs/v4/recipes/index.md).
+- These additions are not in the 4.1.0 tag. No next version is allocated.
+
+## From 4.0.x to released 4.1.0
+
+Released 16 October 2026 through PR #50.
+
+- Install ext-bcmath before upgrading.
+- Price updates now change coherent base net/VAT/gross and reapply retained row coupons;
+  use update() to reprice. Invalid/non-finite coupons and contradictory amounts are rejected.
+- Logical built-in mutations stage/validate/persist atomically. Database package
+  mutations lock before reading; successful events wait for outer transaction commit.
+  See [storage guarantees](docs/v4/storage.md) for custom-driver/raw-write/session limits.
+- Live guest transfer is opt-in and distinct from saved snapshots. Register the
+  [middleware around login after StartSession](docs/v4/authentication.md).
+
+## From v3 to released 4.0.0
 
 This guide covers the breaking changes and new features of `offline-agency/laravel-cart` 4.0.0 compared with the 3.x line.
 
@@ -185,7 +207,7 @@ php artisan vendor:publish --provider="OfflineAgency\LaravelCart\CartServiceProv
 php artisan migrate
 ```
 
-See the README "Storage" section for how owners, TTL and concurrency work.
+See [Storage](docs/v4/storage.md) for current owners, TTL and concurrency guarantees.
 
 ### 5. Translations
 
@@ -386,22 +408,24 @@ These changes affect the `store()` / `restore()` table (`cart.database.table`, d
 - **`restore()` exception.** If the stored content cannot be decoded (corrupt payload, or not a collection of cart items), `restore()` throws `CartStorageException` instead of failing in `unserialize()` or restoring garbage. Restoring an identifier with no stored row is still a silent no-op. `CartMergeMiddleware` and `CartRestoreMiddleware` swallow this exception.
 - **Missing columns.** `store()` writes the `coupons` column, and the `meta` column when it exists. 3.x published only the table migration. Publish the two column migrations with `php artisan vendor:publish --provider="OfflineAgency\LaravelCart\CartServiceProvider" --tag=cart-legacy-column-migrations` and migrate; they skip columns that already exist. Fresh installs get all three from `--tag=migrations`.
 
-### 14. Database Driver Schema and Behavior (Unreleased Migrations)
+### 14. Database Driver Schema and Behavior (released in 4.0.0)
 
-The `carts` / `cart_items` migrations (`0002_..._create_carts_table.php`, `0003_..._create_cart_items_table.php`) are new in 4.0.0. They were never part of a tagged release. If you only use tagged releases, publish and run them as described in section 4. Nothing else is needed.
+The `carts` / `cart_items` migrations (`0002_..._create_carts_table.php`, `0003_..._create_cart_items_table.php`) were first released in 4.0.0. They were not part of earlier tagged releases. If you only use tagged releases, publish and run them as described in section 4. Nothing else is needed.
 
 If you ran **pre-release versions** of these migrations from the `develop` branch, your tables are missing columns and indexes that 4.0.0 relies on:
 
 - `carts`: the user column (`cart.users.foreign_key`) is now **nullable**; a new nullable, indexed `session_id` column; unique indexes on (user column, `instance`) and (`session_id`, `instance`).
 - `cart_items`: new `original_price`, `original_total_price` and `original_vat` columns; a unique index on (`cart_id`, `row_id`).
 
-Because those migrations were never released, there is no upgrade migration. Re-publish the two migrations and recreate the tables, for example by rolling back the old ones and migrating again. Carts stored in the pre-release tables are lost, so do this when that is acceptable. Alternatively, write an equivalent `ALTER` migration for your schema.
+Because the pre-release migration versions were never tagged, there is no upgrade migration. Re-publish the two migrations and recreate the tables, for example by rolling back the old ones and migrating again. Carts stored in the pre-release tables are lost, so do this when that is acceptable. Alternatively, write an equivalent `ALTER` migration for your schema.
 
 Behavior of the database driver in 4.0.0:
 
 - **Owner.** Authenticated carts are keyed by `auth()->id()` in the `cart.users.foreign_key` column (the configured name is honored). Guest carts are keyed by the session id in `session_id`. A session id is never written to the user column.
 - **Guest to login.** Laravel regenerates the session id on login, so a guest's database cart is not carried over to the user automatically. `CartMergeMiddleware` merges the user's `store()` snapshot. It does not move the guest cart.
-- **Writes.** Every write runs in one transaction with a row lock, and cart creation tolerates races. There is no optimistic versioning: the last committed write wins.
+- **Writes.** Every write runs in one transaction with a row lock, and cart creation tolerates races. In released 4.0.0, the last committed write wins. Released 4.1.0
+  changes package-managed mutations to lock before reading; see the
+  [current concurrency boundary](docs/v4/storage.md).
 - **TTL.** `expires_at` is set when the cart row is created. Expired carts are purged when read, and the read cache re-checks the TTL.
 - **Round trip.** Timestamps, original prices, applied item coupons and row ids now survive a save and reload, so item coupons and discounts are no longer lost or recomputed.
 - **Partial removes.** Removing cart-level coupons, metadata or cart options clears only that column and no longer deletes the cart's items.

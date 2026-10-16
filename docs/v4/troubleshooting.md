@@ -15,3 +15,9 @@
   [reference](reference.md); authorize ownership, never guess another identifier.
 - VAT breakdown differs from payable total: cart coupons have no final VAT allocation.
   See [money and tax](money-and-tax.md).
+
+Unreleased `TaxAllocationException` means payableTaxBreakdown() cannot provide its
+documented reconciliation for the supplied amounts, precision or adjustment rows.
+Inspect the [supported allocation domain](post-discount-tax.md), revalidate catalog
+amounts and handle legacy adjustments explicitly. Do not label the legacy
+vatBreakdown() as an equivalent final payable-tax fallback.

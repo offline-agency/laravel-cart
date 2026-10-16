@@ -33,7 +33,7 @@ await writeFile(join(work, 'composer.json'), JSON.stringify(composer, null, 2));
 run('composer', ['update', '--no-dev', '--no-interaction', '--no-progress']);
 const installed = JSON.parse(await readFile(join(work, 'vendor/composer/installed.json'), 'utf8')).packages;
 if (installed.some(p => /^(pestphp\/|phpunit\/|orchestra\/testbench|larastan\/)/.test(p.name))) throw new Error('Package development dependencies leaked into consumer');
-for (const path of ['resources/boost/guidelines/core.blade.php', 'resources/boost/skills/laravel-cart-development/SKILL.md', 'docs/v4/index.md', 'examples/quick-start.php']) {
+for (const path of ['resources/boost/guidelines/core.blade.php', 'resources/boost/skills/laravel-cart-development/SKILL.md', 'docs/v4/index.md', 'examples/quick-start.php', 'examples/CartActions.php', 'examples/payable-tax.php', 'examples/RedisSessionExample.php']) {
     await access(join(work, 'vendor/offline-agency/laravel-cart', path));
 }
 for (const path of ['bootstrap/cache', 'storage/framework/views', 'storage/framework/sessions', 'storage/logs', 'config']) await mkdir(join(work, path), { recursive: true });
@@ -55,6 +55,9 @@ $cart = app('cart');
 require __DIR__.'/vendor/offline-agency/laravel-cart/examples/quick-start.php';
 if (OfflineAgency\\LaravelCart\\Examples\\QuickStart::run($cart)['payable'] !== 45.36) { throw new RuntimeException('Installed example failed'); }
 $cart->destroy();
+require __DIR__.'/vendor/offline-agency/laravel-cart/examples/payable-tax.php';
+if (OfflineAgency\\LaravelCart\\Examples\\PayableTaxExample::run($cart)->totals['vat'] !== '28.80') { throw new RuntimeException('Installed allocation failed'); }
+$cart->destroy();
 config(['cart.format.decimals' => 3]);
 $cart->add(id: 1, name: 'Precision', qty: 1, price: 1.235, vat: 0.0);
 $cart->addCoupon(new OfflineAgency\\LaravelCart\\CartCoupon(hash: 'p', code: 'P', type: 'percentage', value: 10.0));
@@ -63,6 +66,20 @@ echo "Consumer fixed/percentage coupons and example: passed\\n";
 `);
 console.log(run('php', ['artisan', 'package:discover', '--no-interaction']));
 console.log(run('php', ['smoke.php']));
+if (process.env.CART_REDIS_RECIPE_PORT) {
+    const port = Number(process.env.CART_REDIS_RECIPE_PORT);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid disposable Redis port');
+    await writeFile(join(work, 'redis-session.php'), `<?php
+require __DIR__.'/vendor/autoload.php';
+$app = require __DIR__.'/bootstrap/app.php';
+$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
+require __DIR__.'/vendor/offline-agency/laravel-cart/examples/RedisSessionExample.php';
+OfflineAgency\\LaravelCart\\Examples\\RedisSessionExample::run($app, ${port});
+echo "Real Redis session round-trip and lock primitive: passed\\n";
+`);
+    console.log(run('php', ['redis-session.php']));
+}
+
 // Boost remains optional and is installed only in this disposable app's dev section.
 run('composer', ['require', '--dev', 'laravel/boost:^2.10.3', '--no-interaction', '--no-progress']);
 console.log(run('php', ['artisan', 'package:discover', '--no-interaction']));
