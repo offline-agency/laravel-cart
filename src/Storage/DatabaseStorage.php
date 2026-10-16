@@ -18,6 +18,7 @@ use OfflineAgency\LaravelCart\CartCoupon;
 use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Contracts\AtomicCartStorage;
 use OfflineAgency\LaravelCart\Contracts\Couponable;
+use OfflineAgency\LaravelCart\Exceptions\CartLimitExceededException;
 use OfflineAgency\LaravelCart\Exceptions\CartStorageException;
 use OfflineAgency\LaravelCart\Exceptions\GuestCartTransferException;
 use OfflineAgency\LaravelCart\Support\CartConfig;
@@ -145,7 +146,7 @@ class DatabaseStorage implements AtomicCartStorage
 
                 return $transferred;
             }, 3);
-        } catch (QueryException|\OfflineAgency\LaravelCart\Exceptions\CartLimitExceededException|\InvalidArgumentException $exception) {
+        } catch (QueryException|CartLimitExceededException|\InvalidArgumentException $exception) {
             throw new GuestCartTransferException('Cart transfer failed; both original carts were retained. Correct the limits or storage error and retry.', previous: $exception);
         } finally {
             $this->cache = [];
