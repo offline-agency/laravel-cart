@@ -1,8 +1,14 @@
 # Laravel Cart
 
-[![Packagist](https://img.shields.io/packagist/v/offline-agency/laravel-cart)](https://packagist.org/packages/offline-agency/laravel-cart)
-[![CI](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml/badge.svg)](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml)
-[![MIT](https://img.shields.io/packagist/l/offline-agency/laravel-cart)](LICENSE)
+[![Latest stable release](https://img.shields.io/packagist/v/offline-agency/laravel-cart?label=stable)](https://packagist.org/packages/offline-agency/laravel-cart)
+[![Total downloads](https://img.shields.io/packagist/dt/offline-agency/laravel-cart)](https://packagist.org/packages/offline-agency/laravel-cart/stats)
+[![CI (main)](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml?query=branch%3Amain)
+[![Code coverage (main)](https://codecov.io/gh/offline-agency/laravel-cart/branch/main/graph/badge.svg)](https://app.codecov.io/gh/offline-agency/laravel-cart/tree/main)
+
+[![PHP 8.4 and 8.5](https://img.shields.io/badge/PHP-8.4%20%7C%208.5-777BB4?logo=php&logoColor=white)](composer.json)
+[![Laravel 12 and 13](https://img.shields.io/badge/Laravel-12%20%7C%2013-FF2D20?logo=laravel&logoColor=white)](composer.json)
+[![PHPStan level max](https://img.shields.io/badge/PHPStan-level%20max-2563EB)](LARASTAN.md)
+[![MIT license](https://img.shields.io/packagist/l/offline-agency/laravel-cart)](LICENSE)
 
 A Laravel shopping cart with VAT, row/cart coupons, session or database persistence,
 API resources and testing helpers. Useful when your application owns its catalog and
