@@ -32,6 +32,32 @@ snapshot and checkout endpoints; a row ID is not an ownership credential.
 
 [AdoptionRecipesTest.php](../../../tests/Feature/AdoptionRecipesTest.php) exercises
 the service with two real auth identities and database storage, asserting isolation
-and foreign-row rejection. Token issuance/guard middleware is an application concern
-and is not integration-tested here. Revalidate trusted catalog prices/availability
+and foreign-row rejection. Sanctum token issuance and its own middleware setup are application concerns
+and were not integration-tested here; the active-guard boundary is tested below. Revalidate trusted catalog prices/availability
 before checkout and use the application's authorization/inventory transaction.
+
+## Verified ownership boundary
+
+DatabaseStorage resolves auth()->id() before falling back to a session guest key.
+Laravel's Authenticate middleware calls shouldUse() for the successful guard; this
+is why auth:sanctum must be an actual authenticated middleware boundary, not just
+a token-shaped header. Sanctum must be installed/configured by the consuming app;
+this package adds no guard option or token issuer. Authenticated stateless calls
+need no browser session to select the user-owned database cart.
+
+[StatelessApiOwnershipTest.php](../../../tests/Feature/StatelessApiOwnershipTest.php)
+executes real JSON requests through auth:mobile with a Laravel RequestGuard fixture,
+including 401, two token identities, no cookies and ignored request owner/price and
+X-Cart-Identifier values. The guard cache is reset between simulated requests, as
+with separate FPM requests or standard worker cleanup. It verifies active-guard
+ownership, not Sanctum token issuance.
+
+Unauthenticated stateless guests have no supported stable headless cart identifier:
+X-Cart-Identifier is not consumed or authorized by this package. Keep API routes
+authenticated; do not map arbitrary header values into session/user owner columns.
+A possible [verified guest-token extension](../../proposals/redis-cart-storage.md#guest-owner-extension-proposal)
+is a separate proposal, not a shipped authentication subsystem.
+
+Use the [executed server coupon/checkout recipe](coupons-checkout.md) to validate
+authoritative promotions and catalog state; actual reservations and payment remain
+application-owned.

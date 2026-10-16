@@ -4,6 +4,8 @@
 
 Changes below extend released 4.1.0; no next version is allocated.
 
+- Fix product lookups and Buyable comparison to use exact string identity, matching row hashing; integer 42 and string "42" still match, "042" remains distinct.
+- Add executable server coupon/checkout validation, stateless owner-isolation proof and a reproducible read-path harness.
 - Add read-only payableTaxBreakdown() with row/rate decimal allocation and explicit residuals.
 - Add executed adoption service and variants/wishlist, Livewire, Inertia, API and Redis-session recipes.
 - Clarify released/unreleased capabilities and preserve legacy before-cart-coupon tax methods.

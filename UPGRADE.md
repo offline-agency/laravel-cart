@@ -2,6 +2,11 @@
 
 ## From 4.1.0 to the next release (unreleased)
 
+- Product lookup now matches row hashing: `42` and `"42"` match, but `"042"`,
+  `"42-blue"` and other distinct string keys do not alias. Replace loose numeric
+  lookups with the actual stored product key; no row or schema migration is needed.
+  [Identity contract and zero-ID policy](docs/v4/product-identity.md).
+
 - payableTaxBreakdown() is additive: legacy subtotal/vat/vatBreakdown remain before
   cart coupons. Read [allocation domains and residual rules](docs/v4/post-discount-tax.md).
 - Use the [capability map](docs/v4/capabilities.md) and [tested recipe service](docs/v4/recipes/index.md).

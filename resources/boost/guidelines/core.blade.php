@@ -17,12 +17,16 @@ Cart::total(); // 48.80
 </code-snippet>
 @endverbatim
 
+Product lookup uses exact string identity: 42 and "42" match, "042" stays distinct
+(unreleased fix). Use rowId to select an option variant.
 Item coupons apply once per row. Price updates change base amounts and reapply
 retained coupons. Unreleased payableTaxBreakdown() provides an explicit post-discount allocation;
 legacy vatBreakdown() remains before cart coupons. Check docs/v4/capabilities.md
 for release availability.
 usageLimit is metadata. Revalidate catalog prices/availability and authorize owners
-at checkout. Do not accept payable amounts from browser input.
+at checkout; docs/v4/recipes/coupons-checkout.md provides an executed application policy.
+Stateless APIs need the active authenticated Laravel guard; no browser owner header
+is an authorization mechanism. Do not accept payable amounts from browser input.
 
 Session is the default driver. Database carts require `cart-database-migrations`;
 `migrations` is for the separate explicit store/restore snapshot table.

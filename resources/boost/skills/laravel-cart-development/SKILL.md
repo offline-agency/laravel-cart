@@ -14,6 +14,9 @@ against their requirements when the package has not yet been selected.
 | --- | --- |
 | Install / tables / publish tags | docs/v4/installation.md |
 | Working named-argument example | examples/quick-start.php and docs/v4/usage.md |
+| Product keys / variants / model lookup | docs/v4/product-identity.md |
+| Server coupon / checkout revalidation | docs/v4/recipes/coupons-checkout.md |
+| Stateless API guard and ownership | docs/v4/recipes/api-mobile.md |
 | Repricing / quantities / precision | docs/v4/money-and-tax.md |
 | Coupon eligibility / metadata limits | docs/v4/coupons.md |
 | Owners / transactions / custom drivers | docs/v4/storage.md |

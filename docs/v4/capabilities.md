@@ -8,6 +8,9 @@ presence is not a claim of current PHP/Laravel support on an old package line.
 | Use case | Availability | Maintained example/reference | Executed evidence / limit |
 | --- | --- | --- | --- |
 | Option variants, named wishlist, associated models (S06) | Core APIs verified in 3.1.5; current recipe unreleased | [Variants/wishlist](recipes/variants-wishlist.md), [CartActions](../../examples/CartActions.php) | [Adoption service](../../tests/Feature/AdoptionRecipesTest.php), [model association](../../tests/CartItemTest.php); move is not cross-instance atomic |
+| Exact string product lookups | Unreleased fix; int/string decimal form preserved | [Identity contract](product-identity.md) | [Both-driver regressions](../../tests/Regression/ProductIdentityTest.php); no row migration |
+| Server customer coupon / checkout policy | Unreleased application recipe | [Policy recipe](recipes/coupons-checkout.md), [source](../../examples/CheckoutValidation.php) | [Executed policy](../../tests/Feature/CheckoutValidationRecipeTest.php); no reservation/redemption ledger |
+| Stateless authenticated API ownership | 4.1.0 mechanism; proof/recipe unreleased | [API boundaries](recipes/api-mobile.md) | [Real RequestGuard routes](../../tests/Feature/StatelessApiOwnershipTest.php); Sanctum token issuance not tested |
 | Session/database carts and CartResource | 4.0.0 (verified tag) | [Storage](storage.md), [API recipe](recipes/api-mobile.md) | Resource/owner tests; default active Laravel auth identity |
 | Coherent repricing and atomic logical mutations | 4.1.0 | [Quick start](../../examples/quick-start.php), [money](money-and-tax.md) | [Mutation regressions](../../tests/Regression/MutationCorrectnessTest.php); custom-driver limits remain |
 | Trusted login transfer (S09) | 4.1.0, opt-in | [Authentication](authentication.md) | [Real login/session test](../../tests/Feature/GuestTransferTest.php); web lifecycle required |
@@ -16,8 +19,8 @@ presence is not a claim of current PHP/Laravel support on an old package line.
 | Post-discount row/rate allocation (S11) | Unreleased, this follow-up | [payableTaxBreakdown](post-discount-tax.md) | [Mixed-rate/rounding/reload/read-only tests](../../tests/Feature/PayableTaxBreakdownTest.php); no negative adjustments or fiscal certification |
 | Livewire/Inertia adoption (S13) | Recipes unreleased, no frontend runtime dependency | [Livewire](recipes/livewire.md), [Inertia/Vue](recipes/inertia-vue.md) | Real shared service tested; UI/controller fragments illustrative |
 | Redis-backed sessions (S15) | SessionStorage shipped in 4.0.0; recipe unreleased | [Redis sessions](recipes/redis-sessions.md) | Real Redis session/lock probe; HTTP route blocking illustrative |
-| Dedicated Redis driver / independent cart TTL (S15) | **Not implemented** | No shipped dedicated driver | Future real Redis/CAS/cluster tests required |
-| Exact EUR/JPY/KWD Money model (S16) | **Not implemented** | No shipped exact Money API | Public float API is not exact multi-currency support |
+| Dedicated Redis driver / independent cart TTL (S15) | **Not implemented** | [Redis proposal](../proposals/redis-cart-storage.md) | Future real Redis/CAS/cluster tests required |
+| Exact EUR/JPY/KWD Money model (S16) | **Not implemented** | [Money proposal](../proposals/exact-money.md) | Public float API is not exact multi-currency support |
 | Boost guidelines/skill | 4.1.0; allocation/recipe guidance updated here | [Agent integration](agents.md) | Archived consumer discovery/rendering smoke test |
 
 The supplied discovery exercise used twenty package-neutral research sessions;

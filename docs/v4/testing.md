@@ -9,6 +9,8 @@ composer test
 composer test:coverage
 composer docs:check
 composer examples:check
+composer bench:smoke
+node --test scripts/test/*.test.mjs
 node --test .github/scripts/release/test/*.test.mjs
 ```
 
@@ -31,6 +33,8 @@ for those contracts. The workflow tests PHP 8.4/8.5 and Laravel 12/13; lowest jo
 are PHP 8.4 only, with actual versions printed in each job.
 
 The examples command now executes the canonical quick start, payable-tax fixture and
-shared adoption service. Six Node negative checks catch stale quick-start, recipe
-and tax snippets, invalid links/anchors and wrong publish tags. Optional real Redis
+shared adoption service, checkout policy and stateless authenticated routes. Seven
+Node negative checks catch stale quick-start, recipe, checkout and tax snippets,
+invalid links/anchors and wrong publish tags. Two harness tests check meaningful
+output and invalid arguments without timing thresholds. Optional real Redis
 session/lock verification is documented in [the Redis session recipe](recipes/redis-sessions.md).
