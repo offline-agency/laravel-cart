@@ -32,10 +32,13 @@ Model association is optional and does not define variant identity. Illustrative
 
 ```php
 $cart->associate($rowId, App\Models\Product::class);
-$product = $cart->get($rowId)->model;
+$product = App\Models\Product::findOrFail($cart->get($rowId)->id);
+$this->authorize('view', $product);
 ```
 
-The associated class must be an application model with a compatible find() method.
+The public model field may still contain a class string or ID; it is not an automatic
+authorized model lookup. Configure a string model key (or query your SKU column)
+when appropriate. Read the [product identity contract](../product-identity.md).
 Authorization, catalog visibility and availability still belong to the application;
 association is not permission to expose arbitrary models. Existing package model
 association tests are separate from the adoption service's catalog fixture.

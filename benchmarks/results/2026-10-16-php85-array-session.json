@@ -1,0 +1,98 @@
+{
+    "schema": 1,
+    "timestamp_utc": "2026-10-16T16:31:37+00:00",
+    "php": "8.5.10",
+    "laravel": "13.36.0",
+    "os": "Darwin",
+    "architecture": "arm64",
+    "opcache_cli": "0",
+    "driver": "SessionStorage \/ Laravel array session",
+    "rows": 100,
+    "coupons": 5,
+    "quantity_pattern": "1,2,3 repeated; net 10 \/ VAT 2.20 per unit; 1% sequential cart coupons",
+    "setup_ns": 32269917,
+    "fixture_payable": "2308.81",
+    "operations": {
+        "content": [
+            {
+                "cold_ns": 374708,
+                "warm_total_ns": 3698708,
+                "warm_iterations": 10,
+                "storage_reads": 12
+            },
+            {
+                "cold_ns": 369917,
+                "warm_total_ns": 3610292,
+                "warm_iterations": 10,
+                "storage_reads": 12
+            },
+            {
+                "cold_ns": 355917,
+                "warm_total_ns": 3568625,
+                "warm_iterations": 10,
+                "storage_reads": 12
+            }
+        ],
+        "searchById": [
+            {
+                "cold_ns": 369000,
+                "warm_total_ns": 3636791,
+                "warm_iterations": 10,
+                "storage_reads": 12
+            },
+            {
+                "cold_ns": 377250,
+                "warm_total_ns": 3720875,
+                "warm_iterations": 10,
+                "storage_reads": 12
+            },
+            {
+                "cold_ns": 373625,
+                "warm_total_ns": 9092833,
+                "warm_iterations": 10,
+                "storage_reads": 12
+            }
+        ],
+        "total": [
+            {
+                "cold_ns": 456708,
+                "warm_total_ns": 4372625,
+                "warm_iterations": 10,
+                "storage_reads": 24
+            },
+            {
+                "cold_ns": 360416,
+                "warm_total_ns": 3624833,
+                "warm_iterations": 10,
+                "storage_reads": 24
+            },
+            {
+                "cold_ns": 405042,
+                "warm_total_ns": 3712250,
+                "warm_iterations": 10,
+                "storage_reads": 24
+            }
+        ],
+        "payableTaxBreakdown": [
+            {
+                "cold_ns": 2562667,
+                "warm_total_ns": 20902125,
+                "warm_iterations": 10,
+                "storage_reads": 72
+            },
+            {
+                "cold_ns": 2086084,
+                "warm_total_ns": 20972833,
+                "warm_iterations": 10,
+                "storage_reads": 72
+            },
+            {
+                "cold_ns": 1984958,
+                "warm_total_ns": 21403500,
+                "warm_iterations": 10,
+                "storage_reads": 72
+            }
+        ]
+    },
+    "process_peak_bytes": 18874368
+}

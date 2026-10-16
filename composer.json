@@ -1,11 +1,13 @@
 {
     "name": "offline-agency/laravel-cart",
-    "description": "Laravel shopping cart with fiscal support",
+    "description": "Laravel cart with VAT, coupons, variants and session/database persistence.",
     "type": "library",
     "keywords": [
         "laravel",
-        "shoppingcart",
-        "cart"
+        "shopping-cart",
+        "vat",
+        "coupons",
+        "persistence"
     ],
     "license": "MIT",
     "authors": [
@@ -69,8 +71,10 @@
             "@test"
         ],
         "docs:check": "node scripts/docs.mjs",
-        "examples:check": "pest tests/Feature/DocumentationExamplesTest.php tests/Feature/AdoptionRecipesTest.php",
-        "consumer:check": "node scripts/consumer-smoke.mjs"
+        "examples:check": "pest tests/Feature/DocumentationExamplesTest.php tests/Feature/AdoptionRecipesTest.php tests/Feature/CheckoutValidationRecipeTest.php tests/Feature/StatelessApiOwnershipTest.php",
+        "consumer:check": "node scripts/consumer-smoke.mjs",
+        "bench": "php benchmarks/cart-read.php",
+        "bench:smoke": "php benchmarks/cart-read.php --smoke"
     },
     "config": {
         "sort-packages": true,
@@ -90,5 +94,11 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "homepage": "https://github.com/offline-agency/laravel-cart",
+    "support": {
+        "issues": "https://github.com/offline-agency/laravel-cart/issues",
+        "source": "https://github.com/offline-agency/laravel-cart",
+        "docs": "https://github.com/offline-agency/laravel-cart/tree/main/docs/v4"
+    }
 }
