@@ -67,7 +67,10 @@
             "@lint:check",
             "@analyse",
             "@test"
-        ]
+        ],
+        "docs:check": "node scripts/docs.mjs",
+        "examples:check": "pest tests/Feature/DocumentationExamplesTest.php",
+        "consumer:check": "node scripts/consumer-smoke.mjs"
     },
     "config": {
         "sort-packages": true,

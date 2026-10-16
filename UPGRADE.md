@@ -660,3 +660,11 @@ php artisan vendor:publish --provider="OfflineAgency\LaravelCart\CartServiceProv
 12. If associated models in stored carts are not `Buyable` or Eloquent models, see section 13 (restricted unserialize).
 13. If you use the database driver, publish and run its migrations: `php artisan vendor:publish --provider="OfflineAgency\LaravelCart\CartServiceProvider" --tag=cart-database-migrations && php artisan migrate`. If you ran pre-release `develop` migrations, see section 14.
 14. Review the type changes listed in "Type Changes from Max-Level Static Analysis".
+
+## Current v4 correctness contracts
+
+See the [maintained v4 documentation](docs/v4/index.md) and
+[storage/event guarantees](docs/v4/storage.md). BCMath is a runtime requirement.
+Price-only updates mean net base at the retained VAT rate; coupons remain once per row.
+Run `composer docs:check` and `composer examples:check` alongside existing quality gates.
+Live guest transfer is explicitly enabled; snapshots keep their separate migration path.
