@@ -16,6 +16,7 @@
     ],
     "require": {
         "php": "~8.4.0 || ~8.5.0",
+        "ext-bcmath": "*",
         "illuminate/auth": "^12.69.2 || ^13.32",
         "illuminate/console": "^12.69.2 || ^13.32",
         "illuminate/contracts": "^12.69.2 || ^13.32",
@@ -66,7 +67,10 @@
             "@lint:check",
             "@analyse",
             "@test"
-        ]
+        ],
+        "docs:check": "node scripts/docs.mjs",
+        "examples:check": "pest tests/Feature/DocumentationExamplesTest.php",
+        "consumer:check": "node scripts/consumer-smoke.mjs"
     },
     "config": {
         "sort-packages": true,

@@ -20,7 +20,12 @@ final readonly class CartCoupon implements Couponable, JsonSerializable
         public ?Carbon $expiresAt = null,
         public ?int $usageLimit = null,
         public ?float $minCartAmount = null,
-    ) {}
+    ) {
+        if (! in_array($type, ['fixed', 'percentage'], true) || ! is_finite($value) || $value < 0 || ($type === 'percentage' && $value > 100)
+            || ($minCartAmount !== null && (! is_finite($minCartAmount) || $minCartAmount < 0))) {
+            throw new \InvalidArgumentException('Invalid coupon type, value or minimum amount.');
+        }
+    }
 
     public function isPercentage(): bool
     {

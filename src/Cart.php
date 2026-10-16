@@ -14,6 +14,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Traits\Macroable;
+use OfflineAgency\LaravelCart\Contracts\AtomicCartStorage;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
 use OfflineAgency\LaravelCart\Contracts\CartStorage;
 use OfflineAgency\LaravelCart\Contracts\Couponable;
@@ -33,10 +34,12 @@ use OfflineAgency\LaravelCart\Exceptions\InvalidCouponException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidCouponHashException;
 use OfflineAgency\LaravelCart\Exceptions\InvalidRowIDException;
 use OfflineAgency\LaravelCart\Exceptions\UnknownModelException;
+use OfflineAgency\LaravelCart\Storage\StagedStorage;
 use OfflineAgency\LaravelCart\Support\CartConfig;
 use OfflineAgency\LaravelCart\Support\CartContentCodec;
 use OfflineAgency\LaravelCart\Support\Coerce;
 use OfflineAgency\LaravelCart\Support\CouponData;
+use stdClass;
 
 /**
  * @phpstan-import-type AppliedCoupon from CartItem
@@ -59,6 +62,17 @@ class Cart
 
     private Dispatcher $events;
 
+    /** @var \WeakMap<CartItem, string> */
+    private \WeakMap $references;
+
+    private bool $mutating = false;
+
+    /** @var list<array{0: object|string, 1: mixed}> */
+    private array $pendingEvents = [];
+
+    /** @var array<string, string> */
+    private array $rowMoves = [];
+
     private string $instance;
 
     /** @var Collection<string, CartCoupon> */
@@ -67,6 +81,7 @@ class Cart
     public function __construct(CartStorage $storage, Dispatcher $events)
     {
         $this->storage = $storage;
+        $this->references = new \WeakMap;
         $this->events = $events;
         $this->globalCoupons = new Collection;
 
@@ -112,6 +127,10 @@ class Cart
         ?Carbon $updatedAt = null,
         array $options = []
     ): array|CartItem {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->add($id, $name, $subtitle, $qty, $price, $totalPrice, $vat, $vatFcCode, $productFcCode, $urlImg, $createdAt, $updatedAt, $options));
+        }
+
         if (is_array($id) && $this->isMulti($id)) {
             return array_map(fn (mixed $item): CartItem => $this->addItem($item), $id);
         }
@@ -154,17 +173,17 @@ class Cart
         $existing = $content->get($cartItem->rowId);
 
         if ($existing !== null) {
-            $cartItem->qty += $existing->qty;
+            $quantity = $existing->qty + $cartItem->qty;
+            $cartItem = clone $existing;
+            $cartItem->qty = $quantity;
         }
 
         $content->put($cartItem->rowId, $cartItem);
 
-        $this->enforceCartLimits($content, $cartItem);
-
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.added', $cartItem);
+            $this->emit('cart.added', $cartItem);
         }
-        $this->events->dispatch(new CartItemAdded($cartItem));
+        $this->emit(new CartItemAdded($cartItem));
 
         $this->storage->put($this->instance, $content);
 
@@ -178,6 +197,10 @@ class Cart
      */
     public function update(string $rowId, mixed $qty): ?CartItem
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->update($rowId, $qty));
+        }
+
         // Work on candidate copies: the stored item and collection are only
         // changed once the limits have accepted the update.
         $storedItem = $this->get($rowId);
@@ -191,9 +214,16 @@ class Cart
             $cartItem->qty = Coerce::number($qty);
         }
 
+        if ($cartItem->qty <= 0) {
+            $this->remove($rowId);
+
+            return null;
+        }
+
         $content = $this->getContent()->collect();
 
         if ($rowId !== $cartItem->rowId) {
+            $this->rowMoves[$rowId] = $cartItem->rowId;
             $content->pull($rowId);
 
             if ($content->has($cartItem->rowId)) {
@@ -202,30 +232,12 @@ class Cart
             }
         }
 
-        if ($cartItem->qty <= 0) {
-            $this->remove($cartItem->rowId);
-
-            return null;
-        } else {
-            $content->put($cartItem->rowId, $cartItem);
-        }
-
-        if ($cartItem->qty > 0) {
-            $this->enforceCartLimits($content, $cartItem);
-        }
-
-        // Commit: carry the accepted state onto the stored instance so existing
-        // references to the item observe the update, as before.
-        foreach (get_object_vars($cartItem) as $property => $value) {
-            $storedItem->{$property} = $value;
-        }
-        $cartItem = $storedItem;
         $content->put($cartItem->rowId, $cartItem);
 
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.updated', $cartItem);
+            $this->emit('cart.updated', $cartItem);
         }
-        $this->events->dispatch(new CartItemUpdated($cartItem));
+        $this->emit(new CartItemUpdated($cartItem));
 
         $this->storage->put($this->instance, $content);
 
@@ -234,6 +246,12 @@ class Cart
 
     public function remove(string $rowId): void
     {
+        if (! $this->mutating) {
+            $this->mutate(fn () => $this->remove($rowId));
+
+            return;
+        }
+
         $cartItem = $this->get($rowId);
 
         if (! empty($cartItem->appliedCoupons)) {
@@ -247,9 +265,9 @@ class Cart
         $content->pull($cartItem->rowId);
 
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.removed', $cartItem);
+            $this->emit('cart.removed', $cartItem);
         }
-        $this->events->dispatch(new CartItemRemoved($cartItem));
+        $this->emit(new CartItemRemoved($cartItem));
 
         $this->storage->put($this->instance, $content);
     }
@@ -267,6 +285,12 @@ class Cart
 
     public function destroy(): void
     {
+        if (! $this->mutating) {
+            $this->mutate(fn () => $this->destroy());
+
+            return;
+        }
+
         $this->setOptions([]);
         $this->storage->remove($this->instance);
         $this->storage->remove($this->instance.'_global_coupons');
@@ -492,6 +516,22 @@ class Cart
      */
     public function associate(string $rowId, object|string $model): void
     {
+        if (! $this->mutating) {
+            $id = $this->get($rowId)->id;
+            foreach ($this->references as $reference => $context) {
+                if ($context === $this->referenceContext() && $reference->rowId === $rowId) {
+                    $id = $reference->id;
+                    break;
+                }
+            }
+            $this->mutate(function () use ($rowId, $model, $id): void {
+                $this->get($rowId)->id = $id;
+                $this->associate($rowId, $model);
+            });
+
+            return;
+        }
+
         if (is_string($model) && ! class_exists($model)) {
             throw new UnknownModelException(__('laravel-cart::cart.unknown_model', ['model' => $model]));
         }
@@ -509,13 +549,19 @@ class Cart
 
     public function store(int|string $identifier, bool $overwrite = true): void
     {
+        if (! $this->mutating) {
+            $this->mutate(fn () => $this->store($identifier, $overwrite), $this->getConnection());
+
+            return;
+        }
         $content = $this->getContent();
-        $exists = $this->storedCart($identifier, $this->currentInstance())->exists();
+        $exists = $this->storedCart($identifier, $this->currentInstance())->lockForUpdate()->exists();
 
         if ($exists && ! $overwrite) {
             throw new CartAlreadyStoredException(__('laravel-cart::cart.cart_already_stored', ['identifier' => $identifier]));
         }
 
+        $this->globalCoupons = $this->storedGlobalCoupons();
         $serializedContent = CartContentCodec::encode($content);
         $couponsJson = $this->globalCoupons->isNotEmpty()
             ? json_encode($this->globalCoupons->map(fn (CartCoupon $c) => $c->toArray())->values()->all(), JSON_THROW_ON_ERROR)
@@ -545,9 +591,9 @@ class Cart
         }
 
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.stored');
+            $this->emit('cart.stored');
         }
-        $this->events->dispatch(new CartStored($identifier, $this->currentInstance()));
+        $this->emit(new CartStored($identifier, $this->currentInstance()));
     }
 
     /**
@@ -556,15 +602,25 @@ class Cart
      */
     public function restore(int|string $identifier, bool $mergeOnRestore = false, bool $keepStored = false): void
     {
-        // Prefer the row stored for the current instance; fall back to any
-        // instance stored under the identifier (single-instance behaviour).
         $stored = $this->storedCart($identifier, $this->currentInstance())->first()
             ?? $this->storedCart($identifier)->first();
-
         if ($stored === null) {
             return;
         }
+        // Select the destination before entering its read/modify/write boundary.
+        // Re-read the exact snapshot under that boundary: a concurrently deleted
+        // source is a no-op, never a fallback to a different unlocked instance.
+        $storedInstance = Coerce::string($stored->instance);
+        $this->mutate(function () use ($identifier, $mergeOnRestore, $keepStored, $storedInstance): void {
+            $locked = $this->storedCart($identifier, $storedInstance)->lockForUpdate()->first();
+            if ($locked !== null) {
+                $this->restoreSnapshot($identifier, $mergeOnRestore, $keepStored, $locked);
+            }
+        }, $this->getConnection(), 'cart.'.$storedInstance);
+    }
 
+    private function restoreSnapshot(int|string $identifier, bool $mergeOnRestore, bool $keepStored, stdClass $stored): void
+    {
         $storedContent = CartContentCodec::decode(Coerce::nullableString($stored->content));
 
         if ($storedContent === null) {
@@ -604,9 +660,9 @@ class Cart
         }
 
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.restored');
+            $this->emit('cart.restored');
         }
-        $this->events->dispatch(new CartRestored($identifier, $this->currentInstance()));
+        $this->emit(new CartRestored($identifier, $this->currentInstance()));
 
         $this->storage->put($this->instance, $content);
 
@@ -708,6 +764,10 @@ class Cart
 
     public function setMeta(string $key, mixed $value): static
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->setMeta($key, $value));
+        }
+
         $meta = $this->meta();
         $meta[$key] = $value;
         $this->storage->put($this->instance.'_meta', $meta);
@@ -732,6 +792,10 @@ class Cart
 
     public function forgetMeta(string $key): static
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->forgetMeta($key));
+        }
+
         $meta = $this->meta();
         unset($meta[$key]);
         $this->storage->put($this->instance.'_meta', $meta);
@@ -758,6 +822,12 @@ class Cart
 
         if ($items === null) {
             throw new CartStorageException(sprintf('The cart storage key [%s] does not hold a collection of cart items.', $this->instance));
+        }
+
+        if (! $this->mutating) {
+            foreach ($items as $item) {
+                $this->references[$item] = $this->referenceContext();
+            }
         }
 
         return $items;
@@ -865,16 +935,12 @@ class Cart
      */
     public function addBatch(array $items): Collection
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->addBatch($items));
+        }
+
         foreach ($items as $item) {
-            $this->addItem(
-                $item['id'],
-                $item['name'] ?? null,
-                $item['subtitle'] ?? null,
-                $item['qty'] ?? null,
-                $item['price'] ?? null,
-                $item['totalPrice'] ?? null,
-                $item['vat'] ?? null
-            );
+            $this->add($item);
         }
 
         return $this->content();
@@ -925,8 +991,9 @@ class Cart
         return collect($this->coupons())->map(fn (object $c): CartCoupon => new CartCoupon(
             hash: $c->couponCode,
             code: $c->couponCode,
-            type: $c->couponType,
+            type: $c->couponType === 'global' ? 'fixed' : $c->couponType,
             value: $c->couponValue,
+            isGlobal: $c->couponType === 'global',
         ));
     }
 
@@ -961,6 +1028,12 @@ class Cart
         string $couponType,
         float $couponValue
     ): void {
+        if (! $this->mutating) {
+            $this->mutate(fn () => $this->addItemCoupon($rowId, $couponCode, $couponType, $couponValue));
+
+            return;
+        }
+
         if (! is_null($rowId)) {
             $cartItem = $this->get($rowId);
 
@@ -978,6 +1051,12 @@ class Cart
 
     public function detachCoupon(string $rowId, string $couponCode): void
     {
+        if (! $this->mutating) {
+            $this->mutate(fn () => $this->detachCoupon($rowId, $couponCode));
+
+            return;
+        }
+
         $cartItem = $this->get($rowId);
 
         $cartItem->detachCoupon($couponCode);
@@ -1024,6 +1103,10 @@ class Cart
      */
     public function removeCoupon(string $couponCode): static
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->removeCoupon($couponCode));
+        }
+
         $content = $this->getContent();
         $found = false;
 
@@ -1042,7 +1125,7 @@ class Cart
         }
 
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.coupon_removed', $couponCode);
+            $this->emit('cart.coupon_removed', $couponCode);
         }
 
         return $this;
@@ -1050,6 +1133,10 @@ class Cart
 
     public function removeAllCoupons(): static
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->removeAllCoupons());
+        }
+
         $content = $this->getContent();
 
         foreach ($content as $cartItem) {
@@ -1064,7 +1151,7 @@ class Cart
         $this->storage->put($this->instance, $content);
 
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.coupons_cleared');
+            $this->emit('cart.coupons_cleared');
         }
 
         return $this;
@@ -1083,6 +1170,10 @@ class Cart
      */
     public function addCoupon(string|CartCoupon|Couponable $coupon): static
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->addCoupon($coupon));
+        }
+
         if (is_string($coupon)) {
             $coupon = new CartCoupon(
                 hash: md5($coupon),
@@ -1126,7 +1217,7 @@ class Cart
         $this->globalCoupons->put($coupon->hash, $coupon);
         $this->persistGlobalCoupons();
 
-        $this->events->dispatch(new CouponApplied($coupon, $this->currentInstance()));
+        $this->emit(new CouponApplied($coupon, $this->currentInstance()));
 
         return $this;
     }
@@ -1139,6 +1230,10 @@ class Cart
      */
     public function removeCartCoupon(string $hashOrCode): static
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->removeCartCoupon($hashOrCode));
+        }
+
         $coupon = $this->findCartCoupon($hashOrCode);
 
         if ($coupon === null) {
@@ -1148,7 +1243,7 @@ class Cart
         $this->globalCoupons->forget($coupon->hash);
         $this->persistGlobalCoupons();
 
-        $this->events->dispatch(new CouponRemovedEvent($coupon, $this->currentInstance()));
+        $this->emit(new CouponRemovedEvent($coupon, $this->currentInstance()));
 
         return $this;
     }
@@ -1160,6 +1255,10 @@ class Cart
      */
     public function listCoupons(): Collection
     {
+        if (! $this->mutating) {
+            $this->globalCoupons = $this->storedGlobalCoupons();
+        }
+
         return $this->globalCoupons;
     }
 
@@ -1178,6 +1277,10 @@ class Cart
      */
     public function syncCoupons(): array
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->syncCoupons());
+        }
+
         $removed = [];
         $currentTotal = $this->rawTotal();
 
@@ -1197,6 +1300,10 @@ class Cart
 
     private function findCartCoupon(string $hashOrCode): ?CartCoupon
     {
+        if (! $this->mutating) {
+            $this->globalCoupons = $this->storedGlobalCoupons();
+        }
+
         return $this->globalCoupons->get($hashOrCode)
             ?? $this->globalCoupons->first(fn (CartCoupon $c): bool => $c->code === $hashOrCode);
     }
@@ -1210,36 +1317,28 @@ class Cart
      */
     public function sync(array $items): static
     {
-        $currentRowIds = $this->content()->keys()->all();
-        $newIds = array_column($items, 'id');
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->sync($items));
+        }
 
-        foreach ($currentRowIds as $rowId) {
-            $cartItem = $this->get($rowId);
-            if (! in_array($cartItem->id, $newIds, strict: true)) {
+        $rows = [];
+        foreach ($items as $item) {
+            $candidate = CartItem::fromArray($item);
+            if (isset($rows[$candidate->rowId])) {
+                throw new \InvalidArgumentException('sync() requires unique product/options row identities.');
+            }
+            $rows[$candidate->rowId] = $item;
+        }
+        foreach ($this->content()->keys() as $rowId) {
+            if (! isset($rows[$rowId])) {
                 $this->remove($rowId);
             }
         }
-
-        foreach ($items as $item) {
-            $existing = $this->search(fn (CartItem $c): bool => $c->id === $item['id'])->first();
-            if ($existing !== null) {
-                $this->update($existing->rowId, $item['qty']);
+        foreach ($rows as $rowId => $item) {
+            if ($this->content()->has($rowId)) {
+                $this->update($rowId, $item['qty']);
             } else {
-                $this->addItem(
-                    $item['id'],
-                    $item['name'],
-                    $item['subtitle'] ?? '',
-                    $item['qty'],
-                    $item['price'],
-                    $item['totalPrice'] ?? $item['price'],
-                    $item['vat'] ?? 0.0,
-                    $item['vatFcCode'] ?? '',
-                    $item['productFcCode'] ?? '',
-                    $item['urlImg'] ?? '',
-                    null,
-                    null,
-                    $item['options'] ?? []
-                );
+                $this->add($item);
             }
         }
 
@@ -1259,6 +1358,10 @@ class Cart
         string $type,
         float|int $value,
     ): static {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->addGlobalCoupon($couponHash, $code, $type, $value));
+        }
+
         $coupon = new CartCoupon(
             hash: $couponHash,
             code: $code,
@@ -1271,7 +1374,7 @@ class Cart
         $this->persistGlobalCoupons();
 
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.global_coupon_added', $coupon);
+            $this->emit('cart.global_coupon_added', $coupon);
         }
 
         return $this;
@@ -1282,6 +1385,10 @@ class Cart
      */
     public function removeGlobalCoupon(string $couponHash): static
     {
+        if (! $this->mutating) {
+            return $this->mutate(fn () => $this->removeGlobalCoupon($couponHash));
+        }
+
         $coupon = $this->globalCoupons->get($couponHash);
 
         if ($coupon === null) {
@@ -1292,7 +1399,7 @@ class Cart
         $this->persistGlobalCoupons();
 
         if (config('cart.use_legacy_events', true)) {
-            $this->events->dispatch('cart.global_coupon_removed', $coupon);
+            $this->emit('cart.global_coupon_removed', $coupon);
         }
 
         return $this;
@@ -1303,6 +1410,10 @@ class Cart
      */
     public function getGlobalCoupons(): Collection
     {
+        if (! $this->mutating) {
+            $this->globalCoupons = $this->storedGlobalCoupons();
+        }
+
         return $this->globalCoupons;
     }
 
@@ -1311,29 +1422,40 @@ class Cart
      */
     public function globalCouponDiscount(string $total): string
     {
+        if (! $this->mutating) {
+            $this->globalCoupons = $this->storedGlobalCoupons();
+        }
+
+        $scale = max(4, CartConfig::decimals() + 4);
         $remaining = $total;
         $totalDiscount = '0';
 
         $sorted = $this->globalCoupons->sortBy(fn (CartCoupon $c): int => $c->isPercentage() ? 0 : 1);
 
         foreach ($sorted as $coupon) {
-            if (bccomp($remaining, '0', 4) <= 0) {
+            if (bccomp($remaining, '0', $scale) <= 0) {
                 break;
             }
 
+            $couponValue = (string) $coupon->value;
+            if (str_contains($couponValue, 'E')) {
+                [$significand, $exponent] = explode('E', $couponValue);
+                $fraction = explode('.', $significand)[1] ?? '';
+                $couponValue = number_format($coupon->value, max(0, strlen($fraction) - (int) $exponent), '.', '');
+            }
             if ($coupon->isPercentage()) {
-                $discount = bcdiv(bcmul($remaining, (string) $coupon->value, 4), '100', 4);
+                $discount = bcdiv(bcmul($remaining, $couponValue, $scale), '100', $scale);
             } else {
-                $discount = bccomp((string) $coupon->value, $remaining, 4) > 0
+                $discount = bccomp($couponValue, $remaining, $scale) > 0
                     ? $remaining
-                    : (string) $coupon->value;
+                    : $couponValue;
             }
 
-            $totalDiscount = bcadd($totalDiscount, $discount, 4);
-            $remaining = bcsub($remaining, $discount, 4);
+            $totalDiscount = bcadd($totalDiscount, $discount, $scale);
+            $remaining = bcsub($remaining, $discount, $scale);
         }
 
-        return number_format((float) $totalDiscount, 2, '.', '');
+        return number_format($this->formatFloat((float) $totalDiscount), CartConfig::decimals(), '.', '');
     }
 
     /**
@@ -1345,6 +1467,12 @@ class Cart
         string $couponType,
         float $couponValue
     ): void {
+        if (! $this->mutating) {
+            $this->mutate(fn () => $this->applyGlobalCoupon($couponCode, $couponType, $couponValue));
+
+            return;
+        }
+
         $discount_value = 0.0;
         $originalTotalPrice = $this->originalTotalPrice();
         switch ($couponType) {
@@ -1392,6 +1520,12 @@ class Cart
      */
     public function setOptions(array $options): void
     {
+        if (! $this->mutating) {
+            $this->mutate(fn () => $this->setOptions($options));
+
+            return;
+        }
+
         $content = $this->getCartInfo();
 
         $content->put(self::CART_OPTIONS_KEY, $options);
@@ -1482,6 +1616,154 @@ class Cart
     private function formatFloat(float $value): float
     {
         return CartConfig::round($value);
+    }
+
+    /**
+     * @template T
+     *
+     * @param  Closure(): T  $operation
+     * @return T
+     */
+    private function mutate(Closure $operation, ?Connection $snapshotConnection = null, ?string $boundaryInstance = null): mixed
+    {
+        $storage = $this->storage;
+        $originalInstance = $this->instance;
+        $boundaryInstance ??= $originalInstance;
+        $this->getContent();
+        $run = function () use ($storage, $operation, $boundaryInstance, $originalInstance): mixed {
+            $staged = new StagedStorage($storage);
+            $this->storage = $staged;
+            $this->mutating = true;
+            $this->pendingEvents = [];
+            $this->rowMoves = [];
+            try {
+                $this->globalCoupons = $this->storedGlobalCoupons();
+                $result = $operation();
+                $this->instance = $boundaryInstance;
+                $content = $this->getContent();
+                foreach ($content as $item) {
+                    $this->enforceCartLimits($content, $item);
+                }
+                $staged->flush();
+
+                return $result;
+            } finally {
+                $this->storage = $storage;
+                $this->instance = $originalInstance;
+                $this->mutating = false;
+                $this->globalCoupons = new Collection;
+            }
+        };
+        try {
+            $persist = $snapshotConnection !== null ? fn () => $snapshotConnection->transaction($run) : $run;
+            $result = $storage instanceof AtomicCartStorage ? $storage->atomic($boundaryInstance, $persist) : $persist();
+            $events = $this->pendingEvents;
+            $context = $this->referenceContext($boundaryInstance);
+            $this->rememberReferences($result, $context);
+            $rowMoves = $this->rowMoves;
+            $committed = $storage->get($boundaryInstance);
+
+        } finally {
+            $this->pendingEvents = [];
+        }
+        $publish = function () use ($events, $committed, $context, $rowMoves): void {
+            if ($committed instanceof Collection) {
+                foreach ($this->references as $reference => $referenceContext) {
+                    $rowId = $reference->rowId;
+                    // A row can be re-keyed more than once inside one operation.
+                    $visited = [];
+                    while (isset($rowMoves[$rowId]) && ! isset($visited[$rowId])) {
+                        $visited[$rowId] = true;
+                        $rowId = $rowMoves[$rowId];
+                    }
+                    $accepted = $referenceContext === $context ? $committed->get($rowId) : null;
+                    if ($accepted instanceof CartItem) {
+                        foreach (get_object_vars($accepted) as $property => $value) {
+                            $reference->{$property} = $value;
+                        }
+                    }
+                }
+            }
+            foreach ($events as [$event, $payload]) {
+                $this->events->dispatch($event, $payload);
+            }
+        };
+        if ($snapshotConnection !== null && $snapshotConnection->transactionLevel() > 0) {
+            $snapshotConnection->afterCommit($publish);
+        } elseif ($storage instanceof AtomicCartStorage) {
+            $storage->afterCommit($publish);
+        } else {
+            $publish();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Internal transfer coordinator. Applications should use TransferGuestCart.
+     * Matching authenticated rows retain prices and coupons; guest-only rows retain
+     * their base amounts until the application revalidates its catalog.
+     *
+     * @internal
+     *
+     * @param  Collection<string, CartItem>  $items
+     * @param  Collection<string, CartCoupon>  $coupons
+     * @param  array<array-key, mixed>  $info
+     * @param  array<array-key, mixed>  $meta
+     */
+    public function mergeGuestState(Collection $items, Collection $coupons, array $info, array $meta): void
+    {
+        $this->mutate(function () use ($items, $coupons, $info, $meta): void {
+            $content = $this->getContent();
+            foreach ($items as $rowId => $guest) {
+                $authenticated = $content->get($rowId);
+                if ($authenticated !== null) {
+                    $authenticated->qty += $guest->qty;
+                } else {
+                    $content->put($rowId, clone $guest);
+                }
+            }
+            // Validate the complete candidate rather than intermediate merge states.
+            foreach ($content as $item) {
+                $this->enforceCartLimits($content, $item);
+            }
+            $this->storage->put($this->instance, $content);
+            $retained = new Collection;
+            foreach ($this->globalCoupons->concat($coupons) as $coupon) {
+                if (! $retained->contains(fn (CartCoupon $existing): bool => $existing->hash === $coupon->hash || $existing->code === $coupon->code)) {
+                    $retained->put($coupon->hash, $coupon);
+                }
+            }
+            $this->globalCoupons = $retained;
+            $this->persistGlobalCoupons();
+            $this->syncCoupons();
+            $guestOptions = $info[self::CART_OPTIONS_KEY] ?? [];
+            $this->setOptions(array_replace(is_array($guestOptions) ? $guestOptions : [], $this->getOptions()));
+            $this->storage->put($this->instance.'_meta', array_replace($meta, $this->meta()));
+        });
+    }
+
+    private function rememberReferences(mixed $result, string $context): void
+    {
+        if ($result instanceof CartItem) {
+            $this->references[$result] = $context;
+        } elseif (is_array($result) || $result instanceof Collection) {
+            foreach ($result as $value) {
+                $this->rememberReferences($value, $context);
+            }
+        }
+    }
+
+    private function referenceContext(?string $instance = null): string
+    {
+        $owner = auth()->id();
+
+        return ($instance ?? $this->instance)."\0".($owner !== null ? 'user:'.$owner : 'session:'.session()->getId());
+    }
+
+    private function emit(object|string $event, mixed $payload = []): void
+    {
+        $this->pendingEvents[] = [$event, $payload];
     }
 
     private function persistGlobalCoupons(): void

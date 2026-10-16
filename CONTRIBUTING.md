@@ -107,3 +107,11 @@ Maintainers: the full policy, admin setup and recovery steps (including `workflo
 ## Security
 
 Please do not report security vulnerabilities in public issues. Contact the maintainers at info@offlineagency.it instead.
+
+## Current v4 correctness contracts
+
+See the [maintained v4 documentation](docs/v4/index.md) and
+[storage/event guarantees](docs/v4/storage.md). BCMath is a runtime requirement.
+Price-only updates mean net base at the retained VAT rate; coupons remain once per row.
+Run `composer docs:check` and `composer examples:check` alongside existing quality gates.
+Live guest transfer is explicitly enabled; snapshots keep their separate migration path.

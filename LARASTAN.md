@@ -34,3 +34,11 @@ vendor/bin/phpstan clear-result-cache
 - Use native types where PHP allows them, and generics / array shapes (`Collection<string, CartItem>`, `array{rate: float, ...}`) where it does not.
 - Keep `mixed` only at real input boundaries (config values, database rows, decoded JSON, console options, request data) and narrow it right after validation. `OfflineAgency\LaravelCart\Support\Coerce` and `Support\CartConfig` hold the shared narrowing helpers.
 - If a genuine PHPStan or Larastan defect blocks a change, add one narrowly scoped `ignoreErrors` entry (identifier, path and message) with a comment linking the upstream issue, and mention it in the pull request.
+
+## Current v4 correctness contracts
+
+See the [maintained v4 documentation](docs/v4/index.md) and
+[storage/event guarantees](docs/v4/storage.md). BCMath is a runtime requirement.
+Price-only updates mean net base at the retained VAT rate; coupons remain once per row.
+Run `composer docs:check` and `composer examples:check` alongside existing quality gates.
+Live guest transfer is explicitly enabled; snapshots keep their separate migration path.

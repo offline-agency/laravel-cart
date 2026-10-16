@@ -1,0 +1,26 @@
+# Disposable package test databases only. No application volumes or credentials.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: laravel_cart_test
+      POSTGRES_PASSWORD: cart_test
+    ports: ['127.0.0.1:18471:5432']
+    tmpfs: ['/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: laravel_cart_test
+      MYSQL_ROOT_PASSWORD: cart_test
+    ports: ['127.0.0.1:18472:3306']
+    tmpfs: ['/var/lib/mysql']
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h localhost -pcart_test']
+      interval: 2s
+      timeout: 2s
+      retries: 30

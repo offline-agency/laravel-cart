@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Declare ext-bcmath and honor configured cart-coupon precision.
+- Recalculate base/current price, VAT and gross on array/Buyable updates, retaining row coupons.
+- Stage live mutations, make batches/sync atomic, preserve option variants and publish successful events after commit.
+- Lock database package mutations before reading; refresh cart-level coupons across owners/TTL.
+- Add opt-in trusted guest transfer around login/session regeneration with transactional merge and retries.
+- Maintain versioned docs, executable examples and optional Laravel Boost package resources.
+- Add MySQL and distribution/documentation/release tooling verification to CI.
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

@@ -85,22 +85,27 @@ abstract class FeatureTestCase extends Orchestra
             return ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''];
         }
 
+        $driver = (string) getenv('CART_TEST_DB_DRIVER');
+        $database = getenv('CART_TEST_DB_DATABASE') ?: 'laravel_cart_test';
+        if (! str_starts_with($database, 'laravel_cart_test')) {
+            throw new LogicException('Server tests may wipe only dedicated laravel_cart_test databases.');
+        }
+
         return [
-            'driver' => (string) getenv('CART_TEST_DB_DRIVER'),
+            'driver' => $driver,
             'host' => getenv('CART_TEST_DB_HOST') ?: '127.0.0.1',
-            'port' => getenv('CART_TEST_DB_PORT') ?: '5432',
-            'database' => getenv('CART_TEST_DB_DATABASE') ?: 'laravel_cart_test',
-            'username' => getenv('CART_TEST_DB_USERNAME') ?: 'postgres',
+            'port' => getenv('CART_TEST_DB_PORT') ?: ($driver === 'mysql' ? '3306' : '5432'),
+            'database' => $database,
+            'username' => getenv('CART_TEST_DB_USERNAME') ?: ($driver === 'mysql' ? 'root' : 'postgres'),
             'password' => getenv('CART_TEST_DB_PASSWORD') ?: '',
-            'charset' => 'utf8',
+            'charset' => $driver === 'mysql' ? 'utf8mb4' : 'utf8',
             'prefix' => '',
-            'search_path' => 'public',
-            'sslmode' => 'prefer',
+            ...($driver === 'pgsql' ? ['search_path' => 'public', 'sslmode' => 'prefer'] : ['collation' => 'utf8mb4_unicode_ci']),
         ];
     }
 
     private static function usesServerDatabase(): bool
     {
-        return in_array(getenv('CART_TEST_DB_DRIVER'), ['pgsql'], true);
+        return in_array(getenv('CART_TEST_DB_DRIVER'), ['pgsql', 'mysql'], true);
     }
 }

@@ -29,6 +29,7 @@ jobs:
             - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
               with:
                   php-version: "8.5"
+                  extensions: bcmath, mbstring, dom, fileinfo, pdo_sqlite
                   coverage: none
 
             - name: Install dependencies
@@ -42,6 +43,19 @@ jobs:
 
             - name: Check code style
               run: composer lint:check
+
+            - name: Documentation and example drift checks
+              run: |
+                  composer docs:check
+                  composer examples:check
+                  node --test scripts/test/*.test.mjs
+
+            # Also runs on main's exact push SHA before the aggregate release gate.
+            - name: Release tooling tests
+              run: node --test .github/scripts/release/test/*.test.mjs
+
+            - name: Clean consumer and installed Boost resources
+              run: node scripts/consumer-smoke.mjs
 
     tests:
         name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} (${{ matrix.dependencies }})
@@ -73,11 +87,12 @@ jobs:
             - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
               with:
                   php-version: ${{ matrix.php }}
-                  extensions: mbstring, dom, fileinfo, pdo_sqlite
+                  extensions: bcmath, mbstring, dom, fileinfo, pdo_sqlite, pcntl
                   coverage: ${{ matrix.coverage && 'pcov' || 'none' }}
 
             # Testbench, Pest, its Laravel plugin and PHPUnit follow from the framework line:
-            # Laravel 12 resolves Pest 4 / PHPUnit 12, Laravel 13 resolves Pest 5 / PHPUnit 13.
+            # Laravel 12 resolves Pest 4 / PHPUnit 12. Laravel 13 highest resolves Pest 5 /
+            # PHPUnit 13; lowest may retain compatible Pest 4 / PHPUnit 12.
             - name: Install dependencies
               env:
                   LARAVEL: ${{ matrix.laravel }}
@@ -143,7 +158,46 @@ jobs:
             - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
               with:
                   php-version: "8.5"
-                  extensions: mbstring, dom, fileinfo, pdo_pgsql
+                  extensions: bcmath, mbstring, dom, fileinfo, pdo_pgsql, pcntl
+                  coverage: none
+
+            - name: Install dependencies
+              run: composer update --prefer-dist --no-interaction --no-progress --with "laravel/framework:13.*"
+
+            - name: Tests
+              run: composer test
+
+    mysql:
+        name: MySQL 8.4 (PHP 8.5 / Laravel 13)
+        runs-on: ubuntu-latest
+        services:
+            mysql:
+                image: mysql:8.4
+                env:
+                    MYSQL_ROOT_PASSWORD: mysql
+                    MYSQL_DATABASE: laravel_cart_test
+                ports: ["3306:3306"]
+                options: >-
+                    --health-cmd "mysqladmin ping -h localhost -pmysql"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
+        env:
+            CART_TEST_DB_DRIVER: mysql
+            CART_TEST_DB_HOST: 127.0.0.1
+            CART_TEST_DB_PORT: "3306"
+            CART_TEST_DB_DATABASE: laravel_cart_test
+            CART_TEST_DB_USERNAME: root
+            CART_TEST_DB_PASSWORD: mysql
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+              with:
+                  php-version: "8.5"
+                  extensions: bcmath, mbstring, dom, fileinfo, pdo_mysql, pcntl
                   coverage: none
 
             - name: Install dependencies
@@ -155,7 +209,7 @@ jobs:
     required:
         name: CI passed
         if: ${{ always() }}
-        needs: [quality, tests, postgres]
+        needs: [quality, tests, postgres, mysql]
         runs-on: ubuntu-latest
         steps:
             - name: Require every job to succeed

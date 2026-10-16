@@ -103,6 +103,11 @@ return [
     |--------------------------------------------------------------------------
     */
 
+    'guest_transfer' => [
+        'enabled' => false,
+        'instances' => ['default'],
+    ],
+
     'middleware' => [
 
         'merge_on_login' => false,
