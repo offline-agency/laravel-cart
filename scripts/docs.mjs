@@ -4,15 +4,24 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFile(resolve(root, path), 'utf8');
-const source = await read('examples/quick-start.php');
-const excerpt = source.split('    // docs:start\n')[1]?.split('    // docs:end')[0];
-if (!excerpt) throw new Error('Missing maintained example markers');
-const snippet = excerpt.split('\n').map(line => line.replace(/^    /, '')).join('\n').trimEnd();
-const usage = await read('docs/v4/usage.md');
-const generated = usage.replace(/(<!-- example:quick-start:start -->)[\s\S]*?(<!-- example:quick-start:end -->)/,
-    `$1\n\n\`\`\`php\n${snippet}\n\`\`\`\n\n$2`);
-if (process.argv.includes('--write')) await writeFile(resolve(root, 'docs/v4/usage.md'), generated);
-else if (usage !== generated) throw new Error('Stale example snippet: node scripts/docs.mjs --write');
+const sources = {
+    'quick-start': ['examples/quick-start.php', ''],
+    'payable-tax': ['examples/payable-tax.php', ''],
+    'cart-add': ['examples/CartActions.php', 'add:'],
+    'cart-update': ['examples/CartActions.php', 'update:'],
+    'wishlist-move': ['examples/CartActions.php', 'move:'],
+};
+async function snippet(name) {
+    const definition = sources[name];
+    if (!definition) throw new Error(`Unknown maintained example: ${name}`);
+    const [path, marker] = definition;
+    const source = await read(path);
+    const excerpt = source.split(`// docs:${marker}start\n`)[1]?.split(`// docs:${marker}end`)[0];
+    if (!excerpt) throw new Error(`Missing maintained example markers: ${name}`);
+    const lines = excerpt.trimEnd().split('\n');
+    const indent = Math.min(...lines.filter(line => line.trim()).map(line => line.match(/^\s*/)[0].length));
+    return lines.map(line => line.slice(indent)).join('\n');
+}
 
 async function markdownFiles(directory) {
     const entries = await readdir(resolve(root, directory), { withFileTypes: true });
@@ -22,6 +31,16 @@ async function markdownFiles(directory) {
     return nested.flat();
 }
 const files = ['README.md', 'UPGRADE.md', 'CONTRIBUTING.md', 'LARASTAN.md', 'SECURITY.md', ...await markdownFiles('docs')];
+for (const file of files) {
+    const body = await read(file);
+    let generated = body;
+    for (const match of body.matchAll(/<!-- example:([a-z-]+):start -->[\s\S]*?<!-- example:\1:end -->/g)) {
+        const name = match[1];
+        generated = generated.replace(match[0], `<!-- example:${name}:start -->\n\n\`\`\`php\n${await snippet(name)}\n\`\`\`\n\n<!-- example:${name}:end -->`);
+    }
+    if (process.argv.includes('--write')) await writeFile(resolve(root, file), generated);
+    else if (body !== generated) throw new Error(`Stale example snippet in ${file}: node scripts/docs.mjs --write`);
+}
 const slug = text => text.toLowerCase().replace(/<[^>]*>/g, '').replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/ /g, '-');
 function anchors(text) {
     const result = new Set([...text.matchAll(/<a\s+(?:id|name)="([^"]+)"/g)].map(m => m[1]));

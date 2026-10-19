@@ -37,3 +37,18 @@ for (const [name, addition] of [
         } finally { await rm(dir, { recursive: true, force: true }); }
     });
 }
+
+for (const [name, path, before, after] of [
+    ['recipe snippet', 'docs/v4/recipes/index.md', '$this->cart->add(', '$this->cart->missing('],
+    ['tax snippet', 'docs/v4/post-discount-tax.md', '$cart->payableTaxBreakdown()', '$cart->missing()'],
+]) {
+    test(`documentation checker rejects stale ${name}`, async () => {
+        const dir = await fixture();
+        try {
+            assert.equal(spawnSync('node', ['scripts/docs.mjs'], { cwd: dir }).status, 0);
+            const file = join(dir, path);
+            await writeFile(file, (await readFile(file, 'utf8')).replace(before, after));
+            assert.notEqual(spawnSync('node', ['scripts/docs.mjs'], { cwd: dir }).status, 0);
+        } finally { await rm(dir, { recursive: true, force: true }); }
+    });
+}

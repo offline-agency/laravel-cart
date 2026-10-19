@@ -14,6 +14,7 @@ use OfflineAgency\LaravelCart\CartItem;
 use OfflineAgency\LaravelCart\Contracts\Buyable;
 use OfflineAgency\LaravelCart\Contracts\Couponable;
 use OfflineAgency\LaravelCart\Storage\SessionStorage;
+use OfflineAgency\LaravelCart\TaxBreakdown;
 use OfflineAgency\LaravelCart\Testing\CartFake;
 
 /**
@@ -40,6 +41,7 @@ use OfflineAgency\LaravelCart\Testing\CartFake;
  * @method static float vat(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null)
  * @method static float subtotal(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null)
  * @method static float originalTotalPrice(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null)
+ * @method static TaxBreakdown payableTaxBreakdown()
  * @method static float discount()
  * @method static Collection<int, array{rate: float, net: string, vat: string, tax: string, gross: string, tax_name: string}> vatBreakdown()
  * @method static Collection<string, CartItem> search(Closure(CartItem, string): bool $search)

@@ -39,6 +39,7 @@ use OfflineAgency\LaravelCart\Support\CartConfig;
 use OfflineAgency\LaravelCart\Support\CartContentCodec;
 use OfflineAgency\LaravelCart\Support\Coerce;
 use OfflineAgency\LaravelCart\Support\CouponData;
+use OfflineAgency\LaravelCart\Support\TaxAllocator;
 use stdClass;
 
 /**
@@ -446,7 +447,7 @@ class Cart
     }
 
     /**
-     * Get the total discount amount produced by all cart-level coupons against the current subtotal.
+     * Get the cart-level coupon discount against gross after item coupons.
      */
     public function discount(): float
     {
@@ -454,7 +455,17 @@ class Cart
     }
 
     /**
-     * Return a Collection grouped by tax rate for generating fiscal receipts.
+     * Allocate cart discounts into row/rate net, VAT and gross without mutating state.
+     */
+    public function payableTaxBreakdown(): TaxBreakdown
+    {
+        $allocator = new TaxAllocator;
+
+        return $allocator->allocate($this->getContent(), $this->rawTotal(), (string) $this->discount(), $this->total());
+    }
+
+    /**
+     * Return the tax-rate breakdown before cart-level coupon discounts.
      *
      * @return Collection<int, array{rate: float, net: string, vat: string, tax: string, gross: string, tax_name: string}>
      */

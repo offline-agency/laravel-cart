@@ -13,7 +13,8 @@ isolated branch/worktree for feature work.
   test:coverage, docs:check, examples:check and Node release tests. Keep PHPStan max,
   no baseline/blanket ignores, and the existing 100% coverage gate.
 - Monetary invariants: base unit amounts survive coupons; discounts apply once per row.
-  Net + VAT = gross at precision; cart coupons reduce payable without VAT allocation.
+  Net + VAT = gross at precision. Legacy tax methods are before cart coupons;
+  payableTaxBreakdown() allocates them separately with deterministic residuals.
   Stage state before writes; emit successful events after commit, including outer commits.
 - No library lockfile is tracked. Keep Pest/PHPUnit/Testbench compatible by Laravel line.
 - Release policy: one numeric SemVer tag/release per merged main PR, exact merge SHA,
