@@ -10,13 +10,13 @@ The package is analysed with [PHPStan](https://phpstan.org) and the [Larastan](h
 |---|---|---|
 | `level` | `max` | The strictest rule level (currently 10). |
 | `phpVersion` | `80400` | The minimum supported runtime (PHP 8.4), so code that needs 8.5 is reported. |
-| `paths` | `src`, `config`, `database`, `tests` | Shipped code, the published config and migrations, and the test suite including `tests/Fixtures`. |
+| `paths` | `src`, `config`, `database`, `tests`, `examples`, `benchmarks` | Runtime, published configuration/migrations, fixtures, canonical application examples and the read-path harness. |
 | `configDirectories` | the package's `config/` | Tells Larastan where the package's config files live, so `env()` calls in `config/cart.php` are recognised as config. |
 | `stubFiles` | `tests/phpstan/pest-functions.stub` | Pest declares `$this` in `it()` / `beforeEach()` closures as `TestCall`; at runtime it is the test case. `tests/Pest.php` applies `FeatureTestCase` to the whole suite, and the stub states that type. |
 
 There is no `phpstan-baseline.neon` and no `ignoreErrors`. The exported traits (`CanBeBought`, `HasDiscount`, `HasFiscalCodes`) are analysed through the consumer classes in `tests/Fixtures`, not ignored as unused.
 
-Analysis runs in CI on every PHP 8.4/8.5 × Laravel 12/13 job (highest and lowest dependencies), so the same configuration is verified against Larastan with both framework lines.
+Analysis runs on PHP 8.4/8.5 × Laravel 12/13 with highest dependencies. Additional lowest-dependency jobs run PHP 8.4 only, on both framework lines; installed versions are printed by CI.
 
 ## Commands
 
@@ -33,7 +33,7 @@ vendor/bin/phpstan clear-result-cache
 - Fix the types instead of hiding errors. Do not add a baseline, `ignoreErrors`, `@phpstan-ignore`, inline `@var` overrides or `assert()` calls, and do not add casts only to make an error go away.
 - Use native types where PHP allows them, and generics / array shapes (`Collection<string, CartItem>`, `array{rate: float, ...}`) where it does not.
 - Keep `mixed` only at real input boundaries (config values, database rows, decoded JSON, console options, request data) and narrow it right after validation. `OfflineAgency\LaravelCart\Support\Coerce` and `Support\CartConfig` hold the shared narrowing helpers.
-- If a genuine PHPStan or Larastan defect blocks a change, add one narrowly scoped `ignoreErrors` entry (identifier, path and message) with a comment linking the upstream issue, and mention it in the pull request.
+- If an upstream analysis defect blocks a change, provide a minimal reproducer and report the blocker; do not hide it with a baseline, ignore or misleading type declaration.
 
 ## Current v4 correctness contracts
 

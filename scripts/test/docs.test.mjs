@@ -14,7 +14,7 @@ async function fixture() {
     await cp(resolve('scripts/docs.mjs'), join(dir, 'scripts/docs.mjs'));
     await cp(resolve('src/CartServiceProvider.php'), join(dir, 'src/CartServiceProvider.php'));
     // Link targets referenced by docs; their content is not executed.
-    for (const path of ['config', 'tests', 'resources', '.github', 'CHANGELOG.md', 'LICENSE', 'composer.json']) {
+    for (const path of ['config', 'tests', 'resources', '.github', 'CHANGELOG.md', 'LICENSE', 'composer.json', 'benchmarks']) {
         await cp(resolve(path), join(dir, path), { recursive: true });
     }
     return dir;
@@ -41,6 +41,7 @@ for (const [name, addition] of [
 for (const [name, path, before, after] of [
     ['recipe snippet', 'docs/v4/recipes/index.md', '$this->cart->add(', '$this->cart->missing('],
     ['tax snippet', 'docs/v4/post-discount-tax.md', '$cart->payableTaxBreakdown()', '$cart->missing()'],
+    ['checkout snippet', 'docs/v4/recipes/coupons-checkout.md', '$this->cart->addCoupon($coupon)', '$this->cart->missing($coupon)'],
 ]) {
     test(`documentation checker rejects stale ${name}`, async () => {
         const dir = await fixture();

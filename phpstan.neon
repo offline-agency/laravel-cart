@@ -10,6 +10,7 @@ parameters:
         - database
         - tests
         - examples
+        - benchmarks
     # The package's own config directory (Larastan defaults to the Testbench
     # skeleton's config_path(), where env() calls are allowed).
     configDirectories:

@@ -20,3 +20,6 @@ to remove coupons no longer eligible. Cart changes do not automatically revoke t
 in the [reference](reference.md). Legacy negative global discount rows remain valid;
 getCoupons() represents their amount as a fixed CartCoupon with isGlobal=true, while
 coupons() retains the legacy row metadata. See [tax limitations](money-and-tax.md).
+
+For an executed server-catalog/customer-policy integration, use the
+[coupon and checkout revalidation recipe](recipes/coupons-checkout.md).

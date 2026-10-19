@@ -10,8 +10,9 @@ isolated branch/worktree for feature work.
 - docs/v4/ is the canonical reference; examples/ contains executed snippet sources.
   resources/boost/ ships optional third-party guidelines and skill, with no runtime AI.
 - Run composer validate:strict, audit --abandoned=report, lint:check, analyse, test,
-  test:coverage, docs:check, examples:check and Node release tests. Keep PHPStan max,
+  test:coverage, docs:check, examples:check, bench:smoke and Node release tests. Keep PHPStan max,
   no baseline/blanket ignores, and the existing 100% coverage gate.
+- Product identity uses exact string conversion, matching row hashing; never cast keys to int.
 - Monetary invariants: base unit amounts survive coupons; discounts apply once per row.
   Net + VAT = gross at precision. Legacy tax methods are before cart coupons;
   payableTaxBreakdown() allocates them separately with deterministic residuals.

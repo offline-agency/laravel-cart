@@ -33,7 +33,7 @@ await writeFile(join(work, 'composer.json'), JSON.stringify(composer, null, 2));
 run('composer', ['update', '--no-dev', '--no-interaction', '--no-progress']);
 const installed = JSON.parse(await readFile(join(work, 'vendor/composer/installed.json'), 'utf8')).packages;
 if (installed.some(p => /^(pestphp\/|phpunit\/|orchestra\/testbench|larastan\/)/.test(p.name))) throw new Error('Package development dependencies leaked into consumer');
-for (const path of ['resources/boost/guidelines/core.blade.php', 'resources/boost/skills/laravel-cart-development/SKILL.md', 'docs/v4/index.md', 'examples/quick-start.php', 'examples/CartActions.php', 'examples/payable-tax.php', 'examples/RedisSessionExample.php']) {
+for (const path of ['resources/boost/guidelines/core.blade.php', 'resources/boost/skills/laravel-cart-development/SKILL.md', 'docs/v4/index.md', 'examples/quick-start.php', 'examples/CartActions.php', 'examples/payable-tax.php', 'examples/CheckoutValidation.php', 'examples/RedisSessionExample.php']) {
     await access(join(work, 'vendor/offline-agency/laravel-cart', path));
 }
 for (const path of ['bootstrap/cache', 'storage/framework/views', 'storage/framework/sessions', 'storage/logs', 'config']) await mkdir(join(work, path), { recursive: true });
@@ -57,6 +57,21 @@ if (OfflineAgency\\LaravelCart\\Examples\\QuickStart::run($cart)['payable'] !== 
 $cart->destroy();
 require __DIR__.'/vendor/offline-agency/laravel-cart/examples/payable-tax.php';
 if (OfflineAgency\\LaravelCart\\Examples\\PayableTaxExample::run($cart)->totals['vat'] !== '28.80') { throw new RuntimeException('Installed allocation failed'); }
+$cart->destroy();
+// Exercise shipped string identity and the canonical server policy without Testbench.
+$app['auth']->guard()->setUser(new Illuminate\\Auth\\GenericUser(['id' => 7]));
+$red = $cart->add(id: 'sku-red', name: 'Red', qty: 1, price: 10.0, totalPrice: 12.2, vat: 2.2);
+$blue = $cart->add(id: 'sku-blue', name: 'Blue', qty: 1, price: 10.0, totalPrice: 12.2, vat: 2.2);
+$cart->associate($red->rowId, stdClass::class);
+$cart->associate($blue->rowId, stdClass::class);
+if ($cart->searchById('sku-red', stdClass::class)?->id !== 'sku-red' || $cart->content()->count() !== 2) { throw new RuntimeException('Installed string identity failed'); }
+require __DIR__.'/vendor/offline-agency/laravel-cart/examples/CheckoutValidation.php';
+$policy = new OfflineAgency\\LaravelCart\\Examples\\CheckoutValidation($cart,
+    fn (): array => ['net' => 10.0, 'vat' => 2.2, 'gross' => 12.2, 'available' => 5],
+    fn (string $code): OfflineAgency\\LaravelCart\\CartCoupon => new OfflineAgency\\LaravelCart\\CartCoupon(hash: 'member', code: $code, type: 'fixed', value: 2.0));
+$policy->applyCoupon('MEMBER');
+$policy->validateForCheckout();
+if ($cart->total() !== 22.4) { throw new RuntimeException('Installed checkout policy failed'); }
 $cart->destroy();
 config(['cart.format.decimals' => 3]);
 $cart->add(id: 1, name: 'Precision', qty: 1, price: 1.235, vat: 0.0);

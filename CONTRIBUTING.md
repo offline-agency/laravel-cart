@@ -16,7 +16,7 @@ cd laravel-cart
 composer update
 ```
 
-`composer.lock` is not committed, so `composer update` resolves the newest versions allowed by `composer.json`. The test tooling follows the framework line: Laravel 12 resolves Testbench 10 / Pest 4 / PHPUnit 12, and Laravel 13 resolves Testbench 11 / Pest 5 / PHPUnit 13. To work against a specific line:
+`composer.lock` is not committed, so `composer update` resolves the newest versions allowed by `composer.json`. The test tooling follows the framework line: Laravel 12 resolves Testbench 10 / Pest 4 / PHPUnit 12, and Laravel 13 highest dependencies resolve Testbench 11 / Pest 5 / PHPUnit 13; lowest can retain compatible Pest 4 / PHPUnit 12. To work against a specific line:
 
 ```bash
 composer update --with "laravel/framework:12.*"
@@ -31,12 +31,15 @@ composer update --with "laravel/framework:13.*"
 | `composer test` | Pest test suite (SQLite in memory by default) |
 | `composer test:parallel` | Pest in parallel |
 | `composer test:coverage` | Pest with coverage; fails below **100%** |
-| `composer analyse` (alias `composer stan`) | PHPStan (Larastan) at max level over `src`, `config`, `database` and `tests`, no baseline (see [LARASTAN.md](LARASTAN.md)) |
+| `composer analyse` (alias `composer stan`) | PHPStan (Larastan) at max level over `src`, `config`, `database`, `tests`, `examples` and `benchmarks`, no baseline (see [LARASTAN.md](LARASTAN.md)) |
 | `composer lint` | Fix code style with Pint |
 | `composer lint:check` | Check code style without changing files |
 | `composer validate:strict` | `composer validate --strict` and a strict PSR-4 autoload dry run |
 
-Run `composer check` before you push.
+Run `composer check`, `composer docs:check`, `composer examples:check`,
+`composer bench:smoke` and `node --test scripts/test/*.test.mjs` before review.
+The [read-path harness](docs/v4/performance.md) reports raw local measurements; CI
+checks its fixed fixture without timing thresholds.
 
 ### Running the suite against PostgreSQL
 
@@ -63,7 +66,7 @@ docker run --rm -d --name laravel-cart-pg -p 5432:5432 \
 
 ### Lowest dependencies
 
-CI also runs every PHP / Laravel combination with the lowest allowed versions, to prove the floors in `composer.json` (`illuminate/*` `^12.69.2 || ^13.32`). To reproduce it locally:
+CI also runs PHP 8.4 on both Laravel lines with the lowest allowed versions, to prove the floors in `composer.json` (`illuminate/*` `^12.69.2 || ^13.32`). To reproduce it locally:
 
 ```bash
 composer update --prefer-lowest --with "laravel/framework:12.*"

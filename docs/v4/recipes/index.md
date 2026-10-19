@@ -7,6 +7,7 @@ The new recipe sources and allocation API are unreleased additions. See the
 - [Variants, wishlist and models](variants-wishlist.md)
 - [Livewire component](livewire.md)
 - [Inertia with Vue](inertia-vue.md)
+- [Server coupon / checkout validation](coupons-checkout.md)
 - [Authenticated API/mobile](api-mobile.md)
 - [Redis-backed Laravel sessions](redis-sessions.md)
 

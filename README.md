@@ -47,6 +47,23 @@ read/modify/write boundary; [storage guarantees and custom-driver limits](docs/v
 explain their scope. [Guest transfer](docs/v4/authentication.md) is explicitly enabled;
 legacy saved snapshots remain a separate mechanism.
 
+## Capabilities and proof
+
+| Requirement | Availability | Executed source / boundary |
+| --- | --- | --- |
+| VAT, coupons and session/database persistence | 4.1.0 | [Quick start](examples/quick-start.php), [mutation regressions](tests/Regression/MutationCorrectnessTest.php) |
+| Trusted login transfer and database concurrency | 4.1.0, transfer opt-in | [Login](tests/Feature/GuestTransferTest.php), [independent processes](tests/Regression/ServerConcurrencyTest.php) |
+| String product keys, variants and wishlist | Lookup fix/recipe unreleased | [Identity tests](tests/Regression/ProductIdentityTest.php), [recipe](docs/v4/recipes/variants-wishlist.md) |
+| Post-cart-discount VAT allocation | Unreleased, additive | [Executed allocation](examples/payable-tax.php), [mixed-rate tests](tests/Feature/PayableTaxBreakdownTest.php) |
+| Livewire, Inertia and authenticated API integration | Recipes unreleased | [Shared server service](examples/CartActions.php), [stateless ownership test](tests/Feature/StatelessApiOwnershipTest.php); UI fragments illustrative |
+| Customer coupon and checkout revalidation | Recipe unreleased | [Executed server policy](examples/CheckoutValidation.php), [recipe](docs/v4/recipes/coupons-checkout.md); no redemption ledger |
+
+[Redis sessions](docs/v4/recipes/redis-sessions.md) use Laravel session storage;
+a dedicated Redis cart driver and an exact currency-aware Money API remain
+[proposals](docs/proposals/redis-cart-storage.md). See the
+[measured read-path protocol](docs/v4/performance.md) for a reproducible local harness,
+not a comparison with other packages.
+
 ## Reference links
 
 <a id="installation"></a>

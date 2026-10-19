@@ -10,6 +10,8 @@ const sources = {
     'cart-add': ['examples/CartActions.php', 'add:'],
     'cart-update': ['examples/CartActions.php', 'update:'],
     'wishlist-move': ['examples/CartActions.php', 'move:'],
+    'checkout-coupon': ['examples/CheckoutValidation.php', 'coupon:'],
+    'checkout-validate': ['examples/CheckoutValidation.php', 'checkout:'],
 };
 async function snippet(name) {
     const definition = sources[name];
