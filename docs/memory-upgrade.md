@@ -42,7 +42,7 @@ Nessun pacchetto abbandonato, `composer audit` pulito, estensioni transitive tut
 
 ### Branch e follow-up
 
-- Branch: `chore/php-8.6-upgrade`. PR: vedi sotto.
+- Branch: `chore/php-8.6-upgrade`. PR: https://github.com/offline-agency/laravel-cart/pull/53 (non draft).
 - Verificare in CI che `shivammathur/setup-php` fornisca PHP 8.6 e che il coverage job resti al 100%.
 - Quando il tooling lo permette (Pest 4 / paratest / Testbench 10 con PHP 8.6, oppure Laravel 12 senza deprecazioni), riabilitare L12 x PHP 8.6.
 - Nessuna versione/tag assegnata: la release segue la policy del repository.
