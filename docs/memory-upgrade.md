@@ -34,7 +34,9 @@ Nessun pacchetto abbandonato, `composer audit` pulito, estensioni transitive tut
 
 - Ultima stabile: 4.2.0 (GitHub Release 2026-10-19, tag senza prefisso `v`). Il giro precedente di questo task partiva da 4.1.0: nel frattempo e' uscita la 4.2.0 (PR #51), quindi il CHANGELOG "Unreleased" e' stato riallineato.
 - NEXT_VERSION: **4.3.0**, MINOR: solo supporto aggiunto (PHP 8.6), nessun minimo alzato, nessun framework rimosso, API pubblica invariata.
-- Il repository usa un publisher automatico (`.github/release-config.json`, `.github/scripts/release`): il bump viene dal titolo Conventional Commit o dalle label `release:*`, con fallback patch. Un titolo non conventional avrebbe prodotto 4.2.1, quindi il titolo della PR usa il tipo `feat` (minor = 4.3.0).
+- **Meccanismo di rilascio: automazione esistente, nessun `release.yml` aggiunto.** `.github/workflows/release.yml` (con `.github/scripts/release`, `.github/release-config.json`, `.github/RELEASING.md`) al merge su `main` ricalcola la storia first-parent, aspetta il check `CI passed` sul commit di merge e crea tag annotato `X.Y.Z` (senza prefisso `v`) e GitHub Release, una per PR e in ordine. Il bump viene dal titolo Conventional Commit o dalle label `release:*`, con fallback patch: un titolo non conventional avrebbe prodotto 4.2.1, quindi il titolo della PR usa il tipo `feat` (minor = 4.3.0). Il check `Release metadata` lo conferma ("will be released as minor").
+- Differenza rispetto al modello del task: le note della release non vengono dalla sezione CHANGELOG ma sono generate dal publisher (PR, commit, bump). Il CHANGELOG non e' letto dal publisher.
+- CHANGELOG: sezione `## [4.3.0]` senza data (la data e' quella della GitHub Release); nessuna sezione `[Unreleased]` perche' non aveva voci. La 4.2.0 e' datata 2026-10-19 come da release pubblicata.
 - Nessun campo `version` in `composer.json` e nessuna costante di versione nel codice.
 
 ### Docs
@@ -70,6 +72,6 @@ Riga: Latest Release, Packagist Version, Total Downloads, PHP Version, Tests, Li
 ### Branch e follow-up
 
 - Branch: `chore/php-8.6-upgrade`. PR: https://github.com/offline-agency/laravel-cart/pull/53
-- Dopo il merge il publisher crea tag e release 4.3.0. Solo se non lo fa: `gh release create 4.3.0 --target main --title "4.3.0" --notes-file <note>`, con le note della sezione 4.3.0 del CHANGELOG.
-- Dopo la release sostituire "Unreleased" con la data nel CHANGELOG, e aggiornare gli "unreleased" per PHP 8.6 in `docs/v4/capabilities.md`, `docs/v4/index.md`, README e `docs/README.md`.
+- Al merge il publisher crea da solo tag e release 4.3.0 (dopo `CI passed` sul commit di merge); badge Latest Release e Packagist si aggiornano da soli. Fallback solo se il job di release fallisce: `gh release view 4.3.0` e, se manca, rilanciare il workflow `Release` con `workflow_dispatch` (`dry_run=false`); in ultima istanza `gh release create 4.3.0 --target main --title "4.3.0" --notes-file <note>`.
+- I testi docs/README dicono gia' "4.3.0" per il supporto PHP 8.6: nessun aggiornamento manuale richiesto dopo il rilascio.
 - Riabilitare L12 x PHP 8.6 quando il tooling (o Laravel 12) lo permette.
