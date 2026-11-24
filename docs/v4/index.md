@@ -14,5 +14,5 @@ shipping or a redemption ledger. No production adoption or comparative performan
 - [Testing](testing.md), [upgrading](upgrading.md), [troubleshooting](troubleshooting.md)
 - [Agent integration](agents.md), [dated alternatives](alternatives.md)
 
-Latest published tag is 4.2.0, including PR #51. PHP 8.6 support in this follow-up is unreleased (prepared for 4.3.0).
+PHP 8.6 support ships in 4.3.0; 4.0.0 to 4.2.0 support PHP 8.4 and 8.5.
 See the capability map for per-feature availability. Public website deployment is pending.

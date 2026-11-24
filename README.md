@@ -15,9 +15,8 @@ API resources and testing helpers. Useful when your application owns its catalog
 checkout. For inventory, payments, shipping and order management, evaluate a full commerce framework.
 
 Requires **PHP 8.4/8.5/8.6**, **BCMath** and **Laravel components ^12.69.2 or ^13.32**.
-Latest published tag verified 24 November 2026: **4.2.0**. This development branch
-prepares **4.3.0** (PHP 8.6 support, unreleased); see the
-[capability/availability map](docs/v4/capabilities.md).
+PHP 8.6 support ships in **4.3.0**; see the
+[capability/availability map](docs/v4/capabilities.md) and the [changelog](CHANGELOG.md).
 
 Composer enforces the exact requirements; PHP prereleases and Laravel 10/11 are excluded.
 
@@ -25,7 +24,7 @@ Composer enforces the exact requirements; PHP prereleases and Laravel 10/11 are 
 
 | Version | PHP | Laravel (`illuminate/*`) |
 |---|---|---|
-| 4.3.0 (this branch, unreleased) | `~8.4.0 \|\| ~8.5.0 \|\| ~8.6.0` | `^12.69.2 \|\| ^13.32` (Laravel 12 not tested on PHP 8.6) |
+| 4.3.0 | `~8.4.0 \|\| ~8.5.0 \|\| ~8.6.0` | `^12.69.2 \|\| ^13.32` (Laravel 12 not tested on PHP 8.6) |
 | 4.0.0 to 4.2.0 | `~8.4.0 \|\| ~8.5.0` | `^12.69.2 \|\| ^13.32` |
 | 3.x (3.2.0) | `^8.4` | `^10.0 \|\| ^11.0 \|\| ^12.0 \|\| ^13.0` |
 | 2.x (2.0.2) | `>=7.3` | `^5.8 \|\| ^6.0` |
