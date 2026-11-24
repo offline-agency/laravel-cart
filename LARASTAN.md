@@ -16,7 +16,7 @@ The package is analysed with [PHPStan](https://phpstan.org) and the [Larastan](h
 
 There is no `phpstan-baseline.neon` and no `ignoreErrors`. The exported traits (`CanBeBought`, `HasDiscount`, `HasFiscalCodes`) are analysed through the consumer classes in `tests/Fixtures`, not ignored as unused.
 
-Analysis runs in CI on every PHP 8.4/8.5 × Laravel 12/13 job (highest and lowest dependencies), so the same configuration is verified against Larastan with both framework lines.
+Analysis runs in CI on every PHP 8.4/8.5/8.6 × Laravel 12/13 job (highest and lowest dependencies), so the same configuration is verified against Larastan with both framework lines.
 
 ## Commands
 

@@ -3,7 +3,7 @@
 Follow the user's explicit authorization, preserve unrelated work, and use an
 isolated branch/worktree for feature work.
 
-- Runtime: PHP 8.4/8.5, Illuminate ^12.69.2 / ^13.32, ext-bcmath. Keep PHP 8.4 syntax.
+- Runtime: PHP 8.4/8.5/8.6, Illuminate ^12.69.2 / ^13.32, ext-bcmath. Keep PHP 8.4 syntax.
 - src/ contains runtime code, config/ defaults, database/migrations/ published schemas.
 - tests/Regression/ pins defects; tests/Feature/ executes integrations. Server tests
   may wipe only disposable laravel_cart_test* databases. Never application databases.

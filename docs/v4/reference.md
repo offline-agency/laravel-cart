@@ -24,10 +24,11 @@ read [money and tax](money-and-tax.md), [storage](storage.md), and
 |:---:|:---:|:---:|
 | 8.4 | Yes | Yes |
 | 8.5 | Yes | Yes |
+| 8.6 | Not tested (see below) | Yes |
 
-- Tested floors: `illuminate/*` `^12.69.2 || ^13.32`. CI runs all supported PHP/Laravel combinations at highest dependencies. Lowest jobs run PHP 8.4 only; inspect their printed resolved versions.
+- Tested floors: `illuminate/*` `^12.69.2 || ^13.32`. CI runs all supported PHP/Laravel combinations at highest dependencies. Laravel 12 is not tested on PHP 8.6: its Pest 4 / Testbench 10 tooling has no PHP 8.6 release yet, and Laravel 12 itself emits PHP 8.6 deprecations (for example `spl_object_hash()`), so use Laravel 13 on PHP 8.6. Lowest jobs run PHP 8.4 only; inspect their printed resolved versions.
 - Laravel 13 is the preferred target. Laravel 12 is supported while it receives security fixes.
-- PHP 8.2 and 8.3 are not supported by this package (package policy). PHP 8.6 pre-releases are not supported yet.
+- PHP 8.2 and 8.3 are not supported by this package (package policy). PHP pre-releases are not supported.
 - For Laravel 10 or 11, use the `3.x` line of this package.
 
 ---

@@ -27,7 +27,8 @@ Stop the same compose project with `down` afterwards. Never reuse an application
 
 Use [testing helpers](reference.md) for facade fakes, typed event assertions and
 CartAssertions. Fakes do not prove transaction/concurrency behavior; use real drivers
-for those contracts. The workflow tests PHP 8.4/8.5 and Laravel 12/13; lowest jobs
+for those contracts. The workflow tests PHP 8.4/8.5/8.6 and Laravel 12/13 (Laravel 12 is not tested on
+PHP 8.6: its Pest 4 / Testbench 10 tooling does not support it yet); lowest jobs
 are PHP 8.4 only, with actual versions printed in each job.
 
 The examples command now executes the canonical quick start, payable-tax fixture and

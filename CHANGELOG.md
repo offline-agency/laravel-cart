@@ -4,6 +4,8 @@
 
 Changes below extend released 4.1.0; no next version is allocated.
 
+- Support PHP 8.6 (`~8.4.0 || ~8.5.0 || ~8.6.0`); Laravel 12 is not covered by CI on PHP 8.6: its Pest 4 / Testbench 10 tooling does not support it yet and Laravel 12 itself emits PHP 8.6 deprecations, so use Laravel 13.
+- Pass plain decimal strings to BCMath in cart totals and cart-coupon discounts, fixing the PHPStan `argument.type` errors reported by current PHPStan.
 - Add read-only payableTaxBreakdown() with row/rate decimal allocation and explicit residuals.
 - Add executed adoption service and variants/wishlist, Livewire, Inertia, API and Redis-session recipes.
 - Clarify released/unreleased capabilities and preserve legacy before-cart-coupon tax methods.

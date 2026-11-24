@@ -6,7 +6,7 @@ Contributions are welcome and are accepted via pull requests against `main`. Ple
 
 Requirements:
 
-- PHP 8.4 or 8.5 with the `mbstring`, `dom`, `fileinfo` and `pdo_sqlite` extensions (`pdo_pgsql` to run the suite on PostgreSQL)
+- PHP 8.4, 8.5 or 8.6 with the `mbstring`, `dom`, `fileinfo` and `pdo_sqlite` extensions (`pdo_pgsql` to run the suite on PostgreSQL)
 - Composer 2
 - [PCOV](https://github.com/krakjoe/pcov) or Xdebug, only for coverage
 

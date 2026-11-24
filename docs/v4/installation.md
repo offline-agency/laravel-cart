@@ -3,7 +3,7 @@
 Development documentation: see the [capability map](capabilities.md) for released
 features and unreleased additions.
 
-Requirements: PHP `~8.4.0 || ~8.5.0`, BCMath (`ext-bcmath`), and the declared
+Requirements: PHP `~8.4.0 || ~8.5.0 || ~8.6.0`, BCMath (`ext-bcmath`), and the declared
 Illuminate components `^12.69.2 || ^13.32`. PHP 8.3 is excluded by package policy,
 not an upstream EOL claim. PHP prereleases are excluded. Composer checks extensions
 before runtime: install your OS PHP BCMath package (for example `php8.4-bcmath`)
