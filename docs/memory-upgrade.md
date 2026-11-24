@@ -2,16 +2,20 @@
 
 ## PHP 8.6 (2026-11-24)
 
-- **TARGET_PHP:** 8.6 (binario Herd `php86`, 8.6.0, estensione bcmath caricata)
+- **TARGET_PHP:** 8.6 (binario Herd `php86`, 8.6.0). Disponibili anche `php84` (8.4.28) e `php85` (8.5.13).
+- **Modalita':** CURRENT. Pacchetto mantenuto di recente, Laravel 12/13 supportano PHP 8.4, CI gia' su 8.4/8.5.
+- **SUPPORTED_PHP:** 8.4, 8.5, 8.6 (`~8.4.0 || ~8.5.0 || ~8.6.0`).
 - **Esito gate:** VIA LIBERA, nessun bloccante.
-- **Framework target:** Laravel 13 (13.43.0). Laravel 12 resta nei vincoli (`^12.69.2 || ^13.32`).
+- **Framework target:** Laravel 13 (13.43.0). Laravel 12 resta nei vincoli.
 
 ### Gate
+
+Risoluzione albero (platform php impostata per versione, estensioni ignorate): PHP 8.4 L12 ok, L13 ok; PHP 8.5 L12 ok, L13 ok; PHP 8.6 L13 ok, L12 ko.
 
 | Pacchetto | Verdetto | Note |
 |---|---|---|
 | php (`~8.4.0 \|\| ~8.5.0`) | BUMP | aggiunto `~8.6.0` |
-| ext-bcmath | OK | inclusa in PHP |
+| ext-bcmath | OK | inclusa in PHP, caricata in tutti i binari Herd |
 | illuminate/* (`^12.69.2 \|\| ^13.32`) | OK | 13.43.0 / 12.73.0, `php ^8.3` |
 | nesbot/carbon, nunomaduro/termwind | OK | 3.15.1 / 2.4.1 |
 | larastan, pint, mockery, phpstan | OK | 3.15.0 / 1.32.3 / 1.6.15 / 2.3.7 |
@@ -26,23 +30,46 @@ Nessun pacchetto abbandonato, `composer audit` pulito, estensioni transitive tut
 - Prova forzata (`--ignore-platform-req=php`, solo in scratch): 671 test con deprecazioni e 1 fallito, tutte dal vendor di Laravel 12 (`spl_object_hash()` in `Container.php:1112`, `ArraySessionHandler` senza `create_sid()`).
 - Decisione: vincoli invariati, combinazione L12 x PHP 8.6 esclusa dalla CI e documentata come non testata.
 
-### Passi completati
+### Versione
 
-1. `chore(php): support PHP 8.6` (`composer.json`). Nessun bump di dipendenze, nessun cambio di framework. `composer.lock` non e' tracciato.
-2. `fix(cart): pass plain decimal strings to BCMath`. Preesistente, non legato a PHP 8.6: PHPStan 2.3.7 allarga `(string) $float` a `'INF'|'-INF'|'NAN'|numeric-string` (7 errori `argument.type` in `src/Cart.php`, identici su PHP 8.5). Corretto con `number_format()`, come in `TaxAllocator::decimal()`, senza ignore ne' baseline.
-3. `ci: add PHP 8.6 to the test matrix`: PHP 8.6 x Laravel 13, L12 escluso. Job quality/postgres/mysql restano su PHP 8.5.
-4. `docs: document PHP 8.6 support`: README, docs/v4, UPGRADE, CONTRIBUTING, LARASTAN, AGENTS, Boost guideline, CHANGELOG (Unreleased, nessuna versione assegnata).
+- Ultima stabile: 4.2.0 (GitHub Release 2026-10-19, tag senza prefisso `v`). Il giro precedente di questo task partiva da 4.1.0: nel frattempo e' uscita la 4.2.0 (PR #51), quindi il CHANGELOG "Unreleased" e' stato riallineato.
+- NEXT_VERSION: **4.3.0**, MINOR: solo supporto aggiunto (PHP 8.6), nessun minimo alzato, nessun framework rimosso, API pubblica invariata.
+- Il repository usa un publisher automatico (`.github/release-config.json`, `.github/scripts/release`): il bump viene dal titolo Conventional Commit o dalle label `release:*`, con fallback patch. Un titolo non conventional avrebbe prodotto 4.2.1, quindi il titolo della PR usa il tipo `feat` (minor = 4.3.0).
+- Nessun campo `version` in `composer.json` e nessuna costante di versione nel codice.
 
-### Verifiche su PHP 8.6.0 (Laravel 13.43.0)
+### Docs
 
-- Pest con `error_reporting=E_ALL`: 670 passati, 2 saltati (test server DB, saltati anche prima), 1920 asserzioni, nessuna deprecazione.
-- Pint pass; PHPStan max pass (nessun baseline/ignore); `validate:strict`, `audit`, `docs:check`, `examples:check`, test Node e `consumer:check` pass.
-- `test:coverage` non eseguibile in locale: nessun PCOV/Xdebug nei binari Herd. Lo verifica il job di coverage in CI.
-- Problema: l'estensione `phpstan_turbo` non si carica su PHP 8.6 (warning di startup, PHPStan funziona comunque).
+- Layout: versionato (`docs/v4/`), MINOR quindi aggiornato in place. `docs/README.md` ora e' l'indice delle versioni con compatibilita'. `docs/memory-*.md` e `docs/website-handoff.md` restano nella root di `docs/`. `.oa-docs.json` non esiste.
+- Corretta la disponibilita' di release: le parti marcate "unreleased" (payableTaxBreakdown, ricette) sono in 4.2.0; il supporto PHP 8.6 e' marcato non rilasciato (4.3.0).
+- Nessun upgrade guide nuovo (solo MAJOR).
+
+### QA
+
+- Strumenti gia' presenti, nessuno aggiunto: Pint (`pint.json`), Larastan/PHPStan livello `max` senza baseline, script `lint`, `lint:check`, `analyse`/`stan`, `test`.
+- `phpstan.neon`: `phpVersion` da `80400` a `min: 80400, max: 80699`. PHPStan passa su 8.4, 8.5 e 8.6.
+- CI: tests, `composer validate:strict`, Pint check e PHPStan girano gia' su PR e push su `main`; nessun workflow rinominato.
+
+### Badge
+
+Riga: Latest Release, Packagist Version, Total Downloads, PHP Version, Tests, License, poi Codecov, Laravel e PHPStan (esistenti, verificati). Tutti HTTP 200 e senza testi di errore. Rimossi: badge `PHP` statico (sostituito da quello Packagist) e `MIT license` Packagist (sostituito da quello GitHub). Il badge PHP Packagist mostra `~8.4.0 || ~8.5.0` finche' non esce il nuovo tag. Release badge: attivo, esistono release; nessuna release creata da questo task.
+
+### Passi completati e problemi
+
+1. `chore(php): support PHP 8.6` e `fix(cart): pass plain decimal strings to BCMath`: 7 errori PHPStan `argument.type` preesistenti, identici su PHP 8.5 (PHPStan 2.3.7 allarga `(string) $float` a `'INF'|'-INF'|'NAN'|numeric-string`), corretti con `number_format()` come in `TaxAllocator::decimal()`.
+2. `ci: add PHP 8.6 to the test matrix` (L12 escluso su 8.6).
+3. Docs, README, indice versioni, CHANGELOG 4.3.0, `phpVersion` PHPStan.
+
+### Verifiche (Laravel 13.43.0, E_ALL)
+
+- PHP 8.4.28, 8.5.13, 8.6.0: 670 passati, 2 saltati (test su server DB), 1920 asserzioni, nessuna deprecazione.
+- `--prefer-lowest`: PHP 8.4 con L12 (12.71.0) e L13 (13.40.0) 670 passati; PHP 8.6 con L13 lowest 670 passati (informativo, la CI lo esegue solo su 8.4).
+- Pint, PHPStan max, `validate --strict`, `audit`, `docs:check`, `examples:check`, test Node, `consumer:check`: pass.
+- `test:coverage` non eseguibile in locale (nessun PCOV/Xdebug in Herd); la CI della PR #53 lo ha eseguito con esito positivo.
+- `phpstan_turbo` non si carica su PHP 8.6 (warning di startup, PHPStan funziona comunque).
 
 ### Branch e follow-up
 
-- Branch: `chore/php-8.6-upgrade`. PR: https://github.com/offline-agency/laravel-cart/pull/53 (non draft).
-- Verificare in CI che `shivammathur/setup-php` fornisca PHP 8.6 e che il coverage job resti al 100%.
-- Quando il tooling lo permette (Pest 4 / paratest / Testbench 10 con PHP 8.6, oppure Laravel 12 senza deprecazioni), riabilitare L12 x PHP 8.6.
-- Nessuna versione/tag assegnata: la release segue la policy del repository.
+- Branch: `chore/php-8.6-upgrade`. PR: https://github.com/offline-agency/laravel-cart/pull/53
+- Dopo il merge il publisher crea tag e release 4.3.0. Solo se non lo fa: `gh release create 4.3.0 --target main --title "4.3.0" --notes-file <note>`, con le note della sezione 4.3.0 del CHANGELOG.
+- Dopo la release sostituire "Unreleased" con la data nel CHANGELOG, e aggiornare gli "unreleased" per PHP 8.6 in `docs/v4/capabilities.md`, `docs/v4/index.md`, README e `docs/README.md`.
+- Riabilitare L12 x PHP 8.6 quando il tooling (o Laravel 12) lo permette.
