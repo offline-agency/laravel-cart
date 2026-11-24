@@ -3,7 +3,9 @@ includes:
 
 parameters:
     level: max
-    phpVersion: 80400
+    phpVersion:
+        min: 80400
+        max: 80699
     paths:
         - src
         - config

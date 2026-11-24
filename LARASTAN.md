@@ -9,7 +9,7 @@ The package is analysed with [PHPStan](https://phpstan.org) and the [Larastan](h
 | Setting | Value | Why |
 |---|---|---|
 | `level` | `max` | The strictest rule level (currently 10). |
-| `phpVersion` | `80400` | The minimum supported runtime (PHP 8.4), so code that needs 8.5 is reported. |
+| `phpVersion` | `min: 80400`, `max: 80699` | The supported runtime range (PHP 8.4 to 8.6), so code that needs a newer PHP than 8.4 is reported. |
 | `paths` | `src`, `config`, `database`, `tests` | Shipped code, the published config and migrations, and the test suite including `tests/Fixtures`. |
 | `configDirectories` | the package's `config/` | Tells Larastan where the package's config files live, so `env()` calls in `config/cart.php` are recognised as config. |
 | `stubFiles` | `tests/phpstan/pest-functions.stub` | Pest declares `$this` in `it()` / `beforeEach()` closures as `TestCall`; at runtime it is the test case. `tests/Pest.php` applies `FeatureTestCase` to the whole suite, and the stub states that type. |
