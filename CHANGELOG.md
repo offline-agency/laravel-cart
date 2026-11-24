@@ -1,6 +1,6 @@
 # Changelog
 
-## [4.3.0] - Unreleased
+## [4.3.0]
 
 - Support PHP 8.6 (`~8.4.0 || ~8.5.0 || ~8.6.0`), tested on PHP 8.6 with Laravel 13.
 - Laravel 12 is not covered by CI on PHP 8.6: its Pest 4 / Testbench 10 tooling does not support it yet and Laravel 12 itself emits PHP 8.6 deprecations, so use Laravel 13.
