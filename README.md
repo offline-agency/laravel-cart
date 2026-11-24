@@ -1,25 +1,37 @@
 # Laravel Cart
 
-[![Latest stable release](https://img.shields.io/packagist/v/offline-agency/laravel-cart?label=stable)](https://packagist.org/packages/offline-agency/laravel-cart)
-[![Total downloads](https://img.shields.io/packagist/dt/offline-agency/laravel-cart)](https://packagist.org/packages/offline-agency/laravel-cart/stats)
-[![CI (main)](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml?query=branch%3Amain)
+[![Latest Release](https://img.shields.io/github/v/release/offline-agency/laravel-cart?sort=semver)](https://github.com/offline-agency/laravel-cart/releases)
+[![Packagist Version](https://img.shields.io/packagist/v/offline-agency/laravel-cart)](https://packagist.org/packages/offline-agency/laravel-cart)
+[![Total Downloads](https://img.shields.io/packagist/dt/offline-agency/laravel-cart)](https://packagist.org/packages/offline-agency/laravel-cart)
+[![PHP Version](https://img.shields.io/packagist/dependency-v/offline-agency/laravel-cart/php)](https://packagist.org/packages/offline-agency/laravel-cart)
+[![Tests](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/offline-agency/laravel-cart/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/offline-agency/laravel-cart)](LICENSE)
 [![Code coverage (main)](https://codecov.io/gh/offline-agency/laravel-cart/branch/main/graph/badge.svg)](https://app.codecov.io/gh/offline-agency/laravel-cart/tree/main)
-
-[![PHP 8.4, 8.5 and 8.6](https://img.shields.io/badge/PHP-8.4%20%7C%208.5%20%7C%208.6-777BB4?logo=php&logoColor=white)](composer.json)
 [![Laravel 12 and 13](https://img.shields.io/badge/Laravel-12%20%7C%2013-FF2D20?logo=laravel&logoColor=white)](composer.json)
 [![PHPStan level max](https://img.shields.io/badge/PHPStan-level%20max-2563EB)](LARASTAN.md)
-[![MIT license](https://img.shields.io/packagist/l/offline-agency/laravel-cart)](LICENSE)
 
 A Laravel shopping cart with VAT, row/cart coupons, session or database persistence,
 API resources and testing helpers. Useful when your application owns its catalog and
 checkout. For inventory, payments, shipping and order management, evaluate a full commerce framework.
 
 Requires **PHP 8.4/8.5/8.6**, **BCMath** and **Laravel components ^12.69.2 or ^13.32**.
-Latest published tag verified 16 October 2026: **4.1.0**. This development branch
-adds **unreleased** tax allocation and recipe examples; see the
-[capability/availability map](docs/v4/capabilities.md). No next version is assigned.
+Latest published tag verified 24 November 2026: **4.2.0**. This development branch
+prepares **4.3.0** (PHP 8.6 support, unreleased); see the
+[capability/availability map](docs/v4/capabilities.md).
 
 Composer enforces the exact requirements; PHP prereleases and Laravel 10/11 are excluded.
+
+## Compatibility
+
+| Version | PHP | Laravel (`illuminate/*`) |
+|---|---|---|
+| 4.3.0 (this branch, unreleased) | `~8.4.0 \|\| ~8.5.0 \|\| ~8.6.0` | `^12.69.2 \|\| ^13.32` (Laravel 12 not tested on PHP 8.6) |
+| 4.0.0 to 4.2.0 | `~8.4.0 \|\| ~8.5.0` | `^12.69.2 \|\| ^13.32` |
+| 3.x (3.2.0) | `^8.4` | `^10.0 \|\| ^11.0 \|\| ^12.0 \|\| ^13.0` |
+| 2.x (2.0.2) | `>=7.3` | `^5.8 \|\| ^6.0` |
+| 1.x (1.0.4) | `>=7.3` | `^5.8 \|\| ^6.0` |
+
+Documentation: [version index](docs/README.md) and the current [v4 documentation](docs/v4/index.md).
 
 ```sh
 composer require offline-agency/laravel-cart
@@ -40,7 +52,7 @@ The external documentation site is pending alignment with these sources.
 
 Find practical [variants/wishlist, Livewire, Inertia, API and Redis-session recipes](docs/v4/recipes/index.md).
 
-Item coupons apply once per row. The additive, unreleased
+Item coupons apply once per row. The additive
 [payableTaxBreakdown()](docs/v4/post-discount-tax.md) allocates cart discounts into VAT;
 legacy vatBreakdown() stays before cart coupons. Built-in live mutations stage changes and database operations lock the complete
 read/modify/write boundary; [storage guarantees and custom-driver limits](docs/v4/storage.md)
