@@ -1,6 +1,6 @@
 # Authenticated API / mobile
 
-Unreleased recipe; check [release availability](../capabilities.md).
+Recipe released in 4.2.0; see [release availability](../capabilities.md).
 
 Configure the `database` driver and publish/migrate `cart-database-migrations` on
 the configured connection. Owners come from `auth()->id()`, using Laravel's active

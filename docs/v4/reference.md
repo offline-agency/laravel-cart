@@ -357,7 +357,7 @@ Cart::numberFormat(Cart::total(), null, null, null); // "1,234.50" with the conf
 
 This legacy method is not a final fiscal receipt calculation after cart coupons.
 Use the additive [payableTaxBreakdown()](post-discount-tax.md) for the documented
-post-discount allocation (unreleased).
+post-discount allocation.
 
 
 ```php

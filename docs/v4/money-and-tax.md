@@ -38,5 +38,5 @@ cart coupons; they are not the final payable tax breakdown. With cart coupons:
 `total() = max(0, subtotal() + vat() - discount())` for normal positive rows,
 subject to configured rounding. Legacy discount rows have separate historical
 subtotal semantics. Do not print vatBreakdown as a final fiscal allocation when
-cart coupons are present. The additive, unreleased [payableTaxBreakdown()](post-discount-tax.md) exposes a
+cart coupons are present. The additive [payableTaxBreakdown()](post-discount-tax.md) exposes a
 separate deterministic post-discount allocation without changing those methods.

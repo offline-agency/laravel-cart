@@ -1,6 +1,6 @@
 # Variants, wishlist and associated models
 
-Unreleased recipe; check [release availability](../capabilities.md).
+Recipe released in 4.2.0; see [release availability](../capabilities.md).
 
 Use the [shared tested service](index.md). Two calls with product 1, sizes S and L
 produce different row IDs through `options: ['size' => ...]`. Rows match by id and
