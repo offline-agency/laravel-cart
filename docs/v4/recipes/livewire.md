@@ -1,6 +1,6 @@
 # Livewire
 
-Unreleased recipe; check [release availability](../capabilities.md).
+Recipe released in 4.2.0; see [release availability](../capabilities.md).
 
 Install a compatible Livewire version in the consuming Laravel application. The UI
 below is illustrative; the [shared service](index.md) is what Testbench executes.

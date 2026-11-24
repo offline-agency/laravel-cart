@@ -1,6 +1,6 @@
 # Inertia with Vue
 
-Unreleased recipe; check [release availability](../capabilities.md).
+Recipe released in 4.2.0; see [release availability](../capabilities.md).
 
 The [shared CartActions service](index.md) is executed in Testbench. The controller,
 routes and Vue below are illustrative, requiring compatible Inertia/Vue dependencies

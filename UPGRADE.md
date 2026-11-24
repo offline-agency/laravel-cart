@@ -30,7 +30,7 @@ This guide covers the breaking changes and new features of `offline-agency/larav
 
 | Requirement | v3 (3.x) | v4 (4.x) |
 |-------------|----------|----------|
-| PHP         | >= 8.4 (`^8.4`) | 8.4 or 8.5 (`~8.4.0 \|\| ~8.5.0`) |
+| PHP         | >= 8.4 (`^8.4`) | 8.4, 8.5 or 8.6 (`~8.4.0 \|\| ~8.5.0 \|\| ~8.6.0`) |
 | Laravel     | 10, 11, 12, 13 | 12 (12.69.2+), 13 (13.32+) |
 
 - The `illuminate/*` floors (`^12.69.2 || ^13.32`) are the lowest versions tested in CI.
@@ -670,7 +670,7 @@ php artisan vendor:publish --provider="OfflineAgency\LaravelCart\CartServiceProv
 
 ## Upgrade Checklist
 
-1. Make sure you run PHP 8.4 or 8.5 and Laravel 12.69.2+ or 13.32+.
+1. Make sure you run PHP 8.4, 8.5 or 8.6 and Laravel 12.69.2+ or 13.32+.
 2. Require `"offline-agency/laravel-cart": "^4.0"` and run `composer update offline-agency/laravel-cart`.
 3. Publish and review the config: `php artisan vendor:publish --provider="OfflineAgency\LaravelCart\CartServiceProvider" --tag=config`.
 4. If you use fiscal codes, switch from `Buyable` to `FiscalBuyable` + the `HasFiscalCodes` trait.

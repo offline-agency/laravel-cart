@@ -411,7 +411,7 @@ class Cart
     public function total(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): float
     {
         $raw = $this->rawTotal();
-        $discount = (float) $this->globalCouponDiscount((string) $raw);
+        $discount = (float) $this->globalCouponDiscount($this->decimalString($raw));
         $result = $raw - $discount;
 
         return $result < 0 ? 0.0 : $this->formatFloat($result);
@@ -451,7 +451,7 @@ class Cart
      */
     public function discount(): float
     {
-        return (float) $this->globalCouponDiscount((string) $this->rawTotal());
+        return (float) $this->globalCouponDiscount($this->decimalString($this->rawTotal()));
     }
 
     /**
@@ -461,7 +461,7 @@ class Cart
     {
         $allocator = new TaxAllocator;
 
-        return $allocator->allocate($this->getContent(), $this->rawTotal(), (string) $this->discount(), $this->total());
+        return $allocator->allocate($this->getContent(), $this->rawTotal(), $this->decimalString($this->discount()), $this->total());
     }
 
     /**
@@ -1448,12 +1448,9 @@ class Cart
                 break;
             }
 
-            $couponValue = (string) $coupon->value;
-            if (str_contains($couponValue, 'E')) {
-                [$significand, $exponent] = explode('E', $couponValue);
-                $fraction = explode('.', $significand)[1] ?? '';
-                $couponValue = number_format($coupon->value, max(0, strlen($fraction) - (int) $exponent), '.', '');
-            }
+            [$significand, $exponent] = array_pad(explode('E', (string) $coupon->value), 2, '0');
+            $fraction = explode('.', $significand)[1] ?? '';
+            $couponValue = number_format($coupon->value, max(0, strlen($fraction) - (int) $exponent), '.', '');
             if ($coupon->isPercentage()) {
                 $discount = bcdiv(bcmul($remaining, $couponValue, $scale), '100', $scale);
             } else {
@@ -1627,6 +1624,16 @@ class Cart
     private function formatFloat(float $value): float
     {
         return CartConfig::round($value);
+    }
+
+    /**
+     * Render an already rounded amount as a plain decimal string for BCMath.
+     *
+     * @return numeric-string
+     */
+    private function decimalString(float $value): string
+    {
+        return number_format($value, CartConfig::decimals(), '.', '');
     }
 
     /**

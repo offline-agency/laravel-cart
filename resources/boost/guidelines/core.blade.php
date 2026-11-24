@@ -1,7 +1,7 @@
 ## Laravel Cart
 
 `offline-agency/laravel-cart` provides a cart with VAT, row/cart coupons and
-session/database persistence for PHP 8.4/8.5 and Illuminate ^12.69.2 or ^13.32.
+session/database persistence for PHP 8.4/8.5/8.6 and Illuminate ^12.69.2 or ^13.32.
 BCMath is required. Use `OfflineAgency\LaravelCart\Facades\Cart`.
 
 @verbatim

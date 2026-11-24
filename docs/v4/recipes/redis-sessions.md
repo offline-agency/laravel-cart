@@ -1,6 +1,6 @@
 # Redis-backed Laravel sessions
 
-Unreleased recipe; check [release availability](../capabilities.md).
+Recipe released in 4.2.0; see [release availability](../capabilities.md).
 
 This uses the shipped **SessionStorage** through Laravel sessions. There is no
 shipped dedicated Redis cart driver, per-cart Redis key TTL, CAS or Lua mutation API.

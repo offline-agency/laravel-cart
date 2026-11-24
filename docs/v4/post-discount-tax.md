@@ -1,4 +1,4 @@
-# Post-discount tax allocation (unreleased)
+# Post-discount tax allocation
 
 `Cart::payableTaxBreakdown()` is additive. It returns a `TaxBreakdown` value with
 `precision`, `rows`, `rates` and `totals`; `toArray()` and JSON preserve decimal

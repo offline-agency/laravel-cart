@@ -1,7 +1,6 @@
-# Adoption recipes (unreleased source)
+# Adoption recipes
 
-These recipes target the current development checkout based on released 4.1.0.
-The new recipe sources and allocation API are unreleased additions. See the
+These recipes were released in 4.2.0 together with the allocation API. See the
 [capability map](../capabilities.md) before selecting a released package version.
 
 - [Variants, wishlist and models](variants-wishlist.md)

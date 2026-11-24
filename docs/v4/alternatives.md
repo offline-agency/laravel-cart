@@ -6,7 +6,7 @@ Only this repository's package is exercised by its test suite.
 
 | Package | Evidence to evaluate |
 | --- | --- |
-| offline-agency/laravel-cart | This checkout: VAT amounts, once-per-row item coupons, cart coupons, session/database live storage and explicit snapshots. PHP 8.4/8.5 and Laravel 12/13 policy. Review tax/currency limits before choosing. |
+| offline-agency/laravel-cart | This checkout: VAT amounts, once-per-row item coupons, cart coupons, session/database live storage and explicit snapshots. PHP 8.4/8.5/8.6 and Laravel 12/13 policy. Review tax/currency limits before choosing. |
 | wearepixel/laravel-cart | [Package listing and source](https://packagist.org/packages/wearepixel/laravel-cart): 3.0.0 declares PHP >=8.3 and Illuminate 11/12/13; its documentation covers conditions, storage drivers and testing. Not installed/tested in this work. |
 | hardevine/shoppingcart | [3.4 metadata/reference](https://packagist.org/packages/hardevine/shoppingcart) declares Illuminate support through Laravel 12; documents variants, tax rates and explicit database persistence. Not tested here. |
 | darryldecode/cart | [Package listing/reference](https://packagist.org/packages/darryldecode/cart) documents cart conditions and session-oriented usage. Not tested here. |
